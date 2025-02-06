@@ -1,0 +1,23 @@
+# Clone your original repository
+git clone https://github.com/jfranmatheu/Blender-ACK.git new-project
+
+# Change into the new directory
+cd new-project
+
+# Remove the old origin
+git remote remove origin
+
+# Add the new repository as origin
+git remote add origin https://github.com/username/new-project.git
+
+# Add the original repository as upstream
+git remote add upstream https://github.com/jfranmatheu/Blender-ACK.git
+
+# Push to your new repository
+git push -u origin main
+
+# To later sync only the ackit folder from upstream:
+git fetch upstream
+git checkout main
+git read-tree --prefix=project-name/ackit upstream/main:ackit_addon_template/ackit
+git commit -m "Sync ackit folder from upstream"
