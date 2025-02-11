@@ -13,11 +13,7 @@
 
 from .ackit import AddonLoader, AutoCode
 
-AddonLoader.init_modules(use_autoload=False)
-
-# Auto-generated files.
-AutoCode.OPS(filename='ack_ops')
-AutoCode.ICONS(filename='icons')
+AddonLoader.init_modules(use_autoload=False, auto_code={AutoCode.OPS, AutoCode.ICONS})
 
 
 def register():
