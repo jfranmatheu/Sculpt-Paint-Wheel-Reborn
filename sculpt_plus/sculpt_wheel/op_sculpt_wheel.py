@@ -131,6 +131,7 @@ class SculptWheelOperator(bl_types.OperatorModal):
     # Gesture pad drag
     _gesture_state: str | None = None  # None | 'pending' | 'drag'
     _gesture_axis: str | None = None  # 'X' | 'Y'
+    _gesture_origin: tuple[float, float] = (0.0, 0.0)
     _gesture_prev: tuple[float, float] = (0.0, 0.0)
     _saved_size: float = 0.0
     _saved_strength: float = 0.0
@@ -211,6 +212,7 @@ class SculptWheelOperator(bl_types.OperatorModal):
                 self._restore_gesture_values(context)
                 self._gesture_state = None
                 self._gesture_axis = None
+                self._gesture_origin = (0.0, 0.0)
                 context.region.tag_redraw()
                 return OpReturn.RUN
             return OpReturn.FINISH
@@ -218,12 +220,14 @@ class SculptWheelOperator(bl_types.OperatorModal):
         if self._gesture_state == 'drag' and event.type == 'LEFTMOUSE' and event.value == 'RELEASE':
             self._gesture_state = None
             self._gesture_axis = None
+            self._gesture_origin = (0.0, 0.0)
             context.region.tag_redraw()
             return OpReturn.RUN
 
         if self._gesture_state == 'pending' and event.type == 'LEFTMOUSE' and event.value == 'RELEASE':
             self._gesture_state = None
             self._gesture_axis = None
+            self._gesture_origin = (0.0, 0.0)
             context.region.tag_redraw()
             return OpReturn.RUN
 
@@ -268,6 +272,7 @@ class SculptWheelOperator(bl_types.OperatorModal):
                 self._saved_size = _brush_size_get(context)
                 self._saved_strength = _brush_strength_get(context)
                 self._gesture_state = 'pending'
+                self._gesture_origin = (mx, my)
                 self._gesture_prev = (mx, my)
                 return OpReturn.RUN
 
@@ -320,6 +325,7 @@ class SculptWheelOperator(bl_types.OperatorModal):
     def _reset_interaction_state(self) -> None:
         self._gesture_state = None
         self._gesture_axis = None
+        self._gesture_origin = (0.0, 0.0)
         self._custom_press_idx = -1
         self._slot_drag_from = -1
         self.hover_custom_index = -1

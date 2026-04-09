@@ -40,6 +40,10 @@ COL_CUSTOM_HOVER = (0.45, 0.60, 0.85, 0.40)
 
 def draw_wheel(context: Context, op: 'SculptWheelOperator') -> None:
     """Entry point called from the modal operator's ``draw_2d``."""
+    if op._gesture_state == 'drag' and op._gesture_axis is not None:
+        _draw_gesture_overlay(context, op)
+        return
+
     cx = op.wheel_center_x
     cy = op.wheel_center_y
     radius = op.wheel_radius
@@ -63,7 +67,6 @@ def draw_wheel(context: Context, op: 'SculptWheelOperator') -> None:
             _draw_toolset_dots(op, cx, cy, radius)
 
         _draw_edit_toggle(op)
-        _draw_gesture_overlay(context, op, cx, cy, radius)
 
 
 def _draw_gesture_pad(op: 'SculptWheelOperator', cx: float, cy: float) -> None:
@@ -202,26 +205,20 @@ def _overlay_brush_strength(context: Context) -> float:
     return float(brush.strength)
 
 
-def _draw_gesture_overlay(context: Context, op: 'SculptWheelOperator', cx: float, cy: float, radius: float) -> None:
+def _draw_gesture_overlay(context: Context, op: 'SculptWheelOperator') -> None:
     if op._gesture_state != 'drag' or op._gesture_axis is None:
         return
-    if op._gesture_preview != 'PREVIEW':
-        return
 
+    cx, cy = op._gesture_origin
+    radius = op.wheel_radius
     is_vert = op._gesture_axis == 'Y'
     invert = op._gesture_invert
     show_size = (is_vert and not invert) or (not is_vert and invert)
 
     if show_size:
         val = _overlay_brush_size(context)
-        draw_text("Size", cx, cy + radius * 0.64, size=14.0, color=COL_TEXT, align='CENTER', shadow=True)
-        draw_text(str(int(val)), cx, cy, size=20.0, color=(0.2, 1.0, 1.0, 1.0), align='CENTER', shadow=True)
-        draw_ring(cx, cy, min(radius * 0.45, val * 0.5), (0.8, 0.8, 0.8, 0.35), thickness=1.2, softness=0.02)
+        draw_ring(cx, cy, max(1.0, val * 0.5), (0.8, 0.9, 1.0, 0.95), thickness=1.8, softness=0.02)
     else:
         val = _overlay_brush_strength(context)
-        draw_text("Strength", cx, cy + radius * 0.64, size=14.0, color=COL_TEXT, align='CENTER', shadow=True)
-        draw_text(f"{val:.2f}", cx, cy, size=20.0, color=(1.0, 1.0, 0.2, 1.0), align='CENTER', shadow=True)
-        rmid = radius * 0.28
-        draw_ring(cx, cy, radius * 0.42, (0.8, 0.8, 0.8, 0.4), thickness=1.2, softness=0.02)
-        draw_ring(cx, cy, rmid, (0.8, 0.8, 0.8, 0.4), thickness=1.2, softness=0.02)
-        draw_ring(cx, cy, (radius * 0.42 - 8) * min(1.0, val / 2.0), (1.0, 1.0, 0.0, 0.85), thickness=1.5, softness=0.02)
+        draw_ring(cx, cy, radius, (0.8, 0.8, 0.8, 0.45), thickness=1.4, softness=0.02)
+        draw_ring(cx, cy, radius * min(1.0, max(0.0, val / 2.0)), (1.0, 0.95, 0.35, 0.95), thickness=1.8, softness=0.02)
