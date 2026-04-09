@@ -2,9 +2,21 @@
 
 from __future__ import annotations
 
+import math
 from math import cos, dist, sin
 from math import pi as PI
 from typing import Set
+
+
+def layout_sector_from_pointer(mx: float, my: float, cx: float, cy: float, n: int) -> int:
+    """Wedge index 0..n-1 matching rendered pie sectors (top = 0, then clockwise)."""
+    if n <= 0:
+        return 0
+    th = math.atan2(my - cy, mx - cx)
+    step = 2.0 * math.pi / n
+    shifted = (PI / 2.0 - th + step * 0.5 + 2.0 * PI) % (2.0 * PI)
+    i = int(math.floor(shifted / step))
+    return i % n
 
 from bpy.types import Context, Event
 
@@ -106,11 +118,16 @@ class SculptWheelOperator(bl_types.OperatorModal):
     active_toolset_idx: int = 0
     toolset_count: int = 0
 
-    # Inner ring (custom buttons)
+    # Inner ring (custom buttons) — “tarta” pie layout
     custom_positions: list[tuple[float, float]] = []
     custom_radius: float = 0.0
     custom_layout_map: list[int] = []
+    custom_layout_n: int = 0
+    tarta_ring_outer_radius: float = 0.0
+    tarta_inner_ratio: float = 0.5
+    icon_ring_radius: float = 0.0
     hover_custom_index: int = -1
+    hover_custom_layout_slot: int = -1
     hover_gesture_pad: bool = False
 
     gesture_pad_radius: float = 36.0
@@ -272,7 +289,7 @@ class SculptWheelOperator(bl_types.OperatorModal):
                 self._saved_size = _brush_size_get(context)
                 self._saved_strength = _brush_strength_get(context)
                 self._gesture_state = 'pending'
-                self._gesture_origin = (mx, my)
+                self._gesture_origin = (self.wheel_center_x, self.wheel_center_y)
                 self._gesture_prev = (mx, my)
                 return OpReturn.RUN
 
@@ -329,6 +346,7 @@ class SculptWheelOperator(bl_types.OperatorModal):
         self._custom_press_idx = -1
         self._slot_drag_from = -1
         self.hover_custom_index = -1
+        self.hover_custom_layout_slot = -1
         self.hover_gesture_pad = False
 
     def _restore_gesture_values(self, context: Context) -> None:
@@ -423,21 +441,36 @@ class SculptWheelOperator(bl_types.OperatorModal):
             self.slot_radius = 0
         else:
             count = max(7, len(ts.slots))
-            ring_radius = self.wheel_radius * 0.6
+            # Outer brush ring — keep clear of the pie / custom-button annulus (~0.48R).
+            ring_radius = self.wheel_radius * 0.74
             self.slot_radius = compute_slot_radius(ring_radius, count)
             self.slot_positions = compute_slot_positions(cx, cy, ring_radius, count)
 
         n_cb = len(self._wheel_data.custom_buttons)
         if n_cb > 0:
             layout_n = compute_custom_button_layout_count(n_cb)
-            inner_r = self.wheel_radius * 0.38
-            self.custom_radius = compute_slot_radius(inner_r, layout_n) * 0.88
-            self.custom_positions = compute_slot_positions(cx, cy, inner_r, layout_n)
+            self.custom_layout_n = layout_n
+            self.tarta_ring_outer_radius = self.wheel_radius * 0.48
+            self.tarta_inner_ratio = min(
+                0.92,
+                self.gesture_pad_radius / max(self.tarta_ring_outer_radius, 1.0),
+            )
+            self.icon_ring_radius = self.tarta_ring_outer_radius * 0.72
+            self.custom_radius = (
+                compute_slot_radius(self.icon_ring_radius, layout_n) * 0.88
+            )
+            self.custom_positions = compute_slot_positions(
+                cx, cy, self.icon_ring_radius, layout_n,
+            )
             self.custom_layout_map = map_custom_layout_indices(layout_n, n_cb)
         else:
             self.custom_positions = []
             self.custom_radius = 0.0
             self.custom_layout_map = []
+            self.custom_layout_n = 0
+            self.tarta_ring_outer_radius = 0.0
+            self.tarta_inner_ratio = 0.5
+            self.icon_ring_radius = 0.0
 
     def _cache_previews(self) -> None:
         if self.active_toolset is None:
@@ -462,6 +495,7 @@ class SculptWheelOperator(bl_types.OperatorModal):
     def _update_hover(self, mx: float, my: float) -> None:
         self.hover_index = -1
         self.hover_custom_index = -1
+        self.hover_custom_layout_slot = -1
         self.hover_gesture_pad = False
 
         cx, cy = self.wheel_center_x, self.wheel_center_y
@@ -473,15 +507,26 @@ class SculptWheelOperator(bl_types.OperatorModal):
                 self.hover_index = i
                 return
 
-        for i, (sx, sy) in enumerate(self.custom_positions):
-            if i >= len(self.custom_layout_map):
-                break
-            bid = self.custom_layout_map[i]
-            if bid < 0:
-                continue
-            if dist((mx, my), (sx, sy)) <= self.custom_radius:
-                self.hover_custom_index = bid
-                return
+        if self.custom_layout_n > 0 and len(self.custom_layout_map) > 0:
+            r_pt = math.hypot(mx - cx, my - cy)
+            if r_pt >= self.gesture_pad_radius - 1.0 and r_pt <= self.tarta_ring_outer_radius + 3.0:
+                si = layout_sector_from_pointer(mx, my, cx, cy, self.custom_layout_n)
+                if 0 <= si < len(self.custom_layout_map):
+                    bid = self.custom_layout_map[si]
+                    if bid >= 0:
+                        self.hover_custom_index = bid
+                        self.hover_custom_layout_slot = si
+                        return
+            for i, (sx, sy) in enumerate(self.custom_positions):
+                if i >= len(self.custom_layout_map):
+                    break
+                bid = self.custom_layout_map[i]
+                if bid < 0:
+                    continue
+                if dist((mx, my), (sx, sy)) <= self.custom_radius:
+                    self.hover_custom_index = bid
+                    self.hover_custom_layout_slot = i
+                    return
 
         if dist((mx, my), (cx, cy)) <= self.gesture_pad_radius:
             self.hover_gesture_pad = True

@@ -3,6 +3,7 @@
 from . import data          # noqa: F401  (PropertyGroups)
 from . import brush_assets  # noqa: F401  (asset utilities)
 from . import gpu_utils     # noqa: F401  (shaders / layout math)
+from . import gpu_tarta     # noqa: F401  (pie ring + RNGBLR-style draws)
 from . import draw          # noqa: F401  (GPU draw callbacks)
 from . import op_sculpt_wheel  # noqa: F401  (modal operator)
 from . import op_wheel_ui     # noqa: F401  (sidebar operators)
