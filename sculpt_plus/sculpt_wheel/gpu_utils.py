@@ -1,0 +1,267 @@
+"""GPU shader and batch helpers for the sculpt wheel overlay."""
+
+from __future__ import annotations
+
+from math import cos, sin, pi
+from typing import Tuple
+
+import gpu
+from gpu.shader import create_from_info
+from gpu.types import GPUBatch, GPUShader, GPUShaderCreateInfo, GPUStageInterfaceInfo, GPUTexture
+from gpu_extras.batch import batch_for_shader
+
+from ..core.gpu.state_control import CM_GPU_BLEND
+
+
+# ---------------------------------------------------------------------------
+# Shader sources
+# ---------------------------------------------------------------------------
+
+_CIRCLE_FILL_VERT = """
+void main() {
+    v_uv = uv;
+    gl_Position = ModelViewProjectionMatrix * vec4(pos, 0.0, 1.0);
+}
+"""
+
+_CIRCLE_FILL_FRAG = """
+void main() {
+    float d = length(v_uv - vec2(0.5));
+    float r = 0.5;
+    float edge = smoothstep(r, r - softness, d);
+    fragColor = vec4(color.rgb, color.a * edge);
+}
+"""
+
+_RING_VERT = """
+void main() {
+    v_uv = uv;
+    gl_Position = ModelViewProjectionMatrix * vec4(pos, 0.0, 1.0);
+}
+"""
+
+_RING_FRAG = """
+void main() {
+    float d = length(v_uv - vec2(0.5));
+    float outer = smoothstep(outerRadius, outerRadius - softness, d);
+    float inner = smoothstep(innerRadius - softness, innerRadius, d);
+    float ring = outer * inner;
+    fragColor = vec4(color.rgb, color.a * ring);
+}
+"""
+
+_TEXTURED_CIRCLE_VERT = """
+void main() {
+    v_uv = uv;
+    gl_Position = ModelViewProjectionMatrix * vec4(pos, 0.0, 1.0);
+}
+"""
+
+_TEXTURED_CIRCLE_FRAG = """
+void main() {
+    float d = length(v_uv - vec2(0.5));
+    float r = 0.5;
+    float mask = smoothstep(r, r - softness, d);
+    vec4 tex = texture(image, v_uv);
+    fragColor = vec4(tex.rgb, tex.a * mask * opacity);
+}
+"""
+
+
+# ---------------------------------------------------------------------------
+# Compiled shader singletons
+# ---------------------------------------------------------------------------
+
+_shader_circle_fill: GPUShader | None = None
+_shader_ring: GPUShader | None = None
+_shader_tex_circle: GPUShader | None = None
+
+
+def _build_circle_fill_shader() -> GPUShader:
+    iface = GPUStageInterfaceInfo("sculpt_wheel_circle_fill_iface")
+    iface.smooth('VEC2', "v_uv")
+
+    info = GPUShaderCreateInfo()
+    info.push_constant('MAT4', "ModelViewProjectionMatrix")
+    info.push_constant('VEC4', "color")
+    info.push_constant('FLOAT', "softness")
+    info.vertex_in(0, 'VEC2', "pos")
+    info.vertex_in(1, 'VEC2', "uv")
+    info.vertex_out(iface)
+    info.fragment_out(0, 'VEC4', "fragColor")
+    info.vertex_source(_CIRCLE_FILL_VERT)
+    info.fragment_source(_CIRCLE_FILL_FRAG)
+    return create_from_info(info)
+
+
+def _build_ring_shader() -> GPUShader:
+    iface = GPUStageInterfaceInfo("sculpt_wheel_ring_iface")
+    iface.smooth('VEC2', "v_uv")
+
+    info = GPUShaderCreateInfo()
+    info.push_constant('MAT4', "ModelViewProjectionMatrix")
+    info.push_constant('VEC4', "color")
+    info.push_constant('FLOAT', "innerRadius")
+    info.push_constant('FLOAT', "outerRadius")
+    info.push_constant('FLOAT', "softness")
+    info.vertex_in(0, 'VEC2', "pos")
+    info.vertex_in(1, 'VEC2', "uv")
+    info.vertex_out(iface)
+    info.fragment_out(0, 'VEC4', "fragColor")
+    info.vertex_source(_RING_VERT)
+    info.fragment_source(_RING_FRAG)
+    return create_from_info(info)
+
+
+def _build_tex_circle_shader() -> GPUShader:
+    iface = GPUStageInterfaceInfo("sculpt_wheel_tex_circle_iface")
+    iface.smooth('VEC2', "v_uv")
+
+    info = GPUShaderCreateInfo()
+    info.push_constant('MAT4', "ModelViewProjectionMatrix")
+    info.push_constant('FLOAT', "opacity")
+    info.push_constant('FLOAT', "softness")
+    info.sampler(0, 'FLOAT_2D', "image")
+    info.vertex_in(0, 'VEC2', "pos")
+    info.vertex_in(1, 'VEC2', "uv")
+    info.vertex_out(iface)
+    info.fragment_out(0, 'VEC4', "fragColor")
+    info.vertex_source(_TEXTURED_CIRCLE_VERT)
+    info.fragment_source(_TEXTURED_CIRCLE_FRAG)
+    return create_from_info(info)
+
+
+def _get_circle_fill_shader() -> GPUShader:
+    global _shader_circle_fill
+    if _shader_circle_fill is None:
+        _shader_circle_fill = _build_circle_fill_shader()
+    return _shader_circle_fill
+
+
+def _get_ring_shader() -> GPUShader:
+    global _shader_ring
+    if _shader_ring is None:
+        _shader_ring = _build_ring_shader()
+    return _shader_ring
+
+
+def _get_tex_circle_shader() -> GPUShader:
+    global _shader_tex_circle
+    if _shader_tex_circle is None:
+        _shader_tex_circle = _build_tex_circle_shader()
+    return _shader_tex_circle
+
+
+# ---------------------------------------------------------------------------
+# Quad geometry helper
+# ---------------------------------------------------------------------------
+
+def _quad_verts(cx: float, cy: float, half: float) -> Tuple[list, list, list]:
+    """Return (positions, uvs, indices) for a screen-space quad centred at (cx, cy)."""
+    positions = [
+        (cx - half, cy - half),
+        (cx + half, cy - half),
+        (cx + half, cy + half),
+        (cx - half, cy + half),
+    ]
+    uvs = [
+        (0.0, 0.0),
+        (1.0, 0.0),
+        (1.0, 1.0),
+        (0.0, 1.0),
+    ]
+    indices = [(0, 1, 2), (2, 3, 0)]
+    return positions, uvs, indices
+
+
+# ---------------------------------------------------------------------------
+# Public draw functions
+# ---------------------------------------------------------------------------
+
+def draw_circle_fill(
+    cx: float, cy: float, radius: float,
+    color: Tuple[float, float, float, float],
+    softness: float = 0.01,
+) -> None:
+    """Draw an anti-aliased filled circle."""
+    shader = _get_circle_fill_shader()
+    positions, uvs, indices = _quad_verts(cx, cy, radius)
+    batch = batch_for_shader(shader, 'TRIS', {"pos": positions, "uv": uvs}, indices=indices)
+    with CM_GPU_BLEND('ALPHA'):
+        shader.bind()
+        shader.uniform_float("color", color)
+        shader.uniform_float("softness", softness)
+        batch.draw(shader)
+
+
+def draw_ring(
+    cx: float, cy: float, radius: float,
+    color: Tuple[float, float, float, float],
+    thickness: float = 2.0,
+    softness: float = 0.008,
+) -> None:
+    """Draw an anti-aliased ring (annulus)."""
+    shader = _get_ring_shader()
+    half = radius + thickness
+    positions, uvs, indices = _quad_verts(cx, cy, half)
+    batch = batch_for_shader(shader, 'TRIS', {"pos": positions, "uv": uvs}, indices=indices)
+
+    outer_r = 0.5
+    inner_r = 0.5 * (radius - thickness) / (radius + thickness)
+
+    with CM_GPU_BLEND('ALPHA'):
+        shader.bind()
+        shader.uniform_float("color", color)
+        shader.uniform_float("outerRadius", outer_r)
+        shader.uniform_float("innerRadius", inner_r)
+        shader.uniform_float("softness", softness)
+        batch.draw(shader)
+
+
+def draw_textured_circle(
+    cx: float, cy: float, radius: float,
+    texture: GPUTexture,
+    opacity: float = 1.0,
+    softness: float = 0.02,
+) -> None:
+    """Draw a texture clipped to a circle."""
+    shader = _get_tex_circle_shader()
+    positions, uvs, indices = _quad_verts(cx, cy, radius)
+    batch = batch_for_shader(shader, 'TRIS', {"pos": positions, "uv": uvs}, indices=indices)
+    with CM_GPU_BLEND('ALPHA'):
+        shader.bind()
+        shader.uniform_sampler("image", texture)
+        shader.uniform_float("opacity", opacity)
+        shader.uniform_float("softness", softness)
+        batch.draw(shader)
+
+
+# ---------------------------------------------------------------------------
+# Wheel layout math
+# ---------------------------------------------------------------------------
+
+def compute_slot_radius(ring_radius: float, count: int) -> float:
+    """Compute the radius of each small slot circle so *count* fit around *ring_radius*."""
+    if count <= 0:
+        return 0.0
+    if count == 1:
+        return ring_radius * 0.4
+    return ring_radius * sin(pi / count) / (1.0 + sin(pi / count))
+
+
+def compute_slot_positions(
+    cx: float, cy: float, ring_radius: float, count: int,
+) -> list[Tuple[float, float]]:
+    """Compute screen-space centre positions for *count* slots on a ring."""
+    if count <= 0:
+        return []
+    if count == 1:
+        return [(cx, cy + ring_radius)]
+    positions: list[Tuple[float, float]] = []
+    angle_step = 2.0 * pi / count
+    for i in range(count):
+        angle = pi / 2.0 - i * angle_step
+        x = cx + ring_radius * cos(angle)
+        y = cy + ring_radius * sin(angle)
+        positions.append((x, y))
+    return positions

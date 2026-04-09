@@ -10,15 +10,5 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
-
-from .ackit import AddonLoader, AutoCode
-
-AddonLoader.init_modules(use_autoload=False, auto_code={AutoCode.OPS, AutoCode.ICONS})
-
-
-def register():
-    AddonLoader.register_modules()
-
-
-def unregister():
-    AddonLoader.unregister_modules()
+from .core import AddonLoader
+register, unregister = AddonLoader.init()

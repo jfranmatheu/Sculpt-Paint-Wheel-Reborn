@@ -1,10 +1,12 @@
-# UVFLOW Specific gitignore rules.
+# Sculpt-Plus Specific gitignore rules.
 *.dev
 *.old
 *.dev.py
 *.old.py
 
 .vscode/
+.cursor/
+z_old_sculpt_paint_wheel/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

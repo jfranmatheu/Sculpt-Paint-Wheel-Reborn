@@ -1,1 +1,0 @@
-# Property/Group code generation

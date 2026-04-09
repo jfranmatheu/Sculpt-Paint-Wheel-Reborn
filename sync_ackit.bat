@@ -13,3 +13,4 @@ call git checkout-index -f -a
 call git commit -m "Sync ackit folder from upstream"
 : Restore any previously stashed changes
 call git stash pop
+
