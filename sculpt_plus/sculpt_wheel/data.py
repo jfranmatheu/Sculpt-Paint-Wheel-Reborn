@@ -7,13 +7,14 @@ from bpy.props import (
     IntProperty,
     FloatVectorProperty,
     CollectionProperty,
-    BoolProperty,
     EnumProperty,
     PointerProperty,
 )
 from bpy.types import Context
 
 from ..core import bl_types
+from ..core._btypes.data.btype_pg import BType_PropertyGroup
+from ..core.globals import GLOBALS
 
 from .presets import preset_menus, preset_panels, preset_operators
 
@@ -75,7 +76,7 @@ class WheelBrushSlot(bl_types.PropertyGroup):
 
 class WheelToolset(bl_types.PropertyGroup):
     """A named set of brush slots that the user curates."""
-    pg_parent = None  # Set by SculptWheelData below.
+    pg_parent = None  # Set to SculptWheelStorage below.
 
     name: StringProperty(name="Name", default="Toolset")
     slots: CollectionProperty(type=WheelBrushSlot)
@@ -141,7 +142,7 @@ WheelBrushSlot.pg_parent = WheelToolset
 class WheelCustomButton(bl_types.PropertyGroup):
     """User-defined action on the inner ring of the wheel."""
 
-    pg_parent = None  # SculptWheelData
+    pg_parent = None  # SculptWheelStorage
 
     name: StringProperty(name="Name", default="Custom")
     type: EnumProperty(
@@ -229,68 +230,106 @@ class CreateWheelCustomButton(bl_types.PropertyGroup):
     )
 
 
-class SculptWheelData(bl_types.PropertyGroupRoot.SCENE):
-    """Root scene-level data for the sculpt wheel."""
+class SculptWheelStorage(BType_PropertyGroup):
+    """Global wheel toolsets and custom buttons (stored under add-on preferences)."""
 
     toolsets: CollectionProperty(type=WheelToolset)
-    active_toolset_index: IntProperty(name="Active Toolset", default=0, min=0)
-    initialized: BoolProperty(default=False)
-
     custom_buttons: CollectionProperty(type=WheelCustomButton)
+
+    @classmethod
+    def get_datapath(cls) -> str:
+        pkg = GLOBALS.ADDON.PACKAGE_NAME
+        return f"preferences.addons['{pkg}'].preferences.sculpt_wheel_storage"
+
+    @classmethod
+    def get(cls, context: Context) -> "SculptWheelStorage":
+        addon = context.preferences.addons.get(GLOBALS.ADDON.PACKAGE_NAME)
+        if addon is None:
+            raise RuntimeError("Sculpt+ add-on is not enabled")
+        return addon.preferences.sculpt_wheel_storage
+
+
+class SculptWheelData(bl_types.PropertyGroupRoot.WINDOW_MANAGER):
+    """Per-session wheel UI state (active set index, custom-button builder)."""
+
+    active_toolset_index: IntProperty(name="Active Toolset", default=0, min=0)
     create_custom_button: PointerProperty(type=CreateWheelCustomButton)
 
-    @property
-    def active_toolset(self) -> WheelToolset | None:
-        if len(self.toolsets) == 0:
-            return None
-        idx = min(self.active_toolset_index, len(self.toolsets) - 1)
-        return self.toolsets[idx]
-
-    def ensure_default_toolset(self, context: Context) -> WheelToolset:
-        """Create a default toolset from currently loaded sculpt brushes if none exist."""
-        if len(self.toolsets) > 0:
-            return self.active_toolset
-        ts = self.toolsets.add()
-        ts.name = "Default"
-        from .brush_assets import get_sculpt_brushes
-        for brush in get_sculpt_brushes():
-            ts.add_brush(brush)
-        self.initialized = True
-        return ts
-
-    def add_custom_button_from_create(self, create: CreateWheelCustomButton | None = None) -> bool:
-        """Append a custom button from *create* (defaults to ``create_custom_button``)."""
-        from .custom_buttons import build_custom_button_attr
-
-        if len(self.custom_buttons) >= 10:
-            return False
-        src = create or self.create_custom_button
-        attr = build_custom_button_attr(src)
-        if not attr:
-            return False
-        b = self.custom_buttons.add()
-        b.name = (src.name or "Custom").strip() or "Custom"
-        b.type = src.type
-        if src.type == "POPUP":
-            b.popup_type = src.popup_type
-        else:
-            b.popup_type = "NONE"
-        b.attr = attr
-        ip = src.image_path
-        if ip.startswith("//"):
-            ip = bpy_abspath(ip)
-        b.image_path = ip
-        return True
-
-    def remove_custom_button(self, index: int) -> None:
-        if 0 <= index < len(self.custom_buttons):
-            self.custom_buttons.remove(index)
-
-    def remove_all_custom_buttons(self) -> None:
-        while len(self.custom_buttons) > 0:
-            self.custom_buttons.remove(0)
+    @classmethod
+    def get(cls, context: Context) -> "SculptWheelData":
+        return super().get(context)
 
 
-WheelToolset.pg_parent = SculptWheelData
-WheelCustomButton.pg_parent = SculptWheelData
+def get_wheel_storage(context: Context) -> SculptWheelStorage:
+    return SculptWheelStorage.get(context)
+
+
+def get_active_toolset(context: Context) -> WheelToolset | None:
+    st = get_wheel_storage(context)
+    scene = SculptWheelData.get(context)
+    if len(st.toolsets) == 0:
+        return None
+    idx = min(scene.active_toolset_index, len(st.toolsets) - 1)
+    return st.toolsets[idx]
+
+
+def ensure_default_toolset(context: Context) -> WheelToolset | None:
+    """Create a default toolset from currently loaded sculpt brushes if none exist."""
+    st = get_wheel_storage(context)
+    scene = SculptWheelData.get(context)
+    if len(st.toolsets) > 0:
+        return get_active_toolset(context)
+    ts = st.toolsets.add()
+    ts.name = "Default"
+    from .brush_assets import get_sculpt_brushes
+    for brush in get_sculpt_brushes():
+        ts.add_brush(brush)
+    scene.active_toolset_index = 0
+    return ts
+
+
+def wheel_add_custom_button_from_create(
+    context: Context,
+    create: CreateWheelCustomButton | None = None,
+) -> bool:
+    """Append a custom button from *create* (defaults to scene ``create_custom_button``)."""
+    from .custom_buttons import build_custom_button_attr
+
+    st = get_wheel_storage(context)
+    scene = SculptWheelData.get(context)
+    if len(st.custom_buttons) >= 10:
+        return False
+    src = create or scene.create_custom_button
+    attr = build_custom_button_attr(src)
+    if not attr:
+        return False
+    b = st.custom_buttons.add()
+    b.name = (src.name or "Custom").strip() or "Custom"
+    b.type = src.type
+    if src.type == "POPUP":
+        b.popup_type = src.popup_type
+    else:
+        b.popup_type = "NONE"
+    b.attr = attr
+    ip = src.image_path
+    if ip.startswith("//"):
+        ip = bpy_abspath(ip)
+    b.image_path = ip
+    return True
+
+
+def wheel_remove_custom_button(context: Context, index: int) -> None:
+    st = get_wheel_storage(context)
+    if 0 <= index < len(st.custom_buttons):
+        st.custom_buttons.remove(index)
+
+
+def wheel_remove_all_custom_buttons(context: Context) -> None:
+    st = get_wheel_storage(context)
+    while len(st.custom_buttons) > 0:
+        st.custom_buttons.remove(0)
+
+
+WheelToolset.pg_parent = SculptWheelStorage
+WheelCustomButton.pg_parent = SculptWheelStorage
 CreateWheelCustomButton.pg_parent = SculptWheelData

@@ -7,7 +7,13 @@ from bpy.types import Context, Panel, UILayout
 
 from ..core import bl_types
 
-from .data import SculptWheelData, WheelToolset
+from .data import (
+    SculptWheelData,
+    WheelToolset,
+    ensure_default_toolset,
+    get_wheel_storage,
+    get_active_toolset,
+)
 from .brush_assets import find_brush_for_slot
 
 
@@ -49,9 +55,10 @@ class SculptWheelSidebarPanel(bl_types.PanelPresets.VIEW_3D_SIDEBAR):
     @classmethod
     def draw_ui(cls, context: Context, layout: UILayout) -> None:
         data = SculptWheelData.get(context)
-        data.ensure_default_toolset(context)
+        st = get_wheel_storage(context)
+        ensure_default_toolset(context)
 
-        if len(data.toolsets) == 0:
+        if len(st.toolsets) == 0:
             layout.label(text="No brush sets")
             return
 
@@ -59,7 +66,7 @@ class SculptWheelSidebarPanel(bl_types.PanelPresets.VIEW_3D_SIDEBAR):
         box = layout.box()
         box.label(text="Brush Sets", icon='OUTLINER')
         col = box.column(align=True)
-        for i, ts in enumerate(data.toolsets):
+        for i, ts in enumerate(st.toolsets):
             row = col.row(align=True)
             icon = 'RADIOBUT_ON' if i == data.active_toolset_index else 'RADIOBUT_OFF'
             op = row.operator(
@@ -74,7 +81,7 @@ class SculptWheelSidebarPanel(bl_types.PanelPresets.VIEW_3D_SIDEBAR):
         row.operator("sculpt_plus.wheeladdtoolset", text="", icon='ADD')
         row.operator("sculpt_plus.wheelremovetoolset", text="", icon='TRASH')
 
-        ts: WheelToolset | None = data.active_toolset
+        ts: WheelToolset | None = get_active_toolset(context)
         if ts is None:
             return
 
@@ -124,8 +131,8 @@ class SculptWheelSidebarPanel(bl_types.PanelPresets.VIEW_3D_SIDEBAR):
                     col.prop(create, "custom_panel")
         row = cbox.row(align=True)
         row.operator("sculpt_plus.wheeladdcustombutton", icon='ADD')
-        if len(data.custom_buttons) > 0:
-            for i, cb in enumerate(data.custom_buttons):
+        if len(st.custom_buttons) > 0:
+            for i, cb in enumerate(st.custom_buttons):
                 r = cbox.row(align=True)
                 r.label(text=f"{i}: {cb.name}")
                 rm = r.operator("sculpt_plus.wheelremovecustombutton", text="", icon='X')

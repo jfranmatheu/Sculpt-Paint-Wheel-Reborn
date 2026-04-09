@@ -24,7 +24,13 @@ from ..core import bl_types
 from ..core.utils.op_return import OpReturn
 from ..core.utils.mouse_utils import ModalMouse
 
-from .data import SculptWheelData, WheelToolset
+from .data import (
+    SculptWheelData,
+    WheelToolset,
+    SculptWheelStorage,
+    get_wheel_storage,
+    ensure_default_toolset,
+)
 from .gpu_utils import (
     compute_slot_radius,
     compute_slot_positions,
@@ -142,6 +148,7 @@ class SculptWheelOperator(bl_types.OperatorModal):
     _on_release_select: bool = False
     _can_close: bool = False
     _wheel_data: SculptWheelData | None = None
+    _wheel_storage: SculptWheelStorage | None = None
     _gesture_invert: bool = False
     _gesture_preview: str = 'SIMPLE'
 
@@ -191,8 +198,9 @@ class SculptWheelOperator(bl_types.OperatorModal):
         self.wheel_center_x = float(event.mouse_region_x)
         self.wheel_center_y = float(event.mouse_region_y)
 
+        self._wheel_storage = get_wheel_storage(context)
         self._wheel_data = SculptWheelData.get(context)
-        self._wheel_data.ensure_default_toolset(context)
+        ensure_default_toolset(context)
 
         self._sync_active_brush(context)
         self.wheel_ui_mode = 'PICKER'
@@ -255,7 +263,7 @@ class SculptWheelOperator(bl_types.OperatorModal):
 
         if self._custom_press_idx >= 0 and event.type == 'LEFTMOUSE' and event.value == 'RELEASE':
             if self.hover_custom_index == self._custom_press_idx:
-                btn = self._wheel_data.custom_buttons[self._custom_press_idx]
+                btn = self._wheel_storage.custom_buttons[self._custom_press_idx]
                 invoke_wheel_custom_button(context, btn)
             self._custom_press_idx = -1
             context.region.tag_redraw()
@@ -422,10 +430,15 @@ class SculptWheelOperator(bl_types.OperatorModal):
 
     def _rebuild_layout(self) -> None:
         cx, cy = self.wheel_center_x, self.wheel_center_y
-        ts = self._wheel_data.active_toolset
+        st = self._wheel_storage
+        wd = self._wheel_data
+        ts = None
+        if st is not None and wd is not None and len(st.toolsets) > 0:
+            idx = min(wd.active_toolset_index, len(st.toolsets) - 1)
+            ts = st.toolsets[idx]
         self.active_toolset = ts
-        self.active_toolset_idx = self._wheel_data.active_toolset_index
-        self.toolset_count = len(self._wheel_data.toolsets)
+        self.active_toolset_idx = wd.active_toolset_index if wd is not None else 0
+        self.toolset_count = len(st.toolsets) if st is not None else 0
 
         rad = 16.0 * self.wheel_radius / 180.0
         self.edit_toggle_radius = rad
@@ -446,7 +459,7 @@ class SculptWheelOperator(bl_types.OperatorModal):
             self.slot_radius = compute_slot_radius(ring_radius, count)
             self.slot_positions = compute_slot_positions(cx, cy, ring_radius, count)
 
-        n_cb = len(self._wheel_data.custom_buttons)
+        n_cb = len(st.custom_buttons) if st is not None else 0
         if n_cb > 0:
             layout_n = compute_custom_button_layout_count(n_cb)
             self.custom_layout_n = layout_n

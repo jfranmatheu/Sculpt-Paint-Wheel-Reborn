@@ -1,10 +1,13 @@
-from bpy.props import BoolProperty, IntProperty, FloatProperty, EnumProperty
+from bpy.props import BoolProperty, IntProperty, FloatProperty, EnumProperty, PointerProperty
 from bpy.types import Context, UILayout
 
 from .core import bl_types
+from .sculpt_wheel.data import SculptWheelStorage
 
 
 class SculptPlusPreferences(bl_types.AddonPreferences):
+
+    sculpt_wheel_storage: PointerProperty(type=SculptWheelStorage)
 
     # -- Sculpt Wheel settings --
     wheel_radius: IntProperty(

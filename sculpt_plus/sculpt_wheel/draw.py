@@ -122,8 +122,8 @@ def _draw_gesture_pad(context: Context, op: 'SculptWheelOperator', cx: float, cy
 
 def _draw_custom_buttons(op: 'SculptWheelOperator', cx: float, cy: float, icon_scale: float) -> None:
     """Pie ring (DiRNGS_SPLITANG) + icons on the tarta radius (legacy px/sculpt.py order)."""
-    data = op._wheel_data
-    if data is None or len(data.custom_buttons) == 0:
+    st = getattr(op, "_wheel_storage", None)
+    if st is None or len(st.custom_buttons) == 0:
         return
     layout_n = op.custom_layout_n
     if layout_n <= 0 or op.tarta_ring_outer_radius <= 0.0:
@@ -155,7 +155,7 @@ def _draw_custom_buttons(op: 'SculptWheelOperator', cx: float, cy: float, icon_s
         bid = op.custom_layout_map[i]
         if bid < 0:
             continue
-        btn = data.custom_buttons[bid]
+        btn = st.custom_buttons[bid]
         is_hov = bid == op.hover_custom_index
         tex = get_custom_button_texture(btn.image_path)
         if tex is not None:

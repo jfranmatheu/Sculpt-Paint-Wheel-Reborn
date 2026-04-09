@@ -7,7 +7,7 @@ from bpy.types import Context
 
 from ..core import bl_types
 
-from .data import SculptWheelData
+from .data import SculptWheelData, get_wheel_storage, get_active_toolset
 from .brush_assets import (
     get_active_sculpt_brush,
     get_brush_asset_ref,
@@ -35,8 +35,7 @@ class WheelAddActiveBrush(bl_types.Operator):
         if brush is None:
             self.report({'ERROR'}, "No active sculpt brush")
             return {'CANCELLED'}
-        data = SculptWheelData.get(context)
-        ts = data.active_toolset
+        ts = get_active_toolset(context)
         if ts is None:
             self.report({'ERROR'}, "No brush set — use New Brush Set")
             return {'CANCELLED'}
@@ -63,10 +62,11 @@ class WheelAddToolset(bl_types.Operator):
         return context.mode == 'SCULPT'
 
     def execute(self, context: Context) -> set[str]:
+        st = get_wheel_storage(context)
         data = SculptWheelData.get(context)
-        ts = data.toolsets.add()
-        ts.name = f"Set {len(data.toolsets)}"
-        data.active_toolset_index = len(data.toolsets) - 1
+        ts = st.toolsets.add()
+        ts.name = f"Set {len(st.toolsets)}"
+        data.active_toolset_index = len(st.toolsets) - 1
         self.report({'INFO'}, f"Created {ts.name}")
         return {'FINISHED'}
 
@@ -84,8 +84,9 @@ class WheelSelectToolset(bl_types.Operator):
         return context.mode == 'SCULPT'
 
     def execute(self, context: Context) -> set[str]:
+        st = get_wheel_storage(context)
         data = SculptWheelData.get(context)
-        if self.index < 0 or self.index >= len(data.toolsets):
+        if self.index < 0 or self.index >= len(st.toolsets):
             return {'CANCELLED'}
         data.active_toolset_index = self.index
         return {'FINISHED'}
@@ -104,8 +105,7 @@ class WheelRemoveBrushSlot(bl_types.Operator):
         return context.mode == 'SCULPT'
 
     def execute(self, context: Context) -> set[str]:
-        data = SculptWheelData.get(context)
-        ts = data.active_toolset
+        ts = get_active_toolset(context)
         if ts is None:
             return {'CANCELLED'}
         if self.index < 0 or self.index >= len(ts.slots):
@@ -125,17 +125,18 @@ class WheelRemoveToolset(bl_types.Operator):
     def poll_operator(cls, context: Context) -> bool | str:
         if context.mode != 'SCULPT':
             return False
-        data = SculptWheelData.get(context)
-        if len(data.toolsets) <= 1:
+        st = get_wheel_storage(context)
+        if len(st.toolsets) <= 1:
             return "Keep at least one brush set"
         return True
 
     def execute(self, context: Context) -> set[str]:
+        st = get_wheel_storage(context)
         data = SculptWheelData.get(context)
-        if len(data.toolsets) <= 1:
+        if len(st.toolsets) <= 1:
             return {'CANCELLED'}
-        idx = min(data.active_toolset_index, len(data.toolsets) - 1)
-        data.toolsets.remove(idx)
-        if data.active_toolset_index >= len(data.toolsets):
-            data.active_toolset_index = len(data.toolsets) - 1
+        idx = min(data.active_toolset_index, len(st.toolsets) - 1)
+        st.toolsets.remove(idx)
+        if data.active_toolset_index >= len(st.toolsets):
+            data.active_toolset_index = len(st.toolsets) - 1
         return {'FINISHED'}

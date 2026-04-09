@@ -10,7 +10,12 @@ from bpy.types import Context
 
 from ..core import bl_types
 
-from .data import SculptWheelData
+from .data import (
+    SculptWheelData,
+    get_wheel_storage,
+    wheel_add_custom_button_from_create,
+    wheel_remove_custom_button,
+)
 
 
 class WheelAddCustomButton(bl_types.Operator):
@@ -29,6 +34,7 @@ class WheelAddCustomButton(bl_types.Operator):
     def execute(self, context: Context) -> set[str]:
         data = SculptWheelData.get(context)
         create = data.create_custom_button
+        st = get_wheel_storage(context)
         if not create.name or create.name.isspace():
             self.report({'WARNING'}, "Button name is not valid")
             return {'CANCELLED'}
@@ -38,7 +44,7 @@ class WheelAddCustomButton(bl_types.Operator):
         if not path or not os.path.isfile(path):
             self.report({'WARNING'}, "Image path is not valid")
             return {'CANCELLED'}
-        if len(data.custom_buttons) >= 10:
+        if len(st.custom_buttons) >= 10:
             self.report({'WARNING'}, "Maximum 10 custom buttons")
             return {'CANCELLED'}
         if create.type == 'POPUP':
@@ -58,7 +64,7 @@ class WheelAddCustomButton(bl_types.Operator):
                 self.report({'WARNING'}, "Custom operator code should call bpy.ops.…")
                 return {'CANCELLED'}
 
-        if not data.add_custom_button_from_create(create):
+        if not wheel_add_custom_button_from_create(context, create):
             self.report({'WARNING'}, "Could not build this button (check fields)")
             return {'CANCELLED'}
         self.report({'INFO'}, f"Added custom button {create.name!r}")
@@ -80,6 +86,5 @@ class WheelRemoveCustomButton(bl_types.Operator):
     def execute(self, context: Context) -> set[str]:
         if self.index < 0:
             return {'CANCELLED'}
-        data = SculptWheelData.get(context)
-        data.remove_custom_button(self.index)
+        wheel_remove_custom_button(context, self.index)
         return {'FINISHED'}
