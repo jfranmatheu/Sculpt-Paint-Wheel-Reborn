@@ -1,15 +1,33 @@
 """Sculpt Wheel data model -- PropertyGroups for brush slots and toolsets."""
 
+from bpy.path import abspath as bpy_abspath
+
 from bpy.props import (
     StringProperty,
     IntProperty,
     FloatVectorProperty,
     CollectionProperty,
     BoolProperty,
+    EnumProperty,
+    PointerProperty,
 )
 from bpy.types import Context
 
 from ..core import bl_types
+
+from .presets import preset_menus, preset_panels, preset_operators
+
+
+def _enum_preset_menus(self, context):
+    return [(a, b, c or "") for a, b, c in preset_menus]
+
+
+def _enum_preset_panels(self, context):
+    return [(a, b, c or "") for a, b, c in preset_panels]
+
+
+def _enum_preset_operators(self, context):
+    return [(a, b, c or "") for a, b, c in preset_operators]
 
 
 class WheelBrushSlot(bl_types.PropertyGroup):
@@ -77,6 +95,34 @@ class WheelToolset(bl_types.PropertyGroup):
     def move_slot(self, from_idx: int, to_idx: int) -> None:
         self.slots.move(from_idx, to_idx)
 
+    def swap_slots(self, a: int, b: int) -> None:
+        """Swap two brush slots (order in the wheel)."""
+        if a == b:
+            return
+        n = len(self.slots)
+        if not (0 <= a < n and 0 <= b < n):
+            return
+        sa = self.slots[a]
+        sb = self.slots[b]
+        fields = (
+            "asset_library_type",
+            "asset_library_identifier",
+            "relative_asset_identifier",
+            "display_name",
+        )
+        tmp = {f: getattr(sa, f) for f in fields}
+        tmp_color = tuple(sa.slot_color)
+        for f in fields:
+            setattr(sa, f, getattr(sb, f))
+        sa.slot_color = tuple(sb.slot_color)
+        for f in fields:
+            setattr(sb, f, tmp[f])
+        sb.slot_color = tmp_color
+        if self.active_slot_index == a:
+            self.active_slot_index = b
+        elif self.active_slot_index == b:
+            self.active_slot_index = a
+
     def select_slot(self, context: Context, index: int) -> bool:
         """Activate the brush at *index*. Returns True on success."""
         if index < 0 or index >= len(self.slots):
@@ -92,12 +138,106 @@ class WheelToolset(bl_types.PropertyGroup):
 WheelBrushSlot.pg_parent = WheelToolset
 
 
+class WheelCustomButton(bl_types.PropertyGroup):
+    """User-defined action on the inner ring of the wheel."""
+
+    pg_parent = None  # SculptWheelData
+
+    name: StringProperty(name="Name", default="Custom")
+    type: EnumProperty(
+        name="Action Type",
+        items=(
+            ("OPERATOR", "Operator", "Run Python / preset operator"),
+            ("POPUP", "Popup", "Open a menu or panel"),
+        ),
+    )
+    popup_type: EnumProperty(
+        name="Popup Kind",
+        items=(
+            ("NONE", "—", "Not used for operators"),
+            ("MENU", "Menu", ""),
+            ("PANEL", "Panel", ""),
+        ),
+        default="NONE",
+    )
+    attr: StringProperty(name="Payload", default="", maxlen=4096)
+    image_path: StringProperty(name="Icon Path", default="", subtype="FILE_PATH")
+
+
+class CreateWheelCustomButton(bl_types.PropertyGroup):
+    """Temporary settings used when adding a custom button from the sidebar."""
+
+    pg_parent = None  # SculptWheelData
+
+    name: StringProperty(name="Name", default="Button")
+    image_path: StringProperty(name="Icon Image", default="", subtype="FILE_PATH")
+
+    type: EnumProperty(
+        name="Type",
+        items=(
+            ("OPERATOR", "Operator", ""),
+            ("POPUP", "Popup", ""),
+        ),
+    )
+    operator_type: EnumProperty(
+        name="Operator",
+        items=(
+            ("PRESET", "Preset", ""),
+            ("CUSTOM", "Custom", ""),
+        ),
+        default="PRESET",
+    )
+    preset_operator: EnumProperty(name="Preset Operator", items=_enum_preset_operators)
+    custom_operator: StringProperty(
+        name="Custom Code",
+        default="bpy.ops.sculpt.brush_stroke()",
+        maxlen=2048,
+    )
+
+    popup_type: EnumProperty(
+        name="Popup",
+        items=(
+            ("MENU", "Menu", ""),
+            ("PANEL", "Panel", ""),
+        ),
+        default="MENU",
+    )
+    menu_source: EnumProperty(
+        name="Menu Source",
+        items=(
+            ("PRESET", "Preset", ""),
+            ("CUSTOM", "Custom", ""),
+        ),
+        default="PRESET",
+    )
+    preset_menu: EnumProperty(name="Preset Menu", items=_enum_preset_menus)
+    custom_menu: StringProperty(name="Menu ID", default="VIEW3D_MT_sculpt", maxlen=256)
+
+    panel_source: EnumProperty(
+        name="Panel Source",
+        items=(
+            ("PRESET", "Preset", ""),
+            ("CUSTOM", "Custom", ""),
+        ),
+        default="PRESET",
+    )
+    preset_panel: EnumProperty(name="Preset Panel", items=_enum_preset_panels)
+    custom_panel: StringProperty(
+        name="Panel ID",
+        default="VIEW3D_PT_tools_brush_settings_advanced",
+        maxlen=256,
+    )
+
+
 class SculptWheelData(bl_types.PropertyGroupRoot.SCENE):
     """Root scene-level data for the sculpt wheel."""
 
     toolsets: CollectionProperty(type=WheelToolset)
     active_toolset_index: IntProperty(name="Active Toolset", default=0, min=0)
     initialized: BoolProperty(default=False)
+
+    custom_buttons: CollectionProperty(type=WheelCustomButton)
+    create_custom_button: PointerProperty(type=CreateWheelCustomButton)
 
     @property
     def active_toolset(self) -> WheelToolset | None:
@@ -118,5 +258,39 @@ class SculptWheelData(bl_types.PropertyGroupRoot.SCENE):
         self.initialized = True
         return ts
 
+    def add_custom_button_from_create(self, create: CreateWheelCustomButton | None = None) -> bool:
+        """Append a custom button from *create* (defaults to ``create_custom_button``)."""
+        from .custom_buttons import build_custom_button_attr
+
+        if len(self.custom_buttons) >= 10:
+            return False
+        src = create or self.create_custom_button
+        attr = build_custom_button_attr(src)
+        if not attr:
+            return False
+        b = self.custom_buttons.add()
+        b.name = (src.name or "Custom").strip() or "Custom"
+        b.type = src.type
+        if src.type == "POPUP":
+            b.popup_type = src.popup_type
+        else:
+            b.popup_type = "NONE"
+        b.attr = attr
+        ip = src.image_path
+        if ip.startswith("//"):
+            ip = bpy_abspath(ip)
+        b.image_path = ip
+        return True
+
+    def remove_custom_button(self, index: int) -> None:
+        if 0 <= index < len(self.custom_buttons):
+            self.custom_buttons.remove(index)
+
+    def remove_all_custom_buttons(self) -> None:
+        while len(self.custom_buttons) > 0:
+            self.custom_buttons.remove(0)
+
 
 WheelToolset.pg_parent = SculptWheelData
+WheelCustomButton.pg_parent = SculptWheelData
+CreateWheelCustomButton.pg_parent = SculptWheelData

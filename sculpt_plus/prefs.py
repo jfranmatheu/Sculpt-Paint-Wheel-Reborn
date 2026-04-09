@@ -1,4 +1,4 @@
-from bpy.props import BoolProperty, IntProperty, FloatProperty
+from bpy.props import BoolProperty, IntProperty, FloatProperty, EnumProperty
 from bpy.types import Context, UILayout
 
 from .core import bl_types
@@ -32,6 +32,25 @@ class SculptPlusPreferences(bl_types.AddonPreferences):
         description="Select the hovered brush when the trigger key is released instead of clicking",
         default=False,
     )
+    wheel_gesture_pad_radius: IntProperty(
+        name="Gesture Pad Radius",
+        description="Center circle size for size/strength drag (picker mode)",
+        min=20, max=80, default=36,
+    )
+    wheel_gesture_invert: BoolProperty(
+        name="Invert Gesture Axes",
+        description="Swap which axis controls brush size vs strength",
+        default=False,
+    )
+    wheel_gesture_preview: EnumProperty(
+        name="Gesture Overlay",
+        description="Show extra rings while adjusting size or strength",
+        items=(
+            ('SIMPLE', "Simple", "Minimal center pad"),
+            ('PREVIEW', "Preview", "Show value rings like the legacy wheel"),
+        ),
+        default='SIMPLE',
+    )
 
     def draw_ui(self, context: Context, layout: UILayout):
         layout.label(text="Sculpt+ Preferences")
@@ -45,3 +64,7 @@ class SculptPlusPreferences(bl_types.AddonPreferences):
         col.separator()
         col.prop(self, "wheel_keep_open")
         col.prop(self, "wheel_on_release_select")
+        col.separator()
+        col.prop(self, "wheel_gesture_pad_radius")
+        col.prop(self, "wheel_gesture_invert")
+        col.prop(self, "wheel_gesture_preview")

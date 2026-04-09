@@ -265,3 +265,18 @@ def compute_slot_positions(
         y = cy + ring_radius * sin(angle)
         positions.append((x, y))
     return positions
+
+
+def compute_custom_button_layout_count(num_buttons: int) -> int:
+    """Even layout count between 4 and 10 (legacy wheel “tarta” spacing)."""
+    if num_buttons <= 0:
+        return 0
+    n = min(10, max(4, num_buttons))
+    if n % 2:
+        n += 1
+    return n
+
+
+def map_custom_layout_indices(layout_count: int, num_buttons: int) -> list[int]:
+    """For each layout slot, index into ``custom_buttons`` or -1 if empty pad."""
+    return [i if i < num_buttons else -1 for i in range(layout_count)]

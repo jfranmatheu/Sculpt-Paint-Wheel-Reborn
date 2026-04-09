@@ -92,3 +92,41 @@ class SculptWheelSidebarPanel(bl_types.PanelPresets.VIEW_3D_SIDEBAR):
         if ts.active_slot_index >= 0 and ts.active_slot_index < len(ts.slots):
             rm = add_row.operator("sculpt_plus.wheelremovebrushslot", text="", icon='X')
             rm.index = ts.active_slot_index
+
+        # --- Custom buttons (inner ring) ---
+        cbox = layout.box()
+        cbox.label(text="Custom buttons", icon='SETTINGS')
+        cbox.label(text="Up to 10 actions with icons on the wheel center ring.")
+        create = data.create_custom_button
+        col = cbox.column(align=True)
+        col.prop(create, "name")
+        col.prop(create, "image_path")
+        col.prop(create, "type")
+        if create.type == 'OPERATOR':
+            col.prop(create, "operator_type")
+            if create.operator_type == 'PRESET':
+                col.prop(create, "preset_operator")
+            else:
+                col.prop(create, "custom_operator", text="Code")
+        else:
+            col.prop(create, "popup_type")
+            if create.popup_type == 'MENU':
+                col.prop(create, "menu_source")
+                if create.menu_source == 'PRESET':
+                    col.prop(create, "preset_menu")
+                else:
+                    col.prop(create, "custom_menu")
+            else:
+                col.prop(create, "panel_source")
+                if create.panel_source == 'PRESET':
+                    col.prop(create, "preset_panel")
+                else:
+                    col.prop(create, "custom_panel")
+        row = cbox.row(align=True)
+        row.operator("sculpt_plus.wheeladdcustombutton", icon='ADD')
+        if len(data.custom_buttons) > 0:
+            for i, cb in enumerate(data.custom_buttons):
+                r = cbox.row(align=True)
+                r.label(text=f"{i}: {cb.name}")
+                rm = r.operator("sculpt_plus.wheelremovecustombutton", text="", icon='X')
+                rm.index = i
