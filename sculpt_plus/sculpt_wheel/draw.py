@@ -26,23 +26,34 @@ if TYPE_CHECKING:
     from .op_sculpt_wheel import SculptWheelOperator
 
 
-# Reference wheel: outer ~#1A1A1A, pie ~#333, pad ~#555, active gold ~#F0C040
-COL_BASE = (0.102, 0.102, 0.102, 0.94)
-COL_BASE_RING = (0.48, 0.48, 0.50, 0.55)
-COL_SLOT_BG = (0.14, 0.14, 0.15, 0.92)
-COL_SLOT_HOVER = (0.35, 0.35, 0.38, 0.35)
-COL_SLOT_ACTIVE_RING = (0.941, 0.753, 0.251, 0.98)
-COL_SLOT_HOVER_RING = (0.72, 0.72, 0.76, 0.88)
-COL_TEXT = (0.88, 0.88, 0.90, 1.0)
-COL_PAD_LABEL = (0.78, 0.78, 0.82, 0.92)
-COL_TOOLSET_DOT = (0.55, 0.55, 0.58, 0.75)
-COL_TOOLSET_DOT_ACTIVE = (0.94, 0.78, 0.28, 1.0)
-COL_EDIT_RING = (0.95, 0.50, 0.15, 0.92)
-COL_EDIT_RING_2 = (0.95, 0.60, 0.25, 0.88)
-COL_GESTURE_PAD = (0.333, 0.333, 0.333, 0.96)
-COL_GESTURE_HOVER = (0.40, 0.40, 0.43, 0.40)
-COL_PIE_TARTA = (0.20, 0.20, 0.20, 0.96)
-COL_PIE_OUTLINE = (0.70, 0.70, 0.74, 0.92)
+# Dark-mode wheel: near-black base, cool-neutral grays, muted accents (no harsh whites).
+COL_BASE = (0.075, 0.078, 0.085, 0.97)
+COL_BASE_RING = (0.28, 0.30, 0.34, 0.38)
+COL_WHEEL_RING_SOFT_OUT = (0.22, 0.24, 0.28, 0.45)
+COL_WHEEL_RING_SOFT_IN = (0.08, 0.085, 0.095, 0.72)
+COL_SLOT_BG = (0.10, 0.105, 0.12, 0.88)
+COL_SLOT_HOVER = (0.20, 0.22, 0.28, 0.42)
+COL_SLOT_ACTIVE_RING = (0.78, 0.62, 0.22, 0.92)
+COL_SLOT_HOVER_RING = (0.40, 0.44, 0.50, 0.62)
+COL_SLOT_RING = (0.16, 0.16, 0.2, 0.97)
+COL_TEXT = (0.70, 0.72, 0.76, 0.98)
+COL_PAD_LABEL = (0.52, 0.54, 0.58, 0.82)
+COL_TOOLSET_DOT = (0.32, 0.34, 0.38, 0.55)
+COL_TOOLSET_DOT_ACTIVE = (0.72, 0.60, 0.26, 0.88)
+COL_EDIT_RING = (0.62, 0.38, 0.20, 0.72)
+COL_EDIT_RING_2 = (0.52, 0.32, 0.18, 0.58)
+COL_GESTURE_PAD = (0.16, 0.165, 0.18, 0.95)
+COL_GESTURE_HOVER = (0.24, 0.26, 0.30, 0.48)
+COL_PAD_RING = (0.36, 0.38, 0.42, 0.55)
+COL_PAD_ACCENT_DRAG = (0.48, 0.46, 0.34, 0.55)
+COL_PAD_ACCENT_HOVER = (0.42, 0.40, 0.34, 0.48)
+COL_PIE_TARTA = (0.22, 0.225, 0.24, 0.97)
+COL_PIE_OUTLINE = (0.40, 0.42, 0.46, 0.62)
+COL_EDIT_TOGGLE_FILL = (0.18, 0.185, 0.20, 0.90)
+COL_EDIT_TOGGLE_RING = (0.38, 0.40, 0.44, 0.65)
+COL_GESTURE_OVR_SIZE = (0.42, 0.52, 0.62, 0.55)
+COL_GESTURE_OVR_TRACK = (0.34, 0.36, 0.40, 0.38)
+COL_GESTURE_OVR_VALUE = (0.62, 0.55, 0.28, 0.58)
 
 
 def draw_wheel(context: Context, op: 'SculptWheelOperator') -> None:
@@ -66,8 +77,8 @@ def draw_wheel(context: Context, op: 'SculptWheelOperator') -> None:
             draw_ring(cx, cy, radius - 6.0, COL_EDIT_RING_2, thickness=1.5, softness=0.008)
         else:
             draw_ring(cx, cy, radius, COL_BASE_RING, thickness=1.2, softness=0.008)
-            draw_ring_blr_gamma(cx, cy, max(8.0, radius - 6.0), 0.02, 0.01, (0.38, 0.38, 0.40, 0.88))
-            draw_ring_blr_gamma(cx, cy, max(6.0, radius - 8.0), 0.02, 0.01, (0.12, 0.12, 0.13, 0.90))
+            draw_ring_blr_gamma(cx, cy, max(8.0, radius - 6.0), 0.02, 0.01, COL_WHEEL_RING_SOFT_OUT)
+            draw_ring_blr_gamma(cx, cy, max(6.0, radius - 8.0), 0.02, 0.01, COL_WHEEL_RING_SOFT_IN)
 
         _draw_gesture_pad(context, op, cx, cy)
         _draw_custom_buttons(op, cx, cy, icon_scale)
@@ -86,11 +97,11 @@ def _draw_gesture_pad(context: Context, op: 'SculptWheelOperator', cx: float, cy
     draw_circle_fill(cx, cy, r, COL_GESTURE_PAD, softness=0.018)
     if op.hover_gesture_pad and op.wheel_ui_mode == 'PICKER':
         draw_circle_fill(cx, cy, r, COL_GESTURE_HOVER, softness=0.022)
-    draw_ring_blr_gamma(cx, cy, r, 0.05, 0.02, (0.72, 0.72, 0.76, 0.95))
+    draw_ring_blr_gamma(cx, cy, r, 0.05, 0.02, COL_PAD_RING)
     if getattr(op, "_gesture_state", None) == 'drag':
-        draw_ring_blr_gamma(cx, cy, r, 0.07, 0.012, (0.85, 0.82, 0.45, 0.9))
+        draw_ring_blr_gamma(cx, cy, r, 0.07, 0.012, COL_PAD_ACCENT_DRAG)
     elif op.hover_gesture_pad and op.wheel_ui_mode == 'PICKER':
-        draw_ring_blr_gamma(cx, cy, r, 0.07, 0.012, (0.88, 0.86, 0.55, 0.88))
+        draw_ring_blr_gamma(cx, cy, r, 0.07, 0.012, COL_PAD_ACCENT_HOVER)
 
     brush = context.tool_settings.sculpt.brush
     if (
@@ -101,7 +112,7 @@ def _draw_gesture_pad(context: Context, op: 'SculptWheelOperator', cx: float, cy
         draw_text(
             "PAD",
             cx,
-            cy,
+            cy-0.1*r,
             size=max(12.0, r * 0.36),
             color=COL_PAD_LABEL,
             align='CENTER',
@@ -195,6 +206,8 @@ def _draw_slots(
             draw_ring(sx, sy, slot_radius, COL_SLOT_ACTIVE_RING, thickness=2.0, softness=0.012)
         elif is_hovered:
             draw_ring(sx, sy, slot_radius, COL_SLOT_HOVER_RING, thickness=1.5, softness=0.012)
+        else:
+            draw_ring(sx, sy, slot_radius, COL_SLOT_RING, thickness=1.0, softness=0.012)
 
         if edit and is_hovered:
             draw_ring(sx, sy, slot_radius * 0.55, (1.0, 0.85, 0.2, 0.7), thickness=2.0, softness=0.02)
@@ -232,8 +245,8 @@ def _draw_toolset_dots(
 def _draw_edit_toggle(op: 'SculptWheelOperator') -> None:
     tx, ty = op.edit_toggle_x, op.edit_toggle_y
     tr = op.edit_toggle_radius
-    draw_circle_fill(tx, ty, tr, (0.26, 0.26, 0.28, 0.88), softness=0.04)
-    draw_ring(tx, ty, tr, (0.62, 0.62, 0.66, 0.92), thickness=1.2, softness=0.03)
+    draw_circle_fill(tx, ty, tr, COL_EDIT_TOGGLE_FILL, softness=0.04)
+    draw_ring(tx, ty, tr, COL_EDIT_TOGGLE_RING, thickness=1.2, softness=0.03)
     label = "Ed" if op.wheel_ui_mode == 'PICKER' else "Ok"
     draw_text(label, tx, ty, size=max(9.0, tr * 0.9), color=COL_TEXT, align='CENTER', shadow=True)
 
@@ -270,8 +283,15 @@ def _draw_gesture_overlay(context: Context, op: 'SculptWheelOperator') -> None:
 
     if show_size:
         val = _overlay_brush_size(context)
-        draw_ring(cx, cy, max(1.0, val * 0.5), (0.8, 0.9, 1.0, 0.95), thickness=1.8, softness=0.02)
+        draw_ring(cx, cy, max(1.0, val * 0.5), COL_GESTURE_OVR_SIZE, thickness=1.8, softness=0.02)
     else:
         val = _overlay_brush_strength(context)
-        draw_ring(cx, cy, radius, (0.8, 0.8, 0.8, 0.45), thickness=1.4, softness=0.02)
-        draw_ring(cx, cy, radius * min(1.0, max(0.0, val / 2.0)), (1.0, 0.95, 0.35, 0.95), thickness=1.8, softness=0.02)
+        draw_ring(cx, cy, radius, COL_GESTURE_OVR_TRACK, thickness=1.4, softness=0.02)
+        draw_ring(
+            cx,
+            cy,
+            radius * min(1.0, max(0.0, val / 2.0)),
+            COL_GESTURE_OVR_VALUE,
+            thickness=1.8,
+            softness=0.02,
+        )

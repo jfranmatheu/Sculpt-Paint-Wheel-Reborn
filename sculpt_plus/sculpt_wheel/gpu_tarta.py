@@ -43,7 +43,7 @@ void main() {
     const float SEAM_W = 0.018;
     const float SPOKE_DARK = 0.22;
     const float RIM_W = 0.032;
-    const vec3 RIM_RGB = vec3(0.82, 0.82, 0.86);
+    const vec3 RIM_RGB = vec3(0.36, 0.38, 0.42);
 
     vec4 color = pieColor;
 
@@ -90,7 +90,7 @@ void main() {
     float rim_in = 1.0 - smoothstep(0.0, RIM_W, abs(radius - innerRatio));
     float rim_out = 1.0 - smoothstep(0.0, RIM_W * 1.1, abs(radius - 1.0));
     float rims = max(rim_in, rim_out);
-    color.rgb = mix(color.rgb, RIM_RGB, rims * 0.92);
+    color.rgb = mix(color.rgb, RIM_RGB, rims * 0.58);
 
     float alpha = color.a * s_mask;
     if (radius >= innerRatio && radius < innerRatio + inner_soft * 2.5) {
@@ -164,7 +164,7 @@ _shader_tex_boost: GPUShader | None = None
 
 
 def _build_pie_ring_shader() -> GPUShader:
-    iface = GPUStageInterfaceInfo("sculpt_wheel_pie_iface_v2")
+    iface = GPUStageInterfaceInfo("sculpt_wheel_pie_iface_v3_dark")
     iface.smooth("VEC2", "v_uv")
     info = GPUShaderCreateInfo()
     info.push_constant("MAT4", "ModelViewProjectionMatrix")

@@ -29,7 +29,7 @@ void main() {
     float d = length(v_uv - vec2(0.5));
     float r = 0.5;
     float edge = smoothstep(r, r - softness, d);
-    fragColor = vec4(color.rgb, color.a * edge);
+    fragColor = vec4(pow(color.rgb, vec3(2.2)), color.a * edge);
 }
 """
 
@@ -46,7 +46,7 @@ void main() {
     float outer = smoothstep(outerRadius, outerRadius - softness, d);
     float inner = smoothstep(innerRadius - softness, innerRadius, d);
     float ring = outer * inner;
-    fragColor = vec4(color.rgb, color.a * ring);
+    fragColor = vec4(pow(color.rgb, vec3(2.2)), color.a * ring);
 }
 """
 
@@ -63,7 +63,7 @@ void main() {
     float r = 0.5;
     float mask = smoothstep(r, r - softness, d);
     vec4 tex = texture(image, v_uv);
-    fragColor = vec4(tex.rgb, tex.a * mask * opacity);
+    fragColor = vec4(pow(tex.rgb, vec3(2.2)), tex.a * mask * opacity);
 }
 """
 
