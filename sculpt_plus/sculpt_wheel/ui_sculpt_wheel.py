@@ -68,6 +68,7 @@ class SculptWheelSidebarPanel(bl_types.PanelPresets.VIEW_3D_SIDEBAR):
         col = box.column(align=True)
         for i, ts in enumerate(st.toolsets):
             row = col.row(align=True)
+            row.alignment = 'LEFT'
             icon = 'RADIOBUT_ON' if i == data.active_toolset_index else 'RADIOBUT_OFF'
             op = row.operator(
                 "sculpt_plus.wheelselecttoolset",
