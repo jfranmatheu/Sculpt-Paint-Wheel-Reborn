@@ -49,6 +49,7 @@ from .custom_buttons import (
     invoke_wheel_custom_button,
     clear_custom_button_texture_cache,
 )
+from .persistence import save_wheel_storage
 from .sculpt_paint_compat import get_sculpt_unified_paint_settings
 
 
@@ -200,7 +201,7 @@ class SculptWheelOperator(bl_types.OperatorModal):
 
         self._wheel_storage = get_wheel_storage(context)
         self._wheel_data = SculptWheelData.get(context)
-        ensure_default_toolset(context)
+        # ensure_default_toolset(context)
 
         self._sync_active_brush(context)
         self.wheel_ui_mode = 'PICKER'
@@ -390,11 +391,13 @@ class SculptWheelOperator(bl_types.OperatorModal):
             return
         if not self._is_inside_disc(mx, my, self.wheel_center_x, self.wheel_center_y, self.wheel_radius):
             self.active_toolset.remove_slot(a)
+            save_wheel_storage(context)
             self._rebuild_layout()
             return
         b = self.hover_index
         if b >= 0 and b != a:
             self.active_toolset.swap_slots(a, b)
+            save_wheel_storage(context)
             self._rebuild_layout()
 
     def _hit_edit_toggle(self, mx: float, my: float) -> bool:
@@ -560,6 +563,7 @@ class SculptWheelOperator(bl_types.OperatorModal):
             return
         idx = (self._wheel_data.active_toolset_index + direction) % self.toolset_count
         self._wheel_data.active_toolset_index = idx
+        save_wheel_storage(context)
         self._sync_active_brush(context)
         self._rebuild_layout()
         self._cache_previews()

@@ -56,7 +56,7 @@ class SculptWheelSidebarPanel(bl_types.PanelPresets.VIEW_3D_SIDEBAR):
     def draw_ui(cls, context: Context, layout: UILayout) -> None:
         data = SculptWheelData.get(context)
         st = get_wheel_storage(context)
-        ensure_default_toolset(context)
+        # ensure_default_toolset(context)
 
         if len(st.toolsets) == 0:
             layout.label(text="No brush sets")
@@ -88,6 +88,11 @@ class SculptWheelSidebarPanel(bl_types.PanelPresets.VIEW_3D_SIDEBAR):
 
         name_row = layout.row(align=True)
         name_row.prop(ts, "name", text="Name")
+
+        if ts.active_slot_index >= 0 and ts.active_slot_index < len(ts.slots):
+            slot = ts.slots[ts.active_slot_index]
+            icon_row = layout.row(align=True)
+            icon_row.prop(slot, "custom_icon_path", text="Slot icon")
 
         # --- Brush slots (preview names + brush icons) ---
         list_box = layout.box()

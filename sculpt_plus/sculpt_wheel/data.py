@@ -1,5 +1,6 @@
 """Sculpt Wheel data model -- PropertyGroups for brush slots and toolsets."""
 
+import bpy
 from bpy.path import abspath as bpy_abspath
 
 from bpy.props import (
@@ -45,6 +46,12 @@ class WheelBrushSlot(bl_types.PropertyGroup):
         size=4,
         default=(0.4, 0.4, 0.4, 1.0),
         min=0.0, max=1.0,
+    )
+    custom_icon_path: StringProperty(
+        name="Custom Icon",
+        description="Optional image drawn instead of the brush preview (stored under user sculpt_plus_data)",
+        default="",
+        subtype='FILE_PATH',
     )
 
     def set_from_brush(self, brush, asset_ref=None) -> None:
@@ -110,6 +117,7 @@ class WheelToolset(bl_types.PropertyGroup):
             "asset_library_identifier",
             "relative_asset_identifier",
             "display_name",
+            "custom_icon_path",
         )
         tmp = {f: getattr(sa, f) for f in fields}
         tmp_color = tuple(sa.slot_color)
@@ -285,6 +293,8 @@ def ensure_default_toolset(context: Context) -> WheelToolset | None:
     for brush in get_sculpt_brushes():
         ts.add_brush(brush)
     scene.active_toolset_index = 0
+    from .persistence import save_wheel_storage
+    save_wheel_storage(context)
     return ts
 
 
@@ -315,6 +325,8 @@ def wheel_add_custom_button_from_create(
     if ip.startswith("//"):
         ip = bpy_abspath(ip)
     b.image_path = ip
+    from .persistence import save_wheel_storage
+    save_wheel_storage(context)
     return True
 
 
@@ -322,12 +334,31 @@ def wheel_remove_custom_button(context: Context, index: int) -> None:
     st = get_wheel_storage(context)
     if 0 <= index < len(st.custom_buttons):
         st.custom_buttons.remove(index)
+        from .persistence import save_wheel_storage
+        save_wheel_storage(context)
 
 
 def wheel_remove_all_custom_buttons(context: Context) -> None:
     st = get_wheel_storage(context)
     while len(st.custom_buttons) > 0:
         st.custom_buttons.remove(0)
+    from .persistence import save_wheel_storage
+    save_wheel_storage(context)
+
+
+def register() -> None:
+    if GLOBALS.IN_BACKGROUND:
+        return
+    from .persistence import load_wheel_storage_if_empty, schedule_load_if_empty
+
+    try:
+        load_wheel_storage_if_empty(bpy.context)
+    except Exception:
+        schedule_load_if_empty()
+
+
+def unregister() -> None:
+    pass
 
 
 WheelToolset.pg_parent = SculptWheelStorage

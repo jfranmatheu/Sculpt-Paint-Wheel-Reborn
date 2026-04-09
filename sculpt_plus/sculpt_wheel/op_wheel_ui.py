@@ -8,6 +8,7 @@ from bpy.types import Context
 from ..core import bl_types
 
 from .data import SculptWheelData, get_wheel_storage, get_active_toolset
+from .persistence import save_wheel_storage
 from .brush_assets import (
     get_active_sculpt_brush,
     get_brush_asset_ref,
@@ -46,6 +47,7 @@ class WheelAddActiveBrush(bl_types.Operator):
                 return {'CANCELLED'}
         ts.add_brush(brush, asset_ref)
         ts.active_slot_index = len(ts.slots) - 1
+        save_wheel_storage(context)
         self.report({'INFO'}, f"Added {brush.name}")
         return {'FINISHED'}
 
@@ -67,6 +69,7 @@ class WheelAddToolset(bl_types.Operator):
         ts = st.toolsets.add()
         ts.name = f"Set {len(st.toolsets)}"
         data.active_toolset_index = len(st.toolsets) - 1
+        save_wheel_storage(context)
         self.report({'INFO'}, f"Created {ts.name}")
         return {'FINISHED'}
 
@@ -89,6 +92,7 @@ class WheelSelectToolset(bl_types.Operator):
         if self.index < 0 or self.index >= len(st.toolsets):
             return {'CANCELLED'}
         data.active_toolset_index = self.index
+        save_wheel_storage(context)
         return {'FINISHED'}
 
 
@@ -111,6 +115,7 @@ class WheelRemoveBrushSlot(bl_types.Operator):
         if self.index < 0 or self.index >= len(ts.slots):
             return {'CANCELLED'}
         ts.remove_slot(self.index)
+        save_wheel_storage(context)
         return {'FINISHED'}
 
 
@@ -139,4 +144,5 @@ class WheelRemoveToolset(bl_types.Operator):
         st.toolsets.remove(idx)
         if data.active_toolset_index >= len(st.toolsets):
             data.active_toolset_index = len(st.toolsets) - 1
+        save_wheel_storage(context)
         return {'FINISHED'}

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from typing import TYPE_CHECKING
 
 from bpy.types import Context
@@ -195,12 +196,18 @@ def _draw_slots(
         if is_hovered:
             draw_circle_fill(sx, sy, slot_radius, COL_SLOT_HOVER, softness=0.015)
 
-        brush = find_brush_for_slot(slot)
-        if brush is not None:
-            tex = get_brush_preview_texture(brush)
-            if tex is not None:
-                icon_r = slot_radius * icon_scale
-                draw_textured_circle(sx, sy, icon_r, tex, opacity=1.0, softness=0.025)
+        icon_r = slot_radius * icon_scale
+        cip = (getattr(slot, "custom_icon_path", None) or "").strip()
+        if cip and os.path.isfile(cip):
+            ctex = get_custom_button_texture(cip)
+            if ctex is not None:
+                draw_textured_circle(sx, sy, icon_r, ctex, opacity=1.0, softness=0.025)
+        else:
+            brush = find_brush_for_slot(slot)
+            if brush is not None:
+                tex = get_brush_preview_texture(brush)
+                if tex is not None:
+                    draw_textured_circle(sx, sy, icon_r, tex, opacity=1.0, softness=0.025)
 
         if is_active:
             draw_ring(sx, sy, slot_radius, COL_SLOT_ACTIVE_RING, thickness=2.0, softness=0.012)
