@@ -35,31 +35,33 @@ class SculptPlusPreferences(bl_types.AddonPreferences):
         description="Select the hovered brush when the trigger key is released instead of clicking",
         default=False,
     )
-    wheel_gesture_pad_radius: IntProperty(
-        name="Gesture Pad Radius",
-        description="Center circle size for size/strength drag (picker mode)",
-        min=20, max=80, default=36,
+
+    # -- RMB sculpt gesture (click-drag right mouse in Sculpt) --
+    rmb_gesture_overlay_radius: IntProperty(
+        name="Overlay Ring Radius",
+        description="Pixel radius of the on-screen rings while adjusting size or strength",
+        min=80, max=400, default=180,
     )
-    wheel_gesture_invert: BoolProperty(
+    rmb_gesture_invert: BoolProperty(
         name="Invert Gesture Axes",
-        description="Swap which axis controls brush size vs strength",
+        description="Swap which drag axis controls brush size vs strength",
         default=False,
     )
-    wheel_gesture_preview: EnumProperty(
+    rmb_gesture_preview: EnumProperty(
         name="Gesture Overlay",
-        description="Show extra rings while adjusting size or strength",
+        description="Visual style while dragging (size / strength rings)",
         items=(
-            ('SIMPLE', "Simple", "Minimal center pad"),
-            ('PREVIEW', "Preview", "Show value rings like the legacy wheel"),
+            ("SIMPLE", "Simple", "Minimal rings"),
+            ("PREVIEW", "Preview", "Extra ring emphasis for strength display"),
         ),
-        default='SIMPLE',
+        default="SIMPLE",
     )
 
     def draw_ui(self, context: Context, layout: UILayout):
         layout.label(text="Sculpt+ Preferences")
 
         box = layout.box()
-        box.label(text="Sculpt Wheel", icon='BRUSH_DATA')
+        box.label(text="Sculpt Wheel", icon="BRUSH_DATA")
         box.label(text="Pick the active brush set on the wheel panel in the 3D Sidebar.")
         col = box.column(align=True)
         col.prop(self, "wheel_radius")
@@ -68,7 +70,13 @@ class SculptPlusPreferences(bl_types.AddonPreferences):
         col.separator()
         col.prop(self, "wheel_keep_open")
         col.prop(self, "wheel_on_release_select")
-        col.separator()
-        col.prop(self, "wheel_gesture_pad_radius")
-        col.prop(self, "wheel_gesture_invert")
-        col.prop(self, "wheel_gesture_preview")
+
+        box = layout.box()
+        box.label(text="RMB Brush Gesture", icon="MOUSE_RMB")
+        box.label(
+            text="In Sculpt mode: right-click and drag (add-on keymap) to tweak brush size and strength."
+        )
+        col = box.column(align=True)
+        col.prop(self, "rmb_gesture_overlay_radius")
+        col.prop(self, "rmb_gesture_invert")
+        col.prop(self, "rmb_gesture_preview")

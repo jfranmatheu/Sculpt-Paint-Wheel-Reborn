@@ -34,7 +34,6 @@ from .gpu_utils import (
 )
 from .brush_assets import (
     clear_preview_cache,
-    get_active_sculpt_brush,
     activate_wheel_brush_entry,
     wheel_brush_index_for_active,
     get_wheel_brush_preview_texture,
@@ -44,58 +43,6 @@ from .custom_buttons import (
     invoke_wheel_custom_button,
     clear_custom_button_texture_cache,
 )
-from .sculpt_paint_compat import get_sculpt_unified_paint_settings
-
-
-# ---------------------------------------------------------------------------
-# Brush size / strength (unified paint settings aware)
-# ---------------------------------------------------------------------------
-
-
-def _brush_size_get(context: Context) -> float:
-    ups = get_sculpt_unified_paint_settings(context)
-    brush = context.tool_settings.sculpt.brush
-    if brush is None:
-        return 1.0
-    if ups is not None and ups.use_unified_size:
-        return float(ups.size)
-    return float(brush.size)
-
-
-def _brush_size_set(context: Context, value: float) -> None:
-    v = int(max(1, min(500, round(value))))
-    ups = get_sculpt_unified_paint_settings(context)
-    brush = context.tool_settings.sculpt.brush
-    if brush is None:
-        return
-    if ups is not None and ups.use_unified_size:
-        ups.size = v
-    else:
-        brush.size = v
-
-
-def _brush_strength_get(context: Context) -> float:
-    ups = get_sculpt_unified_paint_settings(context)
-    brush = context.tool_settings.sculpt.brush
-    if brush is None:
-        return 1.0
-    if ups is not None and ups.use_unified_strength:
-        return float(ups.strength)
-    return float(brush.strength)
-
-
-def _brush_strength_set(context: Context, value: float) -> None:
-    v = float(max(0.01, min(2.0, value)))
-    ups = get_sculpt_unified_paint_settings(context)
-    brush = context.tool_settings.sculpt.brush
-    if brush is None:
-        return
-    if ups is not None and ups.use_unified_strength:
-        ups.strength = v
-    else:
-        brush.strength = v
-
-
 class SculptWheelOperator(bl_types.OperatorModal):
     """Open a radial brush wheel for quick sculpt brush selection."""
 
@@ -131,9 +78,6 @@ class SculptWheelOperator(bl_types.OperatorModal):
     icon_ring_radius: float = 0.0
     hover_custom_index: int = -1
     hover_custom_layout_slot: int = -1
-    hover_gesture_pad: bool = False
-
-    gesture_pad_radius: float = 36.0
 
     _trigger_key: str = 'SPACE'
     _keep_open: bool = False
@@ -141,16 +85,6 @@ class SculptWheelOperator(bl_types.OperatorModal):
     _can_close: bool = False
     _wheel_data: SculptWheelData | None = None
     _wheel_storage: SculptWheelStorage | None = None
-    _gesture_invert: bool = False
-    _gesture_preview: str = 'SIMPLE'
-
-    # Gesture pad drag
-    _gesture_state: str | None = None  # None | 'pending' | 'drag'
-    _gesture_axis: str | None = None  # 'X' | 'Y'
-    _gesture_origin: tuple[float, float] = (0.0, 0.0)
-    _gesture_prev: tuple[float, float] = (0.0, 0.0)
-    _saved_size: float = 0.0
-    _saved_strength: float = 0.0
 
     # Custom button click
     _custom_press_idx: int = -1
@@ -179,9 +113,6 @@ class SculptWheelOperator(bl_types.OperatorModal):
         self._keep_open = prefs.wheel_keep_open if prefs else False
         self._on_release_select = prefs.wheel_on_release_select if prefs else False
         self._can_close = not self._keep_open
-        self.gesture_pad_radius = float(prefs.wheel_gesture_pad_radius if prefs else 36)
-        self._gesture_invert = prefs.wheel_gesture_invert if prefs else False
-        self._gesture_preview = getattr(prefs, "wheel_gesture_preview", "SIMPLE") if prefs else "SIMPLE"
 
         self._trigger_key = self._detect_trigger_key(context, event)
         self.wheel_center_x = float(event.mouse_region_x)
@@ -215,31 +146,8 @@ class SculptWheelOperator(bl_types.OperatorModal):
         pass
 
     def modal_step(self, context: Context, event: Event) -> Set[str]:
-        mx, my = float(event.mouse_region_x), float(event.mouse_region_y)
-
         if event.type == 'RIGHTMOUSE' and event.value == 'PRESS':
-            if self._gesture_state is not None:
-                self._restore_gesture_values(context)
-                self._gesture_state = None
-                self._gesture_axis = None
-                self._gesture_origin = (0.0, 0.0)
-                context.region.tag_redraw()
-                return OpReturn.RUN
             return OpReturn.FINISH
-
-        if self._gesture_state == 'drag' and event.type == 'LEFTMOUSE' and event.value == 'RELEASE':
-            self._gesture_state = None
-            self._gesture_axis = None
-            self._gesture_origin = (0.0, 0.0)
-            context.region.tag_redraw()
-            return OpReturn.RUN
-
-        if self._gesture_state == 'pending' and event.type == 'LEFTMOUSE' and event.value == 'RELEASE':
-            self._gesture_state = None
-            self._gesture_axis = None
-            self._gesture_origin = (0.0, 0.0)
-            context.region.tag_redraw()
-            return OpReturn.RUN
 
         if self._custom_press_idx >= 0 and event.type == 'LEFTMOUSE' and event.value == 'RELEASE':
             if self.hover_custom_index == self._custom_press_idx:
@@ -260,14 +168,6 @@ class SculptWheelOperator(bl_types.OperatorModal):
         if event.type == 'LEFTMOUSE' and event.value == 'PRESS':
             if not self._is_inside_wheel(event):
                 return OpReturn.FINISH
-
-            if self.hover_gesture_pad and get_active_sculpt_brush(context) is not None:
-                self._saved_size = _brush_size_get(context)
-                self._saved_strength = _brush_strength_get(context)
-                self._gesture_state = 'pending'
-                self._gesture_origin = (self.wheel_center_x, self.wheel_center_y)
-                self._gesture_prev = (mx, my)
-                return OpReturn.RUN
 
             if self.hover_custom_index >= 0:
                 self._custom_press_idx = self.hover_custom_index
@@ -291,19 +191,6 @@ class SculptWheelOperator(bl_types.OperatorModal):
         self._update_hover(mx, my)
         self.active_brush_slot_index = wheel_brush_index_for_active(context, self.brushes)
 
-        if self._gesture_state == 'pending':
-            px, py = self._gesture_prev
-            if abs(my - py) > 6.0:
-                self._gesture_axis = 'Y'
-                self._gesture_state = 'drag'
-                self._gesture_prev = (mx, my)
-            elif abs(mx - px) > 6.0:
-                self._gesture_axis = 'X'
-                self._gesture_state = 'drag'
-                self._gesture_prev = (mx, my)
-        elif self._gesture_state == 'drag' and self._gesture_axis:
-            self._gesture_apply(context, event, mx, my)
-
         context.region.tag_redraw()
         return True
 
@@ -317,43 +204,9 @@ class SculptWheelOperator(bl_types.OperatorModal):
     # ------------------------------------------------------------------
 
     def _reset_interaction_state(self) -> None:
-        self._gesture_state = None
-        self._gesture_axis = None
-        self._gesture_origin = (0.0, 0.0)
         self._custom_press_idx = -1
         self.hover_custom_index = -1
         self.hover_custom_layout_slot = -1
-        self.hover_gesture_pad = False
-
-    def _restore_gesture_values(self, context: Context) -> None:
-        _brush_size_set(context, self._saved_size)
-        _brush_strength_set(context, self._saved_strength)
-
-    def _gesture_apply(self, context: Context, event: Event, mx: float, my: float) -> None:
-        axis = self._gesture_axis
-        if axis is None:
-            return
-        px, py = self._gesture_prev
-        diff = (my - py) if axis == 'Y' else (mx - px)
-        if abs(diff) < 5.0:
-            return
-        is_vert = axis == 'Y'
-        rate = 1.0 if is_vert else 0.01
-        if event.shift:
-            rate *= 0.2
-        elif event.ctrl:
-            rate *= 2.0
-        invert = self._gesture_invert
-        adjust_size = (is_vert and not invert) or (not is_vert and invert)
-        if adjust_size:
-            _brush_size_set(context, _brush_size_get(context) + rate * diff)
-        else:
-            _brush_strength_set(context, _brush_strength_get(context) + rate * diff)
-        self._gesture_prev = (mx, my)
-
-    @staticmethod
-    def _is_inside_disc(mx: float, my: float, cx: float, cy: float, r: float) -> bool:
-        return dist((mx, my), (cx, cy)) <= r
 
     @staticmethod
     def _get_prefs(context: Context):
@@ -423,7 +276,7 @@ class SculptWheelOperator(bl_types.OperatorModal):
             self.tarta_ring_outer_radius = self.wheel_radius * 0.48
             self.tarta_inner_ratio = min(
                 0.92,
-                self.gesture_pad_radius / max(self.tarta_ring_outer_radius, 1.0),
+                42.0 / max(self.tarta_ring_outer_radius, 1.0),
             )
             self.icon_ring_radius = self.tarta_ring_outer_radius * 0.72
             self.custom_radius = (
@@ -450,9 +303,9 @@ class SculptWheelOperator(bl_types.OperatorModal):
         self.hover_index = -1
         self.hover_custom_index = -1
         self.hover_custom_layout_slot = -1
-        self.hover_gesture_pad = False
 
         cx, cy = self.wheel_center_x, self.wheel_center_y
+        inner_r = min(42.0, self.wheel_radius * 0.24)
 
         for i, (sx, sy) in enumerate(self.slot_positions):
             if i >= len(self.brushes):
@@ -463,7 +316,7 @@ class SculptWheelOperator(bl_types.OperatorModal):
 
         if self.custom_layout_n > 0 and len(self.custom_layout_map) > 0:
             r_pt = math.hypot(mx - cx, my - cy)
-            if r_pt >= self.gesture_pad_radius - 1.0 and r_pt <= self.tarta_ring_outer_radius + 3.0:
+            if r_pt >= inner_r - 1.0 and r_pt <= self.tarta_ring_outer_radius + 3.0:
                 si = layout_sector_from_pointer(mx, my, cx, cy, self.custom_layout_n)
                 if 0 <= si < len(self.custom_layout_map):
                     bid = self.custom_layout_map[si]
@@ -481,9 +334,6 @@ class SculptWheelOperator(bl_types.OperatorModal):
                     self.hover_custom_index = bid
                     self.hover_custom_layout_slot = i
                     return
-
-        if dist((mx, my), (cx, cy)) <= self.gesture_pad_radius:
-            self.hover_gesture_pad = True
 
     def _is_inside_wheel(self, event: Event) -> bool:
         return dist(

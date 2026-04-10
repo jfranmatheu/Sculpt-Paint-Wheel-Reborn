@@ -20,8 +20,6 @@ from .gpu_tarta import (
 )
 from .brush_assets import get_wheel_brush_preview_texture
 from .custom_buttons import get_custom_button_texture
-from .sculpt_paint_compat import get_sculpt_unified_paint_settings
-
 if TYPE_CHECKING:
     from .op_sculpt_wheel import SculptWheelOperator
 
@@ -37,32 +35,14 @@ COL_SLOT_ACTIVE_RING = (0.78, 0.62, 0.22, 0.92)
 COL_SLOT_HOVER_RING = (0.40, 0.44, 0.50, 0.62)
 COL_SLOT_RING = (0.16, 0.16, 0.2, 0.97)
 COL_TEXT = (0.70, 0.72, 0.76, 0.98)
-COL_PAD_LABEL = (0.52, 0.54, 0.58, 0.82)
 COL_TOOLSET_DOT = (0.32, 0.34, 0.38, 0.55)
 COL_TOOLSET_DOT_ACTIVE = (0.72, 0.60, 0.26, 0.88)
-COL_EDIT_RING = (0.62, 0.38, 0.20, 0.72)
-COL_EDIT_RING_2 = (0.52, 0.32, 0.18, 0.58)
-COL_GESTURE_PAD = (0.16, 0.165, 0.18, 0.95)
-COL_GESTURE_HOVER = (0.24, 0.26, 0.30, 0.48)
-COL_PAD_RING = (0.36, 0.38, 0.42, 0.55)
-COL_PAD_ACCENT_DRAG = (0.48, 0.46, 0.34, 0.55)
-COL_PAD_ACCENT_HOVER = (0.42, 0.40, 0.34, 0.48)
 COL_PIE_TARTA = (0.22, 0.225, 0.24, 0.97)
 COL_PIE_OUTLINE = (0.40, 0.42, 0.46, 0.62)
-COL_EDIT_TOGGLE_FILL = (0.18, 0.185, 0.20, 0.90)
-COL_EDIT_TOGGLE_RING = (0.38, 0.40, 0.44, 0.65)
-COL_GESTURE_OVR_SIZE = (0.42, 0.52, 0.62, 0.55)
-COL_GESTURE_OVR_TRACK = (0.34, 0.36, 0.40, 0.38)
-COL_GESTURE_OVR_VALUE = (0.62, 0.55, 0.28, 0.58)
 
 
 def draw_wheel(context: Context, op: 'SculptWheelOperator') -> None:
     """Entry point called from the modal operator's ``draw_2d``."""
-    if op._gesture_state == 'drag' and op._gesture_axis is not None:
-        with CM_GPU_BLEND('ALPHA'):
-            _draw_gesture_overlay(context, op)
-        return
-
     cx = op.wheel_center_x
     cy = op.wheel_center_y
     radius = op.wheel_radius
@@ -76,41 +56,11 @@ def draw_wheel(context: Context, op: 'SculptWheelOperator') -> None:
         draw_ring_blr_gamma(cx, cy, max(8.0, radius - 6.0), 0.02, 0.01, COL_WHEEL_RING_SOFT_OUT)
         draw_ring_blr_gamma(cx, cy, max(6.0, radius - 8.0), 0.02, 0.01, COL_WHEEL_RING_SOFT_IN)
 
-        _draw_gesture_pad(context, op, cx, cy)
         _draw_custom_buttons(op, cx, cy, icon_scale)
         _draw_slots(context, op, cx, cy, slot_radius, icon_scale)
 
         if op.brush_set_count > 1:
             _draw_brush_set_dots(op, cx, cy, radius)
-
-
-def _draw_gesture_pad(context: Context, op: 'SculptWheelOperator', cx: float, cy: float) -> None:
-    r = op.gesture_pad_radius
-    if r <= 0:
-        return
-    draw_circle_fill(cx, cy, r, COL_GESTURE_PAD, softness=0.018)
-    if op.hover_gesture_pad:
-        draw_circle_fill(cx, cy, r, COL_GESTURE_HOVER, softness=0.022)
-    draw_ring_blr_gamma(cx, cy, r, 0.05, 0.02, COL_PAD_RING)
-    if getattr(op, "_gesture_state", None) == 'drag':
-        draw_ring_blr_gamma(cx, cy, r, 0.07, 0.012, COL_PAD_ACCENT_DRAG)
-    elif op.hover_gesture_pad:
-        draw_ring_blr_gamma(cx, cy, r, 0.07, 0.012, COL_PAD_ACCENT_HOVER)
-
-    brush = context.tool_settings.sculpt.brush
-    if (
-        brush is not None
-        and getattr(op, "_gesture_state", None) != 'drag'
-    ):
-        draw_text(
-            "PAD",
-            cx,
-            cy-0.1*r,
-            size=max(12.0, r * 0.36),
-            color=COL_PAD_LABEL,
-            align='CENTER',
-            shadow=True,
-        )
 
 
 def _draw_custom_buttons(op: 'SculptWheelOperator', cx: float, cy: float, icon_scale: float) -> None:
@@ -165,7 +115,7 @@ def _draw_custom_buttons(op: 'SculptWheelOperator', cx: float, cy: float, icon_s
 
 
 def _draw_slots(
-    context: bpy.types.Context,
+    context: Context,
     op: 'SculptWheelOperator',
     cx: float, cy: float,
     slot_radius: float,
@@ -228,49 +178,3 @@ def _draw_brush_set_dots(
         dx = start_x + i * spacing
         col = COL_TOOLSET_DOT_ACTIVE if i == active else COL_TOOLSET_DOT
         draw_circle_fill(dx, dot_y, dot_radius, col, softness=0.04)
-
-
-def _overlay_brush_size(context: Context) -> float:
-    ups = get_sculpt_unified_paint_settings(context)
-    brush = context.tool_settings.sculpt.brush
-    if brush is None:
-        return 1.0
-    if ups is not None and ups.use_unified_size:
-        return float(ups.size)
-    return float(brush.size)
-
-
-def _overlay_brush_strength(context: Context) -> float:
-    ups = get_sculpt_unified_paint_settings(context)
-    brush = context.tool_settings.sculpt.brush
-    if brush is None:
-        return 1.0
-    if ups is not None and ups.use_unified_strength:
-        return float(ups.strength)
-    return float(brush.strength)
-
-
-def _draw_gesture_overlay(context: Context, op: 'SculptWheelOperator') -> None:
-    if op._gesture_state != 'drag' or op._gesture_axis is None:
-        return
-
-    cx, cy = op._gesture_origin
-    radius = op.wheel_radius
-    is_vert = op._gesture_axis == 'Y'
-    invert = op._gesture_invert
-    show_size = (is_vert and not invert) or (not is_vert and invert)
-
-    if show_size:
-        val = _overlay_brush_size(context)
-        draw_ring(cx, cy, max(1.0, val * 0.5), COL_GESTURE_OVR_SIZE, thickness=1.8, softness=0.02)
-    else:
-        val = _overlay_brush_strength(context)
-        draw_ring(cx, cy, radius, COL_GESTURE_OVR_TRACK, thickness=1.4, softness=0.02)
-        draw_ring(
-            cx,
-            cy,
-            radius * min(1.0, max(0.0, val / 2.0)),
-            COL_GESTURE_OVR_VALUE,
-            thickness=1.8,
-            softness=0.02,
-        )
