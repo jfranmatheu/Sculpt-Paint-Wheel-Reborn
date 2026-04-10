@@ -80,7 +80,7 @@ void main() {
 
     if (hv >= 0 && sec == hv) {
         float radial = clamp((radius - innerRatio) / max(1e-5, 1.0 - innerRatio), 0.0, 1.0);
-        color.rgb = mix(color.rgb, color.rgb * 1.15, radial * 0.9);
+        color.rgb = mix(color.rgb, color.rgb * 1.75, radial * 0.9);
     }
 
     float rim_in = 1.0 - smoothstep(0.0, RIM_W, abs(radius - innerRatio));
