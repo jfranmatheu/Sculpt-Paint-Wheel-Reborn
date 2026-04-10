@@ -9,14 +9,15 @@ from bpy.types import Context
 from ..core.gpu.imm_2d import draw_text
 from ..core.gpu.state_control import CM_GPU_BLEND
 from .gpu_utils import (
+    draw_annulus,
     draw_circle_fill,
     draw_ring,
     draw_textured_circle,
+    draw_textured_quad,
 )
 from .gpu_tarta import (
     draw_pie_split_ring,
     draw_ring_blr_gamma,
-    draw_textured_circle_boost,
 )
 from .brush_assets import get_wheel_brush_preview_texture
 from .custom_buttons import get_custom_button_texture
@@ -41,6 +42,13 @@ COL_PIE_TARTA = (0.22, 0.225, 0.24, 0.97)
 COL_PIE_OUTLINE = (0.40, 0.42, 0.46, 0.62)
 
 
+def _wheel_inner_radius(op: "SculptWheelOperator", wheel_r: float) -> float:
+    """Inner edge of the main wheel ring: flush with tarta outer when present."""
+    if getattr(op, "tarta_ring_outer_radius", 0.0) > 1.0:
+        return float(op.tarta_ring_outer_radius)
+    return max(28.0, wheel_r * 0.30)
+
+
 def draw_wheel(context: Context, op: 'SculptWheelOperator') -> None:
     """Entry point called from the modal operator's ``draw_2d``."""
     cx = op.wheel_center_x
@@ -48,13 +56,19 @@ def draw_wheel(context: Context, op: 'SculptWheelOperator') -> None:
     radius = op.wheel_radius
     slot_radius = op.slot_radius
     icon_scale = op.icon_scale
+    inner_r = _wheel_inner_radius(op, radius)
+    inner_r = min(inner_r, radius - 32.0)
 
     with CM_GPU_BLEND('ALPHA'):
-        draw_circle_fill(cx, cy, radius, COL_BASE, softness=0.005)
+        if inner_r < radius - 1.0:
+            draw_annulus(cx, cy, radius, max(0.0, inner_r), COL_BASE)
 
-        draw_ring(cx, cy, radius, COL_BASE_RING, thickness=1.2, softness=0.008)
-        draw_ring_blr_gamma(cx, cy, max(8.0, radius - 6.0), 0.02, 0.01, COL_WHEEL_RING_SOFT_OUT)
-        draw_ring_blr_gamma(cx, cy, max(6.0, radius - 8.0), 0.02, 0.01, COL_WHEEL_RING_SOFT_IN)
+        draw_ring(cx, cy, radius, COL_BASE_RING, thickness=1.25, softness=0.008)
+        draw_ring_blr_gamma(cx, cy, max(8.0, radius - 5.0), 0.02, 0.01, COL_WHEEL_RING_SOFT_OUT)
+        if inner_r > 2.0:
+            draw_ring_blr_gamma(
+                cx, cy, max(8.0, inner_r + 5.0), 0.022, 0.014, COL_WHEEL_RING_SOFT_IN,
+            )
 
         _draw_custom_buttons(op, cx, cy, icon_scale)
         _draw_slots(context, op, cx, cy, slot_radius, icon_scale)
@@ -91,7 +105,8 @@ def _draw_custom_buttons(op: 'SculptWheelOperator', cx: float, cy: float, icon_s
         )
         return
 
-    dec_rad = cr * 0.9 * icon_scale
+    # Square icons, uncropped (full texture alpha), slightly smaller than slot radius.
+    half = cr * 0.52 * icon_scale
     for i, (sx, sy) in enumerate(op.custom_positions):
         if i >= len(op.custom_layout_map):
             break
@@ -102,10 +117,10 @@ def _draw_custom_buttons(op: 'SculptWheelOperator', cx: float, cy: float, icon_s
         is_hov = bid == op.hover_custom_index
         tex = get_custom_button_texture(btn.image_path)
         if tex is not None:
-            if is_hov:
-                draw_textured_circle_boost(sx, sy, dec_rad, tex, boost=1.25, softness=0.03)
-            else:
-                draw_textured_circle(sx, sy, dec_rad, tex, opacity=1.0, softness=0.03)
+            h = half * (1.08 if is_hov else 1.0)
+            draw_textured_quad(
+                sx, sy, h, tex, opacity=1.0 if is_hov else 0.94,
+            )
         elif btn.name:
             draw_text(btn.name[:10], sx, sy, size=9.0, color=COL_TEXT, align='CENTER', shadow=True)
 

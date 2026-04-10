@@ -43,9 +43,11 @@ void main() {
 _RING_FRAG = """
 void main() {
     float d = length(v_uv - vec2(0.5));
-    float outer = smoothstep(outerRadius, outerRadius - softness, d);
-    float inner = smoothstep(innerRadius - softness, innerRadius, d);
-    float ring = outer * inner;
+    float band = max(outerRadius - innerRadius, 1e-5);
+    float s = min(max(softness, 1e-5), band * 0.48);
+    float aOuter = 1.0 - smoothstep(outerRadius - s, outerRadius + s, d);
+    float aInner = smoothstep(innerRadius - s, innerRadius + s, d);
+    float ring = aOuter * aInner;
     fragColor = vec4(pow(color.rgb, vec3(2.2)), color.a * ring);
 }
 """
@@ -67,6 +69,32 @@ void main() {
 }
 """
 
+_ANNULUS_VERT = """
+void main() {
+    v_world = pos;
+    gl_Position = ModelViewProjectionMatrix * vec4(pos, 0.0, 1.0);
+}
+"""
+
+_ANNULUS_FRAG = """
+void main() {
+    float r = distance(v_world, center);
+    float band = max(outerR - innerR, 1e-5);
+    float s = min(max(softness, 1e-5), band * 0.48);
+    float aOuter = 1.0 - smoothstep(outerR - s, outerR + s, r);
+    float aInner = smoothstep(innerR - s, innerR + s, r);
+    float a = aOuter * aInner;
+    fragColor = vec4(pow(color.rgb, vec3(2.2)), color.a * a);
+}
+"""
+
+_TEXTURED_QUAD_FRAG = """
+void main() {
+    vec4 tex = texture(image, v_uv);
+    fragColor = vec4(pow(tex.rgb, vec3(2.2)), tex.a * opacity);
+}
+"""
+
 
 # ---------------------------------------------------------------------------
 # Compiled shader singletons
@@ -75,6 +103,8 @@ void main() {
 _shader_circle_fill: GPUShader | None = None
 _shader_ring: GPUShader | None = None
 _shader_tex_circle: GPUShader | None = None
+_shader_annulus: GPUShader | None = None
+_shader_tex_quad: GPUShader | None = None
 
 
 def _build_circle_fill_shader() -> GPUShader:
@@ -131,6 +161,42 @@ def _build_tex_circle_shader() -> GPUShader:
     return create_from_info(info)
 
 
+def _build_annulus_shader() -> GPUShader:
+    iface = GPUStageInterfaceInfo("sculpt_wheel_annulus_iface")
+    iface.smooth('VEC2', "v_world")
+
+    info = GPUShaderCreateInfo()
+    info.push_constant('MAT4', "ModelViewProjectionMatrix")
+    info.push_constant('VEC2', "center")
+    info.push_constant('VEC4', "color")
+    info.push_constant('FLOAT', "innerR")
+    info.push_constant('FLOAT', "outerR")
+    info.push_constant('FLOAT', "softness")
+    info.vertex_in(0, 'VEC2', "pos")
+    info.vertex_out(iface)
+    info.fragment_out(0, 'VEC4', "fragColor")
+    info.vertex_source(_ANNULUS_VERT)
+    info.fragment_source(_ANNULUS_FRAG)
+    return create_from_info(info)
+
+
+def _build_tex_quad_shader() -> GPUShader:
+    iface = GPUStageInterfaceInfo("sculpt_wheel_tex_quad_iface")
+    iface.smooth('VEC2', "v_uv")
+
+    info = GPUShaderCreateInfo()
+    info.push_constant('MAT4', "ModelViewProjectionMatrix")
+    info.push_constant('FLOAT', "opacity")
+    info.sampler(0, 'FLOAT_2D', "image")
+    info.vertex_in(0, 'VEC2', "pos")
+    info.vertex_in(1, 'VEC2', "uv")
+    info.vertex_out(iface)
+    info.fragment_out(0, 'VEC4', "fragColor")
+    info.vertex_source(_TEXTURED_CIRCLE_VERT)
+    info.fragment_source(_TEXTURED_QUAD_FRAG)
+    return create_from_info(info)
+
+
 def _get_circle_fill_shader() -> GPUShader:
     global _shader_circle_fill
     if _shader_circle_fill is None:
@@ -150,6 +216,20 @@ def _get_tex_circle_shader() -> GPUShader:
     if _shader_tex_circle is None:
         _shader_tex_circle = _build_tex_circle_shader()
     return _shader_tex_circle
+
+
+def _get_annulus_shader() -> GPUShader:
+    global _shader_annulus
+    if _shader_annulus is None:
+        _shader_annulus = _build_annulus_shader()
+    return _shader_annulus
+
+
+def _get_tex_quad_shader() -> GPUShader:
+    global _shader_tex_quad
+    if _shader_tex_quad is None:
+        _shader_tex_quad = _build_tex_quad_shader()
+    return _shader_tex_quad
 
 
 # ---------------------------------------------------------------------------
@@ -233,6 +313,52 @@ def draw_textured_circle(
         shader.uniform_sampler("image", texture)
         shader.uniform_float("opacity", opacity)
         shader.uniform_float("softness", softness)
+        batch.draw(shader)
+
+
+def draw_annulus(
+    cx: float,
+    cy: float,
+    outer_r: float,
+    inner_r: float,
+    color: Tuple[float, float, float, float],
+    softness: float = 2.75,
+) -> None:
+    """Filled ring in pixel space (inner_r < r < outer_r).
+
+    *softness* is the half-width of the antialiased edge on inner and outer
+    boundaries, in **pixels** (symmetric ``smoothstep`` ramps).
+    """
+    if outer_r <= inner_r + 0.5:
+        return
+    shader = _get_annulus_shader()
+    positions, _uvs, indices = _quad_verts(cx, cy, outer_r)
+    batch = batch_for_shader(shader, 'TRIS', {"pos": positions}, indices=indices)
+    with CM_GPU_BLEND('ALPHA'):
+        shader.bind()
+        shader.uniform_float("center", (cx, cy))
+        shader.uniform_float("color", color)
+        shader.uniform_float("innerR", inner_r)
+        shader.uniform_float("outerR", outer_r)
+        shader.uniform_float("softness", softness)
+        batch.draw(shader)
+
+
+def draw_textured_quad(
+    cx: float,
+    cy: float,
+    half: float,
+    texture: GPUTexture,
+    opacity: float = 1.0,
+) -> None:
+    """Axis-aligned square with texture; alpha from texture (no circular mask)."""
+    shader = _get_tex_quad_shader()
+    positions, uvs, indices = _quad_verts(cx, cy, half)
+    batch = batch_for_shader(shader, 'TRIS', {"pos": positions, "uv": uvs}, indices=indices)
+    with CM_GPU_BLEND('ALPHA'):
+        shader.bind()
+        shader.uniform_sampler("image", texture)
+        shader.uniform_float("opacity", opacity)
         batch.draw(shader)
 
 
