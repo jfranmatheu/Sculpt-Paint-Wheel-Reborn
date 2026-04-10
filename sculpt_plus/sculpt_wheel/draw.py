@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 from typing import TYPE_CHECKING
 
 from bpy.types import Context
@@ -19,7 +18,7 @@ from .gpu_tarta import (
     draw_ring_blr_gamma,
     draw_textured_circle_boost,
 )
-from .brush_assets import find_brush_for_slot, get_brush_preview_texture, get_brush_asset_preview_texture
+from .brush_assets import get_wheel_brush_preview_texture
 from .custom_buttons import get_custom_button_texture
 from .sculpt_paint_compat import get_sculpt_unified_paint_settings
 
@@ -73,22 +72,16 @@ def draw_wheel(context: Context, op: 'SculptWheelOperator') -> None:
     with CM_GPU_BLEND('ALPHA'):
         draw_circle_fill(cx, cy, radius, COL_BASE, softness=0.005)
 
-        if op.wheel_ui_mode == 'EDIT':
-            draw_ring(cx, cy, radius - 4.0, COL_EDIT_RING, thickness=2.0, softness=0.008)
-            draw_ring(cx, cy, radius - 6.0, COL_EDIT_RING_2, thickness=1.5, softness=0.008)
-        else:
-            draw_ring(cx, cy, radius, COL_BASE_RING, thickness=1.2, softness=0.008)
-            draw_ring_blr_gamma(cx, cy, max(8.0, radius - 6.0), 0.02, 0.01, COL_WHEEL_RING_SOFT_OUT)
-            draw_ring_blr_gamma(cx, cy, max(6.0, radius - 8.0), 0.02, 0.01, COL_WHEEL_RING_SOFT_IN)
+        draw_ring(cx, cy, radius, COL_BASE_RING, thickness=1.2, softness=0.008)
+        draw_ring_blr_gamma(cx, cy, max(8.0, radius - 6.0), 0.02, 0.01, COL_WHEEL_RING_SOFT_OUT)
+        draw_ring_blr_gamma(cx, cy, max(6.0, radius - 8.0), 0.02, 0.01, COL_WHEEL_RING_SOFT_IN)
 
         _draw_gesture_pad(context, op, cx, cy)
         _draw_custom_buttons(op, cx, cy, icon_scale)
         _draw_slots(context, op, cx, cy, slot_radius, icon_scale)
 
-        if op.toolset_count > 1:
-            _draw_toolset_dots(op, cx, cy, radius)
-
-        _draw_edit_toggle(op)
+        if op.brush_set_count > 1:
+            _draw_brush_set_dots(op, cx, cy, radius)
 
 
 def _draw_gesture_pad(context: Context, op: 'SculptWheelOperator', cx: float, cy: float) -> None:
@@ -96,18 +89,17 @@ def _draw_gesture_pad(context: Context, op: 'SculptWheelOperator', cx: float, cy
     if r <= 0:
         return
     draw_circle_fill(cx, cy, r, COL_GESTURE_PAD, softness=0.018)
-    if op.hover_gesture_pad and op.wheel_ui_mode == 'PICKER':
+    if op.hover_gesture_pad:
         draw_circle_fill(cx, cy, r, COL_GESTURE_HOVER, softness=0.022)
     draw_ring_blr_gamma(cx, cy, r, 0.05, 0.02, COL_PAD_RING)
     if getattr(op, "_gesture_state", None) == 'drag':
         draw_ring_blr_gamma(cx, cy, r, 0.07, 0.012, COL_PAD_ACCENT_DRAG)
-    elif op.hover_gesture_pad and op.wheel_ui_mode == 'PICKER':
+    elif op.hover_gesture_pad:
         draw_ring_blr_gamma(cx, cy, r, 0.07, 0.012, COL_PAD_ACCENT_HOVER)
 
     brush = context.tool_settings.sculpt.brush
     if (
-        op.wheel_ui_mode == 'PICKER'
-        and brush is not None
+        brush is not None
         and getattr(op, "_gesture_state", None) != 'drag'
     ):
         draw_text(
@@ -180,37 +172,25 @@ def _draw_slots(
     icon_scale: float,
 ) -> None:
     positions = op.slot_positions
-    toolset = op.active_toolset
-    if toolset is None:
+    brushes = op.brushes
+    if not brushes:
         return
-    slots = toolset.slots
-    edit = op.wheel_ui_mode == 'EDIT'
 
     for i, (sx, sy) in enumerate(positions):
-        if i >= len(slots):
+        if i >= len(brushes):
             break
-        slot = slots[i]
-        is_active = (i == toolset.active_slot_index)
-        is_hovered = (i == op.hover_index)
+        entry = brushes[i]
+        is_active = i == op.active_brush_slot_index
+        is_hovered = i == op.hover_index
 
         draw_circle_fill(sx, sy, slot_radius, COL_SLOT_BG, softness=0.015)
         if is_hovered:
             draw_circle_fill(sx, sy, slot_radius, COL_SLOT_HOVER, softness=0.015)
 
         icon_r = slot_radius * icon_scale
-        cip = (getattr(slot, "custom_icon_path", None) or "").strip()
-        if cip and os.path.isfile(cip):
-            ctex = get_custom_button_texture(cip)
-            if ctex is not None:
-                draw_textured_circle(sx, sy, icon_r, ctex, opacity=1.0, softness=0.025)
-        else:
-            brush = find_brush_for_slot(slot)
-            if brush is not None:
-                tex = get_brush_preview_texture(brush)
-            else:
-                tex = get_brush_asset_preview_texture(context, slot)
-            if tex is not None:
-                draw_textured_circle(sx, sy, icon_r, tex, opacity=1.0, softness=0.025)
+        tex = get_wheel_brush_preview_texture(entry)
+        if tex is not None:
+            draw_textured_circle(sx, sy, icon_r, tex, opacity=1.0, softness=0.025)
 
         if is_active:
             draw_ring(sx, sy, slot_radius, COL_SLOT_ACTIVE_RING, thickness=2.0, softness=0.012)
@@ -219,12 +199,10 @@ def _draw_slots(
         else:
             draw_ring(sx, sy, slot_radius, COL_SLOT_RING, thickness=1.0, softness=0.012)
 
-        if edit and is_hovered:
-            draw_ring(sx, sy, slot_radius * 0.55, (1.0, 0.85, 0.2, 0.7), thickness=2.0, softness=0.02)
-
-        if op.show_names and slot.display_name:
+        name = str(entry.get("brush_name") or "")
+        if op.show_names and name:
             draw_text(
-                slot.display_name,
+                name,
                 sx, sy - slot_radius - 10,
                 size=11.0,
                 color=COL_TEXT,
@@ -233,13 +211,13 @@ def _draw_slots(
             )
 
 
-def _draw_toolset_dots(
+def _draw_brush_set_dots(
     op: 'SculptWheelOperator',
     cx: float, cy: float,
     wheel_radius: float,
 ) -> None:
-    count = op.toolset_count
-    active = op.active_toolset_idx
+    count = op.brush_set_count
+    active = op.active_brush_set_index
     dot_radius = 3.0
     spacing = 10.0
     total_w = (count - 1) * spacing
@@ -250,15 +228,6 @@ def _draw_toolset_dots(
         dx = start_x + i * spacing
         col = COL_TOOLSET_DOT_ACTIVE if i == active else COL_TOOLSET_DOT
         draw_circle_fill(dx, dot_y, dot_radius, col, softness=0.04)
-
-
-def _draw_edit_toggle(op: 'SculptWheelOperator') -> None:
-    tx, ty = op.edit_toggle_x, op.edit_toggle_y
-    tr = op.edit_toggle_radius
-    draw_circle_fill(tx, ty, tr, COL_EDIT_TOGGLE_FILL, softness=0.04)
-    draw_ring(tx, ty, tr, COL_EDIT_TOGGLE_RING, thickness=1.2, softness=0.03)
-    label = "Ed" if op.wheel_ui_mode == 'PICKER' else "Ok"
-    draw_text(label, tx, ty, size=max(9.0, tr * 0.9), color=COL_TEXT, align='CENTER', shadow=True)
 
 
 def _overlay_brush_size(context: Context) -> float:

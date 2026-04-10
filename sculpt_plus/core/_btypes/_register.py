@@ -81,12 +81,39 @@ def init():
 
     print_debug(f"++++++++++++++++++++++++++++++++++++++++++++++++++++++", indent=1)
 
+
+def _bpy_register_phase(bpy_type) -> int:
+    """Lower phase registers first. PropertyGroups must precede AddonPreferences (PointerProperty)."""
+    if bpy_type is None:
+        return 1
+    name = getattr(bpy_type, "__name__", "")
+    # Compare by name: dict keys may be bpy.types.* while PropertyGroup is from _bpy_types.
+    if name == "PropertyGroup":
+        return 0
+    if name == "AddonPreferences":
+        return 2
+    return 1
+
+
+def _iter_classes_per_btype_register_order():
+    items = list(get_classes_per_btype().items())
+    items.sort(key=lambda it: (_bpy_register_phase(it[0]), getattr(it[0], "__name__", "")))
+    return items
+
+
+def _iter_registered_per_btype_unregister_order():
+    """Unregister AddonPreferences before PropertyGroups that they reference."""
+    items = list(registered_classes_per_btype.items())
+    items.sort(key=lambda it: (-_bpy_register_phase(it[0]), getattr(it[0], "__name__", "")))
+    return items
+
+
 def register():
     print_debug("🅱️  BTYPE REGISTERING PROCESS ++++++++++++++++++++++++++++++++++++++++++++++++++++++")
 
     print_debug(f"1. Registering all classes that inherit from BType...", indent=1)
     # Register all classes that inherit from BType
-    for bpy_type, cls_list in get_classes_per_btype().items():
+    for bpy_type, cls_list in _iter_classes_per_btype_register_order():
         if bpy_type is None:
             continue
         if bpy_type == WorkSpaceTool:
@@ -142,7 +169,7 @@ def unregister():
 
     print_debug(f"1. Unregistering all classes that inherit from BType...", indent=1)
     # Unregister all classes that inherit from BType
-    for bpy_type, cls_list in registered_classes_per_btype.items():
+    for bpy_type, cls_list in _iter_registered_per_btype_unregister_order():
         if bpy_type is None:
             continue
         if bpy_type == WorkSpaceTool:

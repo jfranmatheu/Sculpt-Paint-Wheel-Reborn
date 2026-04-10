@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import math
-from math import cos, dist, sin
+from math import dist
 from math import pi as PI
 from typing import Set
 
@@ -24,13 +24,8 @@ from ..core import bl_types
 from ..core.utils.op_return import OpReturn
 from ..core.utils.mouse_utils import ModalMouse
 
-from .data import (
-    SculptWheelData,
-    WheelToolset,
-    SculptWheelStorage,
-    get_wheel_storage,
-    ensure_default_toolset,
-)
+from .data import SculptWheelData, SculptWheelStorage, get_wheel_storage
+from .brush_library_cache import flatten_brushes_for_set, list_cached_brush_set_keys
 from .gpu_utils import (
     compute_slot_radius,
     compute_slot_positions,
@@ -40,16 +35,15 @@ from .gpu_utils import (
 from .brush_assets import (
     clear_preview_cache,
     get_active_sculpt_brush,
-    get_brush_asset_ref,
-    find_brush_for_slot,
-    get_brush_preview_texture,
+    activate_wheel_brush_entry,
+    wheel_brush_index_for_active,
+    get_wheel_brush_preview_texture,
 )
 from .draw import draw_wheel
 from .custom_buttons import (
     invoke_wheel_custom_button,
     clear_custom_button_texture_cache,
 )
-from .persistence import save_wheel_storage
 from .sculpt_paint_compat import get_sculpt_unified_paint_settings
 
 
@@ -121,9 +115,11 @@ class SculptWheelOperator(bl_types.OperatorModal):
     icon_scale: float = 0.92
     show_names: bool = False
 
-    active_toolset: WheelToolset | None = None
-    active_toolset_idx: int = 0
-    toolset_count: int = 0
+    brushes: list[dict] = []
+    brush_set_keys: list[str] = []
+    active_brush_set_index: int = 0
+    brush_set_count: int = 0
+    active_brush_slot_index: int = -1
 
     # Inner ring (custom buttons) — “tarta” pie layout
     custom_positions: list[tuple[float, float]] = []
@@ -138,11 +134,6 @@ class SculptWheelOperator(bl_types.OperatorModal):
     hover_gesture_pad: bool = False
 
     gesture_pad_radius: float = 36.0
-    wheel_ui_mode: str = 'PICKER'  # 'PICKER' | 'EDIT'
-
-    edit_toggle_x: float = 0.0
-    edit_toggle_y: float = 0.0
-    edit_toggle_radius: float = 16.0
 
     _trigger_key: str = 'SPACE'
     _keep_open: bool = False
@@ -163,9 +154,6 @@ class SculptWheelOperator(bl_types.OperatorModal):
 
     # Custom button click
     _custom_press_idx: int = -1
-
-    # Edit mode slot drag
-    _slot_drag_from: int = -1
 
     # ------------------------------------------------------------------
     # Poll
@@ -201,13 +189,9 @@ class SculptWheelOperator(bl_types.OperatorModal):
 
         self._wheel_storage = get_wheel_storage(context)
         self._wheel_data = SculptWheelData.get(context)
-        # ensure_default_toolset(context)
 
-        self._sync_active_brush(context)
-        self.wheel_ui_mode = 'PICKER'
         self._reset_interaction_state()
-        self._rebuild_layout()
-
+        self._rebuild_layout(context)
         self._cache_previews()
 
         if not context.window_manager.modal_handler_add(self):
@@ -257,11 +241,6 @@ class SculptWheelOperator(bl_types.OperatorModal):
             context.region.tag_redraw()
             return OpReturn.RUN
 
-        if self._slot_drag_from >= 0 and event.type == 'LEFTMOUSE' and event.value == 'RELEASE':
-            self._finish_slot_drag(context, mx, my)
-            context.region.tag_redraw()
-            return OpReturn.RUN
-
         if self._custom_press_idx >= 0 and event.type == 'LEFTMOUSE' and event.value == 'RELEASE':
             if self.hover_custom_index == self._custom_press_idx:
                 btn = self._wheel_storage.custom_buttons[self._custom_press_idx]
@@ -271,7 +250,7 @@ class SculptWheelOperator(bl_types.OperatorModal):
             return OpReturn.RUN
 
         if event.type == self._trigger_key and event.value == 'RELEASE':
-            if self._on_release_select and self.hover_index >= 0 and self.wheel_ui_mode == 'PICKER':
+            if self._on_release_select and self.hover_index >= 0:
                 self._select_hovered(context)
             if self._can_close:
                 return OpReturn.FINISH
@@ -279,21 +258,9 @@ class SculptWheelOperator(bl_types.OperatorModal):
             return OpReturn.RUN
 
         if event.type == 'LEFTMOUSE' and event.value == 'PRESS':
-            if self._hit_edit_toggle(mx, my):
-                self.wheel_ui_mode = 'EDIT' if self.wheel_ui_mode == 'PICKER' else 'PICKER'
-                context.region.tag_redraw()
-                return OpReturn.RUN
-
             if not self._is_inside_wheel(event):
                 return OpReturn.FINISH
 
-            if self.wheel_ui_mode == 'EDIT':
-                if self.hover_index >= 0:
-                    self._slot_drag_from = self.hover_index
-                    return OpReturn.RUN
-                return OpReturn.RUN
-
-            # PICKER
             if self.hover_gesture_pad and get_active_sculpt_brush(context) is not None:
                 self._saved_size = _brush_size_get(context)
                 self._saved_strength = _brush_strength_get(context)
@@ -313,7 +280,7 @@ class SculptWheelOperator(bl_types.OperatorModal):
                 return OpReturn.RUN
 
         if event.type in {'WHEELUPMOUSE', 'WHEELDOWNMOUSE'}:
-            self._cycle_toolset(context, 1 if event.type == 'WHEELUPMOUSE' else -1)
+            self._cycle_brush_set(context, 1 if event.type == 'WHEELUPMOUSE' else -1)
             context.region.tag_redraw()
             return OpReturn.RUN
 
@@ -322,6 +289,7 @@ class SculptWheelOperator(bl_types.OperatorModal):
     def modal_step_move(self, context: Context, event: Event, mouse: ModalMouse, **kw) -> bool:
         mx, my = float(event.mouse_region_x), float(event.mouse_region_y)
         self._update_hover(mx, my)
+        self.active_brush_slot_index = wheel_brush_index_for_active(context, self.brushes)
 
         if self._gesture_state == 'pending':
             px, py = self._gesture_prev
@@ -353,7 +321,6 @@ class SculptWheelOperator(bl_types.OperatorModal):
         self._gesture_axis = None
         self._gesture_origin = (0.0, 0.0)
         self._custom_press_idx = -1
-        self._slot_drag_from = -1
         self.hover_custom_index = -1
         self.hover_custom_layout_slot = -1
         self.hover_gesture_pad = False
@@ -384,25 +351,6 @@ class SculptWheelOperator(bl_types.OperatorModal):
             _brush_strength_set(context, _brush_strength_get(context) + rate * diff)
         self._gesture_prev = (mx, my)
 
-    def _finish_slot_drag(self, context: Context, mx: float, my: float) -> None:
-        a = self._slot_drag_from
-        self._slot_drag_from = -1
-        if self.active_toolset is None or a < 0:
-            return
-        if not self._is_inside_disc(mx, my, self.wheel_center_x, self.wheel_center_y, self.wheel_radius):
-            self.active_toolset.remove_slot(a)
-            save_wheel_storage(context)
-            self._rebuild_layout()
-            return
-        b = self.hover_index
-        if b >= 0 and b != a:
-            self.active_toolset.swap_slots(a, b)
-            save_wheel_storage(context)
-            self._rebuild_layout()
-
-    def _hit_edit_toggle(self, mx: float, my: float) -> bool:
-        return dist((mx, my), (self.edit_toggle_x, self.edit_toggle_y)) <= self.edit_toggle_radius
-
     @staticmethod
     def _is_inside_disc(mx: float, my: float, cx: float, cy: float, r: float) -> bool:
         return dist((mx, my), (cx, cy)) <= r
@@ -431,33 +379,39 @@ class SculptWheelOperator(bl_types.OperatorModal):
             pass
         return event.type if event.value == 'PRESS' else 'SPACE'
 
-    def _rebuild_layout(self) -> None:
+    def _rebuild_layout(self, context: Context) -> None:
         cx, cy = self.wheel_center_x, self.wheel_center_y
         st = self._wheel_storage
         wd = self._wheel_data
-        ts = None
-        if st is not None and wd is not None and len(st.toolsets) > 0:
-            idx = min(wd.active_toolset_index, len(st.toolsets) - 1)
-            ts = st.toolsets[idx]
-        self.active_toolset = ts
-        self.active_toolset_idx = wd.active_toolset_index if wd is not None else 0
-        self.toolset_count = len(st.toolsets) if st is not None else 0
 
-        rad = 16.0 * self.wheel_radius / 180.0
-        self.edit_toggle_radius = rad
-        left_x = cx - self.wheel_radius - rad * 2.0 - 10.0
-        left_y = cy
-        ang = PI / 4.0
-        dx, dy = left_x - cx, left_y - cy
-        self.edit_toggle_x = cx + dx * cos(ang) - dy * sin(ang)
-        self.edit_toggle_y = cy + dx * sin(ang) + dy * cos(ang)
+        self.brush_set_keys = list_cached_brush_set_keys()
+        self.brush_set_count = len(self.brush_set_keys)
+        cur_set = wd.wheel_brush_set if wd is not None else "NONE"
 
-        if ts is None or len(ts.slots) == 0:
+        if not self.brush_set_keys:
+            if wd is not None:
+                wd.wheel_brush_set = "NONE"
+            self.active_brush_set_index = 0
+            self.brushes = []
+        else:
+            if cur_set == "NONE" or cur_set not in self.brush_set_keys:
+                cur_set = self.brush_set_keys[0]
+                if wd is not None:
+                    wd.wheel_brush_set = cur_set
+            try:
+                self.active_brush_set_index = self.brush_set_keys.index(cur_set)
+            except ValueError:
+                self.active_brush_set_index = 0
+            self.brushes = flatten_brushes_for_set(cur_set)
+
+        self.active_brush_slot_index = wheel_brush_index_for_active(context, self.brushes)
+
+        n_br = len(self.brushes)
+        if n_br == 0:
             self.slot_positions = []
             self.slot_radius = 0
         else:
-            count = max(7, len(ts.slots))
-            # Outer brush ring — keep clear of the pie / custom-button annulus (~0.48R).
+            count = max(7, n_br)
             ring_radius = self.wheel_radius * 0.74
             self.slot_radius = compute_slot_radius(ring_radius, count)
             self.slot_positions = compute_slot_positions(cx, cy, ring_radius, count)
@@ -489,24 +443,8 @@ class SculptWheelOperator(bl_types.OperatorModal):
             self.icon_ring_radius = 0.0
 
     def _cache_previews(self) -> None:
-        if self.active_toolset is None:
-            return
-        for slot in self.active_toolset.slots:
-            brush = find_brush_for_slot(slot)
-            if brush is not None:
-                get_brush_preview_texture(brush)
-
-    def _sync_active_brush(self, context: Context) -> None:
-        brush = get_active_sculpt_brush(context)
-        if brush is None or self.active_toolset is None:
-            return
-        asset_ref = get_brush_asset_ref(context)
-        for i, slot in enumerate(self.active_toolset.slots):
-            if slot.display_name == brush.name:
-                self.active_toolset.active_slot_index = i
-                if asset_ref is not None and slot.asset_library_type == 'LOCAL':
-                    slot.set_from_brush(brush, asset_ref)
-                return
+        for entry in self.brushes:
+            get_wheel_brush_preview_texture(entry)
 
     def _update_hover(self, mx: float, my: float) -> None:
         self.hover_index = -1
@@ -517,7 +455,7 @@ class SculptWheelOperator(bl_types.OperatorModal):
         cx, cy = self.wheel_center_x, self.wheel_center_y
 
         for i, (sx, sy) in enumerate(self.slot_positions):
-            if self.active_toolset is not None and i >= len(self.active_toolset.slots):
+            if i >= len(self.brushes):
                 break
             if dist((mx, my), (sx, sy)) <= self.slot_radius:
                 self.hover_index = i
@@ -554,16 +492,20 @@ class SculptWheelOperator(bl_types.OperatorModal):
         ) <= self.wheel_radius
 
     def _select_hovered(self, context: Context) -> None:
-        if self.active_toolset is None or self.hover_index < 0:
+        if self.hover_index < 0 or self.hover_index >= len(self.brushes):
             return
-        self.active_toolset.select_slot(context, self.hover_index)
+        entry = self.brushes[self.hover_index]
+        if activate_wheel_brush_entry(context, entry):
+            self.active_brush_slot_index = self.hover_index
 
-    def _cycle_toolset(self, context: Context, direction: int) -> None:
-        if self.toolset_count <= 1:
+    def _cycle_brush_set(self, context: Context, direction: int) -> None:
+        if self.brush_set_count <= 1 or self._wheel_data is None:
             return
-        idx = (self._wheel_data.active_toolset_index + direction) % self.toolset_count
-        self._wheel_data.active_toolset_index = idx
-        save_wheel_storage(context)
-        self._sync_active_brush(context)
-        self._rebuild_layout()
+        keys = self.brush_set_keys
+        if not keys:
+            return
+        i = (self.active_brush_set_index + direction) % len(keys)
+        self._wheel_data.wheel_brush_set = keys[i]
+        clear_preview_cache()
+        self._rebuild_layout(context)
         self._cache_previews()

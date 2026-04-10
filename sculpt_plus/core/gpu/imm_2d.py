@@ -13,11 +13,17 @@ from gpu_extras.batch import batch_for_shader
 from gpu_extras.presets import draw_circle_2d as _draw_circle_2d, draw_texture_2d as _draw_texture_2d
 from mathutils import Color, Vector
 from gpu.texture import from_image
+
+from ...core.globals import GLOBALS
 from .state_control import CM_GPU_BLEND, gpu_state
 
 
-UNIFORM_COLOR_SHADER = from_builtin('UNIFORM_COLOR')
-POLYLINE_UNIFORM_COLOR_SHADER = from_builtin('POLYLINE_UNIFORM_COLOR')
+if not GLOBALS.IN_BACKGROUND:
+    UNIFORM_COLOR_SHADER = from_builtin('UNIFORM_COLOR')
+    POLYLINE_UNIFORM_COLOR_SHADER = from_builtin('POLYLINE_UNIFORM_COLOR')
+else:
+    UNIFORM_COLOR_SHADER = None
+    POLYLINE_UNIFORM_COLOR_SHADER = None
 
 _gpu_tex_cache: dict[str | Image, GPUTexture] = {}
 

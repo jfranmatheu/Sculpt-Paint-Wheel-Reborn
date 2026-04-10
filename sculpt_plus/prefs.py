@@ -60,6 +60,7 @@ class SculptPlusPreferences(bl_types.AddonPreferences):
 
         box = layout.box()
         box.label(text="Sculpt Wheel", icon='BRUSH_DATA')
+        box.label(text="Pick the active brush set on the wheel panel in the 3D Sidebar.")
         col = box.column(align=True)
         col.prop(self, "wheel_radius")
         col.prop(self, "wheel_icon_scale")
