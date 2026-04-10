@@ -19,7 +19,7 @@ from .gpu_tarta import (
     draw_ring_blr_gamma,
     draw_textured_circle_boost,
 )
-from .brush_assets import find_brush_for_slot, get_brush_preview_texture
+from .brush_assets import find_brush_for_slot, get_brush_preview_texture, get_brush_asset_preview_texture
 from .custom_buttons import get_custom_button_texture
 from .sculpt_paint_compat import get_sculpt_unified_paint_settings
 
@@ -83,7 +83,7 @@ def draw_wheel(context: Context, op: 'SculptWheelOperator') -> None:
 
         _draw_gesture_pad(context, op, cx, cy)
         _draw_custom_buttons(op, cx, cy, icon_scale)
-        _draw_slots(op, cx, cy, slot_radius, icon_scale)
+        _draw_slots(context, op, cx, cy, slot_radius, icon_scale)
 
         if op.toolset_count > 1:
             _draw_toolset_dots(op, cx, cy, radius)
@@ -173,6 +173,7 @@ def _draw_custom_buttons(op: 'SculptWheelOperator', cx: float, cy: float, icon_s
 
 
 def _draw_slots(
+    context: bpy.types.Context,
     op: 'SculptWheelOperator',
     cx: float, cy: float,
     slot_radius: float,
@@ -206,8 +207,10 @@ def _draw_slots(
             brush = find_brush_for_slot(slot)
             if brush is not None:
                 tex = get_brush_preview_texture(brush)
-                if tex is not None:
-                    draw_textured_circle(sx, sy, icon_r, tex, opacity=1.0, softness=0.025)
+            else:
+                tex = get_brush_asset_preview_texture(context, slot)
+            if tex is not None:
+                draw_textured_circle(sx, sy, icon_r, tex, opacity=1.0, softness=0.025)
 
         if is_active:
             draw_ring(sx, sy, slot_radius, COL_SLOT_ACTIVE_RING, thickness=2.0, softness=0.012)

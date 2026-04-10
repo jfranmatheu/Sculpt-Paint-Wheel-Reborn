@@ -7,9 +7,12 @@ from typing import TYPE_CHECKING
 import bpy
 import gpu
 from gpu.types import GPUTexture
+from .custom_buttons import get_custom_button_texture
 
 if TYPE_CHECKING:
     from .data import WheelBrushSlot
+
+from .data import SculptWheelData
 
 
 # ---------------------------------------------------------------------------
@@ -69,8 +72,8 @@ def _slot_stored_path_is_asset_path(slot: 'WheelBrushSlot') -> bool:
     rid = slot.relative_asset_identifier
     if not rid:
         return False
-    if slot.asset_library_type != 'LOCAL':
-        return True
+    # if slot.asset_library_type != 'LOCAL':
+    #     return True
     return ('/' in rid) or ('\\' in rid) or ('.blend' in rid.lower())
 
 
@@ -153,6 +156,14 @@ def get_active_sculpt_brush(context: bpy.types.Context) -> bpy.types.Brush | Non
 
 
 # ---------------------------------------------------------------------------
+# Brush asset utils
+# ---------------------------------------------------------------------------
+
+# def get_brush_asset(slot: 'WheelBrushSlot') -> bpy.types.AssetWeakReference | None:
+    
+
+
+# ---------------------------------------------------------------------------
 # Preview -> GPUTexture
 # ---------------------------------------------------------------------------
 
@@ -189,3 +200,29 @@ def get_brush_preview_texture(brush: bpy.types.Brush) -> GPUTexture | None:
 
     _preview_cache[uid] = tex
     return tex
+
+
+def get_brush_asset_preview_texture(context: bpy.types.Context, slot: 'WheelBrushSlot') -> GPUTexture | None:
+    if slot.custom_icon_path:
+        return get_custom_button_texture(slot.custom_icon_path)
+    if slot.asset_library_type == 'ESSENTIALS':
+        lib_name = "essentials_brushes-mesh_sculpt.blend"
+        lib = bpy.data.libraries.get(lib_name, None)
+        if lib:
+            lib_path = lib.filepath
+        with bpy.data.libraries.load(lib_path, assets_only=True) as (data_from, data_to):
+            data_to.brushes = [slot.display_name]
+        brush = data_to.brushes[0]
+        return get_brush_preview_texture(brush)
+    else:
+        # backup_brush = get_active_sculpt_brush(context)
+        activate_brush_asset(context, slot)
+        '''# restore brush
+        if backup_brush:
+            asset_data: bpy.types.AssetWeakReference = backup_brush.library_weak_reference
+            bpy.ops.brush.asset_activate(
+                asset_library_type=asset_data.asset_library_type,
+                asset_library_identifier=asset_data.asset_library_identifier,
+                relative_asset_identifier=asset_data.relative_asset_identifier,
+            )'''
+    return None
