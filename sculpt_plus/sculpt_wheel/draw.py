@@ -38,8 +38,8 @@ COL_SLOT_RING = (0.16, 0.16, 0.2, 0.97)
 COL_TEXT = (0.70, 0.72, 0.76, 0.98)
 COL_TOOLSET_DOT = (0.32, 0.34, 0.38, 0.55)
 COL_TOOLSET_DOT_ACTIVE = (0.72, 0.60, 0.26, 0.88)
-COL_PIE_TARTA = (0.22, 0.225, 0.24, 0.97)
-COL_PIE_OUTLINE = (0.40, 0.42, 0.46, 0.62)
+COL_PIE_TARTA = (0.18, 0.18, 0.2, 0.97)
+COL_PIE_OUTLINE = (0.24, 0.24, 0.26, 0.97)
 
 
 def _wheel_inner_radius(op: "SculptWheelOperator", wheel_r: float) -> float:
@@ -61,14 +61,14 @@ def draw_wheel(context: Context, op: 'SculptWheelOperator') -> None:
 
     with CM_GPU_BLEND('ALPHA'):
         if inner_r < radius - 1.0:
-            draw_annulus(cx, cy, radius, max(0.0, inner_r), COL_BASE)
+            draw_annulus(cx, cy, radius, max(0.0, inner_r), COL_BASE, softness=1.2)
 
-        draw_ring(cx, cy, radius, COL_BASE_RING, thickness=1.25, softness=0.008)
-        draw_ring_blr_gamma(cx, cy, max(8.0, radius - 5.0), 0.02, 0.01, COL_WHEEL_RING_SOFT_OUT)
-        if inner_r > 2.0:
-            draw_ring_blr_gamma(
-                cx, cy, max(8.0, inner_r + 5.0), 0.022, 0.014, COL_WHEEL_RING_SOFT_IN,
-            )
+        # draw_ring(cx, cy, radius, COL_BASE_RING, thickness=1.25, softness=0.008)
+        # draw_ring_blr_gamma(cx, cy, max(8.0, radius - 5.0), 0.02, 0.01, COL_WHEEL_RING_SOFT_OUT)
+        # if inner_r > 2.0:
+        #     draw_ring_blr_gamma(
+        #         cx, cy, max(8.0, inner_r + 5.0), 0.022, 0.014, COL_WHEEL_RING_SOFT_IN,
+        #     )
 
         _draw_custom_buttons(op, cx, cy, icon_scale)
         _draw_slots(context, op, cx, cy, slot_radius, icon_scale)
@@ -95,14 +95,15 @@ def _draw_custom_buttons(op: 'SculptWheelOperator', cx: float, cy: float, icon_s
         layout_n,
         hover_sec,
         COL_PIE_TARTA,
-        inner_soft=0.06,
+        inner_soft=0.025,
+        outer_soft=0.025,
     )
 
     cr = op.custom_radius
     if cr <= 0:
-        draw_ring_blr_gamma(
+        '''draw_ring_blr_gamma(
             cx, cy, op.tarta_ring_outer_radius, 0.025, 0.01, COL_PIE_OUTLINE,
-        )
+        )'''
         return
 
     # Square icons, uncropped (full texture alpha), slightly smaller than slot radius.
@@ -124,9 +125,9 @@ def _draw_custom_buttons(op: 'SculptWheelOperator', cx: float, cy: float, icon_s
         elif btn.name:
             draw_text(btn.name[:10], sx, sy, size=9.0, color=COL_TEXT, align='CENTER', shadow=True)
 
-    draw_ring_blr_gamma(
+    '''draw_ring_blr_gamma(
         cx, cy, op.tarta_ring_outer_radius, 0.025, 0.01, COL_PIE_OUTLINE,
-    )
+    )'''
 
 
 def _draw_slots(

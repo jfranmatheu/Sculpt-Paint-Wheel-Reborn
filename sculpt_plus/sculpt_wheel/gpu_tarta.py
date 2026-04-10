@@ -47,16 +47,12 @@ void main() {
 
     vec4 color = pieColor;
 
-    vec2 cxy = 2.0 * v_uv - 1.0;
-    float r_disc = dot(cxy, cxy);
-    float s_mask = smoothstep(0.55, 0.45, abs(r_disc / 9.5) * 5.0);
-    if (s_mask < 0.05) {
-        discard;
-    }
-
     vec2 toCenter = vec2(0.5) - v_uv;
     float radius = length(toCenter) * 2.0;
     if (radius < innerRatio) {
+        discard;
+    }
+    if (radius > 1.0) {
         discard;
     }
 
@@ -92,9 +88,13 @@ void main() {
     float rims = max(rim_in, rim_out);
     color.rgb = mix(color.rgb, RIM_RGB, rims * 0.58);
 
-    float alpha = color.a * s_mask;
+    float alpha = color.a;
     if (radius >= innerRatio && radius < innerRatio + inner_soft * 2.5) {
         alpha *= smoothstep(innerRatio, innerRatio + inner_soft, radius);
+    }
+    if (radius <= 1.0 && radius > 1.0 - outer_soft * 2.5) {
+        float outer_t = clamp((1.0 - radius) / max(1e-5, outer_soft), 0.0, 1.0);
+        alpha *= outer_t * outer_t * (3.0 - 2.0 * outer_t);
     }
 
     fragColor = vec4(pow(color.rgb, vec3(2.2)), alpha);
@@ -171,6 +171,7 @@ def _build_pie_ring_shader() -> GPUShader:
     info.push_constant("VEC4", "pieColor")
     info.push_constant("FLOAT", "innerRatio")
     info.push_constant("FLOAT", "inner_soft")
+    info.push_constant("FLOAT", "outer_soft")
     info.push_constant("FLOAT", "n_sectors")
     info.push_constant("FLOAT", "hover_sector")
     info.vertex_in(0, "VEC2", "pos")
@@ -246,6 +247,7 @@ def draw_pie_split_ring(
     hover_sector: int,
     color: Tuple[float, float, float, float],
     inner_soft: float = 0.08,
+    outer_soft: float = 0.08,
 ) -> None:
     """Draw the segmented annulus behind custom buttons (legacy SPLITANG)."""
     if n_sectors <= 0 or outer_radius_px <= 0.0:
@@ -258,6 +260,7 @@ def draw_pie_split_ring(
         shader.uniform_float("pieColor", color)
         shader.uniform_float("innerRatio", float(inner_ratio))
         shader.uniform_float("inner_soft", float(inner_soft))
+        shader.uniform_float("outer_soft", float(outer_soft))
         shader.uniform_float("n_sectors", float(n_sectors))
         shader.uniform_float("hover_sector", float(hover_sector))
         batch.draw(shader)
