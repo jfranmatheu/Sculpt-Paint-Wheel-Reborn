@@ -49,6 +49,8 @@ COL_TEXT = (0.70, 0.72, 0.76, 0.98)
 COL_TOOLSET_DOT = (0.32, 0.34, 0.38, 0.55)
 COL_TOOLSET_DOT_ACTIVE = (0.72, 0.60, 0.26, 0.88)
 COL_PIE_TARTA = (0.19, 0.19, 0.21, 0.97)
+# Slightly cooler / blue-tinted wedge for OPERATOR actions vs POPUP panels.
+COL_PIE_TARTA_OP = (0.13, 0.16, 0.24, 0.97)
 COL_PIE_OUTLINE = (0.24, 0.24, 0.26, 0.97)
 
 
@@ -104,6 +106,19 @@ def _draw_custom_buttons(op: 'SculptWheelOperator', cx: float, cy: float, icon_s
         return
 
     hover_sec = op.hover_custom_layout_slot if op.hover_custom_layout_slot >= 0 else -1
+
+    kinds: list[int] = []
+    for si in range(layout_n):
+        if si >= len(op.custom_layout_map):
+            kinds.append(0)
+            continue
+        bid = op.custom_layout_map[si]
+        if bid < 0:
+            kinds.append(0)
+            continue
+        btn = coll[bid]
+        kinds.append(1 if getattr(btn, "type", "") == "OPERATOR" else 0)
+
     draw_pie_split_ring(
         cx,
         cy,
@@ -112,6 +127,8 @@ def _draw_custom_buttons(op: 'SculptWheelOperator', cx: float, cy: float, icon_s
         layout_n,
         hover_sec,
         COL_PIE_TARTA,
+        COL_PIE_TARTA_OP,
+        kinds,
         inner_soft=0.025,
         outer_soft=0.025,
     )

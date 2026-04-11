@@ -8,7 +8,7 @@ screen-space quads and ``GPUShaderCreateInfo`` (Blender 4+/5+).
 
 from __future__ import annotations
 
-from typing import Tuple
+from typing import Sequence, Tuple
 
 import gpu
 from gpu.shader import create_from_info
@@ -37,6 +37,40 @@ void main() {
 # ---------------------------------------------------------------------------
 
 _PIE_RING_FRAG = """
+float sector_kind(int s) {
+    if (s < 4) {
+        if (s == 0) {
+            return sectorKinds0.x;
+        }
+        if (s == 1) {
+            return sectorKinds0.y;
+        }
+        if (s == 2) {
+            return sectorKinds0.z;
+        }
+        return sectorKinds0.w;
+    }
+    if (s < 8) {
+        if (s == 4) {
+            return sectorKinds1.x;
+        }
+        if (s == 5) {
+            return sectorKinds1.y;
+        }
+        if (s == 6) {
+            return sectorKinds1.z;
+        }
+        return sectorKinds1.w;
+    }
+    if (s == 8) {
+        return sectorKinds2.x;
+    }
+    if (s == 9) {
+        return sectorKinds2.y;
+    }
+    return 0.0;
+}
+
 void main() {
     const float PI = 3.14159265359;
     const float TWO_PI = 6.28318530718;
@@ -44,8 +78,6 @@ void main() {
     const float SPOKE_DARK = 0.22;
     const float RIM_W = 0.032;
     const vec3 RIM_RGB = vec3(0.36, 0.38, 0.42);
-
-    vec4 color = pieColor;
 
     vec2 toCenter = vec2(0.5) - v_uv;
     float radius = length(toCenter) * 2.0;
@@ -66,9 +98,6 @@ void main() {
     float step = TWO_PI / float(n);
     float shifted = mod(angle - PI * 0.5 + step * 0.5 + TWO_PI, TWO_PI);
     float pos_in_seg = shifted / step;
-    float dist_from_spoke = min(fract(pos_in_seg), 1.0 - fract(pos_in_seg));
-    float seam = 1.0 - smoothstep(0.0, SEAM_W, dist_from_spoke);
-    color.rgb *= mix(1.0, SPOKE_DARK, seam);
 
     int sec = int(floor(pos_in_seg + 1e-5));
     if (sec >= n) {
@@ -77,6 +106,12 @@ void main() {
     if (sec < 0) {
         sec = 0;
     }
+
+    vec4 color = mix(pieColorPopup, pieColorOp, sector_kind(sec));
+
+    float dist_from_spoke = min(fract(pos_in_seg), 1.0 - fract(pos_in_seg));
+    float seam = 1.0 - smoothstep(0.0, SEAM_W, dist_from_spoke);
+    color.rgb *= mix(1.0, SPOKE_DARK, seam);
 
     if (hv >= 0 && sec == hv) {
         float radial = clamp((radius - innerRatio) / max(1e-5, 1.0 - innerRatio), 0.0, 1.0);
@@ -164,11 +199,15 @@ _shader_tex_boost: GPUShader | None = None
 
 
 def _build_pie_ring_shader() -> GPUShader:
-    iface = GPUStageInterfaceInfo("sculpt_wheel_pie_iface_v3_dark")
+    iface = GPUStageInterfaceInfo("sculpt_wheel_pie_iface_v5_sector_fix")
     iface.smooth("VEC2", "v_uv")
     info = GPUShaderCreateInfo()
     info.push_constant("MAT4", "ModelViewProjectionMatrix")
-    info.push_constant("VEC4", "pieColor")
+    info.push_constant("VEC4", "pieColorPopup")
+    info.push_constant("VEC4", "pieColorOp")
+    info.push_constant("VEC4", "sectorKinds0")
+    info.push_constant("VEC4", "sectorKinds1")
+    info.push_constant("VEC4", "sectorKinds2")
     info.push_constant("FLOAT", "innerRatio")
     info.push_constant("FLOAT", "inner_soft")
     info.push_constant("FLOAT", "outer_soft")
@@ -238,6 +277,21 @@ def _get_tex_boost_shader() -> GPUShader:
     return _shader_tex_boost
 
 
+_MAX_TARTA_SECTORS = 10
+
+
+def _pack_sector_kinds(kinds: Sequence[int]) -> tuple[tuple[float, float, float, float], ...]:
+    """Pack up to 10 values ``0`` (popup) / ``1`` (operator) into three vec4 uniforms."""
+    k = [float(int(x) & 1) for x in kinds[:_MAX_TARTA_SECTORS]]
+    while len(k) < 10:
+        k.append(0.0)
+    return (
+        (k[0], k[1], k[2], k[3]),
+        (k[4], k[5], k[6], k[7]),
+        (k[8], k[9], 0.0, 0.0),
+    )
+
+
 def draw_pie_split_ring(
     cx: float,
     cy: float,
@@ -245,19 +299,33 @@ def draw_pie_split_ring(
     inner_ratio: float,
     n_sectors: int,
     hover_sector: int,
-    color: Tuple[float, float, float, float],
+    color_popup: Tuple[float, float, float, float],
+    color_operator: Tuple[float, float, float, float],
+    sector_kinds: Sequence[int],
     inner_soft: float = 0.08,
     outer_soft: float = 0.08,
 ) -> None:
-    """Draw the segmented annulus behind custom buttons (legacy SPLITANG)."""
+    """Draw the segmented annulus behind custom buttons (legacy SPLITANG).
+
+    *sector_kinds*: length ``n_sectors``, each ``0`` = POPUP base (*color_popup*),
+    ``1`` = OPERATOR base (*color_operator*). Values beyond 10 are ignored.
+    """
     if n_sectors <= 0 or outer_radius_px <= 0.0:
         return
+    sk = list(sector_kinds[:n_sectors])
+    while len(sk) < 10:
+        sk.append(0)
+    pk = _pack_sector_kinds(sk)
     shader = _get_pie_ring_shader()
     positions, uvs, indices = _quad_verts(cx, cy, outer_radius_px)
     batch = batch_for_shader(shader, "TRIS", {"pos": positions, "uv": uvs}, indices=indices)
     with CM_GPU_BLEND("ALPHA"):
         shader.bind()
-        shader.uniform_float("pieColor", color)
+        shader.uniform_float("pieColorPopup", color_popup)
+        shader.uniform_float("pieColorOp", color_operator)
+        shader.uniform_float("sectorKinds0", pk[0])
+        shader.uniform_float("sectorKinds1", pk[1])
+        shader.uniform_float("sectorKinds2", pk[2])
         shader.uniform_float("innerRatio", float(inner_ratio))
         shader.uniform_float("inner_soft", float(inner_soft))
         shader.uniform_float("outer_soft", float(outer_soft))
