@@ -19,6 +19,16 @@ from .gpu_tarta import (
     draw_pie_split_ring,
     draw_ring_blr_gamma,
 )
+from .gpu_colpk import draw_colpk_hue_ring, draw_colpk_sat_arc, draw_colpk_val_arc
+from .colpk_wheel import (
+    S_ANGLE_BOT,
+    S_ANGLE_TOP,
+    V_ANGLE_BOT,
+    V_ANGLE_TOP,
+    colpk_handle_positions,
+    colpk_linked_preview_enabled,
+    get_sculpt_brush_rgb,
+)
 from .brush_assets import get_wheel_brush_preview_texture
 from .custom_buttons import get_custom_button_texture
 if TYPE_CHECKING:
@@ -77,6 +87,7 @@ def draw_wheel(context: Context, op: 'SculptWheelOperator') -> None:
         #     )
 
         _draw_custom_buttons(op, cx, cy, icon_scale)
+        _draw_color_pickers(context, op)
         _draw_slots(context, op, cx, cy, slot_radius, icon_scale)
 
         if op.brush_set_count > 1:
@@ -134,6 +145,44 @@ def _draw_custom_buttons(op: 'SculptWheelOperator', cx: float, cy: float, icon_s
     '''draw_ring_blr_gamma(
         cx, cy, op.tarta_ring_outer_radius, 0.025, 0.01, COL_PIE_OUTLINE,
     )'''
+
+
+def _draw_color_pickers(context: Context, op: "SculptWheelOperator") -> None:
+    """HSV rings outside the custom-button tarta when the active set enables them."""
+    if not getattr(op, "show_color_picker", False):
+        return
+    cx = op.wheel_center_x
+    cy = op.wheel_center_y
+    ho = float(getattr(op, "colpk_hue_outer_r", 0.0))
+    so = float(getattr(op, "colpk_sv_outer_r", 0.0))
+    if ho <= 0.0 or so <= 0.0:
+        return
+
+    rgb = get_sculpt_brush_rgb(context)
+    from mathutils import Color
+
+    c = Color()
+    c.r, c.g, c.b = rgb
+    h, s, v = float(c.h), float(c.s), float(c.v)
+
+    if colpk_linked_preview_enabled(context):
+        draw_colpk_hue_ring(cx, cy, ho, s, v)
+        draw_colpk_sat_arc(cx, cy, so, S_ANGLE_TOP, S_ANGLE_BOT, h, v)
+        draw_colpk_val_arc(cx, cy, so, V_ANGLE_TOP, V_ANGLE_BOT, h, s)
+    else:
+        draw_colpk_hue_ring(cx, cy, ho, 1.0, 1.0)
+        draw_colpk_sat_arc(cx, cy, so, S_ANGLE_TOP, S_ANGLE_BOT, h, 1.0)
+        draw_colpk_val_arc(cx, cy, so, V_ANGLE_TOP, V_ANGLE_BOT, h, 1.0)
+
+    hr = max(3.0, op.wheel_radius * 0.018)
+    col_outline = (0.82, 0.84, 0.88, 0.92)
+    col_fill = (0.06, 0.062, 0.07, 0.96)
+    for hp in colpk_handle_positions(op, context):
+        if hp is None:
+            continue
+        hx, hy = hp
+        draw_circle_fill(hx, hy, hr, col_fill, softness=0.12)
+        draw_ring(hx, hy, hr, col_outline, thickness=1.15, softness=0.05)
 
 
 def _draw_slots(

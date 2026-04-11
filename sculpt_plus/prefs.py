@@ -35,6 +35,15 @@ class SculptPlusPreferences(bl_types.AddonPreferences):
         description="Select the hovered brush when the trigger key is released instead of clicking",
         default=False,
     )
+    wheel_colpk_linked_preview: BoolProperty(
+        name="Color pickers: live HSV preview",
+        description=(
+            "When on, each ring tints by the current hue/saturation/value together. "
+            "When off, the hue ring uses full saturation and value, the saturation arc uses full value, "
+            "and the value arc uses full saturation (easier to read each channel in isolation)"
+        ),
+        default=True,
+    )
 
     # -- RMB sculpt gesture (click-drag right mouse in Sculpt) --
     rmb_gesture_overlay_radius: IntProperty(
@@ -75,6 +84,7 @@ class SculptPlusPreferences(bl_types.AddonPreferences):
         col.separator()
         col.prop(self, "wheel_keep_open")
         col.prop(self, "wheel_on_release_select")
+        col.prop(self, "wheel_colpk_linked_preview")
 
         box = layout.box()
         box.label(text="RMB Brush Gesture", icon="MOUSE_RMB")

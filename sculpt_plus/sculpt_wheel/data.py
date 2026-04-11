@@ -291,8 +291,11 @@ class WheelBrushSetConfigItem(bl_types.PropertyGroup):
         update=_wheel_brush_cfg_item_updated,
     )
     show_color_picker: BoolProperty(
-        name="Color picker (reserved)",
-        description="Reserved for a future in-wheel color UI",
+        name="In-wheel color picker",
+        description=(
+            "When on, the wheel shows hue / saturation / value rings outside the custom-button ring "
+            "(LMB drag; Esc or RMB cancels the current drag)"
+        ),
         default=False,
         update=_wheel_brush_cfg_item_updated,
     )

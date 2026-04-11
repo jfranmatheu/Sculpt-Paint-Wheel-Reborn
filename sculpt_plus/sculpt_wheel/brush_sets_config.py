@@ -400,6 +400,20 @@ def brush_set_enum_label(context: Context, set_key: str) -> str:
     return brush_set_display_label(set_key)
 
 
+def get_active_brush_set_show_color_picker(context: Context) -> bool:
+    """True when the wheel’s active brush set has in-wheel HSV rings enabled."""
+    from .data import SculptWheelData
+
+    wd = SculptWheelData.get(context)
+    key = (wd.wheel_brush_set or "").strip()
+    if not key or key == "NONE":
+        return False
+    for it in wd.brush_set_configs:
+        if it.set_key == key:
+            return bool(it.show_color_picker)
+    return False
+
+
 def get_wheel_base_color_tuple(context: Context, set_key: str) -> tuple[float, float, float, float]:
     from .data import SculptWheelData
 

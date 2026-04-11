@@ -33,8 +33,15 @@ from .data import (
 from .brush_library_cache import flatten_brushes_for_set
 from .brush_sets_config import (
     ensure_brush_sets_loaded,
+    get_active_brush_set_show_color_picker,
     get_wheel_base_color_tuple,
     list_ordered_brush_set_keys,
+)
+from .colpk_wheel import (
+    colpk_pick_channel,
+    colpk_update_from_mouse,
+    get_sculpt_brush_rgb,
+    set_sculpt_brush_rgb,
 )
 from .gpu_utils import (
     compute_slot_radius,
@@ -107,6 +114,15 @@ class SculptWheelOperator(bl_types.OperatorModal):
 
     # Custom button click
     _custom_press_idx: int = -1
+
+    # HSV color pickers (when active brush set has show_color_picker)
+    show_color_picker: bool = False
+    colpk_hue_inner_r: float = 0.0
+    colpk_hue_outer_r: float = 0.0
+    colpk_sv_inner_r: float = 0.0
+    colpk_sv_outer_r: float = 0.0
+    _colpk_channel: str | None = None
+    _colpk_prev_rgb: tuple[float, float, float] | None = None
 
     # ------------------------------------------------------------------
     # Poll
@@ -200,6 +216,25 @@ class SculptWheelOperator(bl_types.OperatorModal):
             if not self._is_inside_wheel(event):
                 return OpReturn.FINISH
 
+            mx, my = float(event.mouse_region_x), float(event.mouse_region_y)
+            cx, cy = self.wheel_center_x, self.wheel_center_y
+
+            for i, (sx, sy) in enumerate(self.slot_positions):
+                if i >= len(self.brushes):
+                    break
+                if dist((mx, my), (sx, sy)) <= self.slot_radius:
+                    self._select_brush_at_index(context, i)
+                    if self._can_close:
+                        return OpReturn.FINISH
+                    return OpReturn.RUN
+
+            ch = colpk_pick_channel(mx, my, cx, cy, self)
+            if ch is not None:
+                self._colpk_prev_rgb = get_sculpt_brush_rgb(context)
+                self._colpk_channel = ch
+                colpk_update_from_mouse(context, self, ch, mx, my)
+                return self._colpk_submodal
+
             if self.hover_custom_index >= 0:
                 self._custom_press_idx = self.hover_custom_index
                 return OpReturn.RUN
@@ -230,6 +265,32 @@ class SculptWheelOperator(bl_types.OperatorModal):
         clear_preview_cache()
         clear_custom_button_texture_cache()
 
+    def _colpk_submodal(self, context: Context, event: Event) -> bool:
+        ch = self._colpk_channel
+        if ch is None:
+            return False
+
+        if event.type in ('MOUSEMOVE', 'INBETWEEN_MOUSEMOVE'):
+            mx, my = float(event.mouse_region_x), float(event.mouse_region_y)
+            colpk_update_from_mouse(context, self, ch, mx, my)
+            context.region.tag_redraw()
+            return True
+
+        if event.type == 'LEFTMOUSE' and event.value == 'RELEASE':
+            self._colpk_channel = None
+            self._colpk_prev_rgb = None
+            context.region.tag_redraw()
+            return False
+
+        if event.type in ('RIGHTMOUSE', 'ESC') and event.value == 'PRESS':
+            if self._colpk_prev_rgb is not None:
+                set_sculpt_brush_rgb(context, self._colpk_prev_rgb)
+            self._colpk_channel = None
+            self._colpk_prev_rgb = None
+            context.region.tag_redraw()
+            return False
+        return True
+
     # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
@@ -238,6 +299,8 @@ class SculptWheelOperator(bl_types.OperatorModal):
         self._custom_press_idx = -1
         self.hover_custom_index = -1
         self.hover_custom_layout_slot = -1
+        self._colpk_channel = None
+        self._colpk_prev_rgb = None
 
     @staticmethod
     def _get_prefs(context: Context):
@@ -338,6 +401,27 @@ class SculptWheelOperator(bl_types.OperatorModal):
             self.tarta_inner_ratio = 0.5
             self.icon_ring_radius = 0.0
 
+        self.show_color_picker = bool(get_active_brush_set_show_color_picker(context))
+        if self.show_color_picker:
+            base_outer = (
+                self.tarta_ring_outer_radius
+                if self.tarta_ring_outer_radius > 1.0
+                else max(28.0, self.wheel_radius * 0.30)
+            )
+            gap = max(5.0, self.wheel_radius * 0.028)
+            hue_thick = max(14.0, self.wheel_radius * 0.062)
+            self.colpk_hue_inner_r = base_outer + gap
+            self.colpk_hue_outer_r = self.colpk_hue_inner_r + hue_thick
+            gap2 = max(4.0, self.wheel_radius * 0.022)
+            sv_thick = max(16.0, self.wheel_radius * 0.07)
+            self.colpk_sv_inner_r = self.colpk_hue_outer_r + gap2
+            self.colpk_sv_outer_r = self.colpk_sv_inner_r + sv_thick
+        else:
+            self.colpk_hue_inner_r = 0.0
+            self.colpk_hue_outer_r = 0.0
+            self.colpk_sv_inner_r = 0.0
+            self.colpk_sv_outer_r = 0.0
+
     def _cache_previews(self) -> None:
         for entry in self.brushes:
             get_wheel_brush_preview_texture(entry)
@@ -394,6 +478,13 @@ class SculptWheelOperator(bl_types.OperatorModal):
         entry = self.brushes[self.hover_index]
         if activate_wheel_brush_entry(context, entry):
             self.active_brush_slot_index = self.hover_index
+
+    def _select_brush_at_index(self, context: Context, index: int) -> None:
+        if index < 0 or index >= len(self.brushes):
+            return
+        entry = self.brushes[index]
+        if activate_wheel_brush_entry(context, entry):
+            self.active_brush_slot_index = index
 
     def _cycle_brush_set(self, context: Context, direction: int) -> None:
         if self.brush_set_count <= 1 or self._wheel_data is None:
