@@ -128,7 +128,7 @@ class SculptWheelOperator(bl_types.OperatorModal):
         if not ensure_brush_sets_loaded(context):
             self.report(
                 {"WARNING"},
-                "Could not load brush sets (check Sidebar → Sculpt Wheel)",
+                "Could not load brush sets (Sidebar → Sculpt Wheel → reload libraries)",
             )
             return OpReturn.CANCEL
 

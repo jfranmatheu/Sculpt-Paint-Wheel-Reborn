@@ -7,7 +7,11 @@ from bpy.types import Context
 
 from ..core import bl_types
 
-from .brush_sets_config import brush_set_config_move, load_wheel_brush_data
+from .brush_sets_config import (
+    bootstrap_wheel_brush_data_all_windows,
+    brush_set_config_move,
+    load_wheel_brush_data,
+)
 from .data import SculptWheelData
 
 
@@ -34,9 +38,9 @@ class WheelLoadBrushData(bl_types.Operator):
 
 
 class WheelReloadBrushLibraries(bl_types.Operator):
-    """Force full rebuild of brush shelve and refresh configs + JSON."""
+    """Full rescan of asset libraries, rebuild shelve, sync all windows + JSON."""
 
-    bl_label = "Rebuild brush cache"
+    bl_label = "Reload brush libraries"
     bl_description = (
         "Rescan asset libraries and rebuild brush preview data (runs background Blender)"
     )
@@ -47,11 +51,11 @@ class WheelReloadBrushLibraries(bl_types.Operator):
         return True
 
     def execute(self, context: Context) -> set[str]:
-        ok, err = load_wheel_brush_data(context, force_rebuild=True)
+        ok, err = bootstrap_wheel_brush_data_all_windows(force_rebuild=True)
         if ok:
-            self.report({"INFO"}, "Brush library data rebuilt")
+            self.report({"INFO"}, "Brush libraries reloaded")
             return {"FINISHED"}
-        self.report({"ERROR"}, f"Brush rebuild failed: {err[:500]}")
+        self.report({"ERROR"}, f"Brush reload failed: {err[:500]}")
         return {"CANCELLED"}
 
 

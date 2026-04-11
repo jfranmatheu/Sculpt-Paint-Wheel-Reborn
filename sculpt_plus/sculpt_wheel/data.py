@@ -63,10 +63,10 @@ def _enum_wheel_brush_sets(self, context):
     wd = SculptWheelData.get(context)
     # During sync, the collection is filled before brush_sets_loaded flips; still list real keys.
     if not wd.brush_sets_loaded and len(wd.brush_set_configs) == 0:
-        return [("NONE", "(Load brush data…)", "")]
+        return [("NONE", "(Preparing brush data…)", "")]
     keys = list_ordered_brush_set_keys(context)
     if not keys:
-        return [("NONE", "(No brush sets — load or rebuild)", "")]
+        return [("NONE", "(No brush sets — add libraries or Reload)", "")]
     return [(k, brush_set_enum_label(context, k), "") for k in keys]
 
 
@@ -453,6 +453,7 @@ def wheel_remove_all_custom_buttons_in_active_set(context: Context) -> None:
 def register() -> None:
     if GLOBALS.IN_BACKGROUND:
         return
+    from .brush_sets_config import schedule_wheel_brush_bootstrap
     from .persistence import load_custom_buttons_if_empty, schedule_custom_buttons_load
 
     sculpt_data_root = Path(bpy.utils.resource_path("USER")) / "sculpt_plus_data"
@@ -461,6 +462,7 @@ def register() -> None:
         load_custom_buttons_if_empty(bpy.context)
     except Exception:
         schedule_custom_buttons_load()
+    schedule_wheel_brush_bootstrap()
 
 
 def unregister() -> None:

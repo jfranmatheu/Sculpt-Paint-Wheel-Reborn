@@ -34,42 +34,43 @@ class SculptWheelSidebarPanel(bl_types.PanelPresets.VIEW_3D_SIDEBAR):
         touch_wheel_storage_save_debounced(context)
 
         box = layout.box()
-        box.label(text="Brush sets", icon="ASSET_MANAGER")
         aid = GLOBALS.ADDON.ID
+        hdr = box.row()
+        split = hdr.split(factor=0.88)
+        split.label(text="Brush sets", icon="ASSET_MANAGER")
+        row = split.row()
+        row.ui_units_x = 1
+        row.alignment = 'RIGHT'
+        row.operator(
+            f"{aid}.wheelreloadbrushlibraries",
+            text="",
+            icon="FILE_REFRESH",
+        )
         if not wm.brush_sets_loaded:
-            box.operator(
-                f"{aid}.wheelloadbrushdata",
-                text="Load brush sets",
-                icon="IMPORT",
+            box.label(
+                text="Preparing libraries (first run may take a minute). Use reload if this persists.",
             )
-        else:
-            row = box.row(align=True)
-            row.operator(
-                f"{aid}.wheelreloadbrushlibraries",
-                text="Rebuild cache",
-                icon="FILE_REFRESH",
-            )
-            col = box.column(align=True)
-            col.label(text="Wheel brush set (click a row):")
-            sync_brush_set_list_index_to_wheel(context)
-            n_cfg = len(wm.brush_set_configs)
-            rows = min(8, max(4, n_cfg)) if n_cfg else 4
-            split = col.split(factor=0.9)
-            left = split.column()
-            left.template_list(
-                SculptWheelBrushSetsUIList.bl_idname,
-                "",
-                wm,
-                "brush_set_configs",
-                wm,
-                "brush_set_config_active_index",
-                rows=rows,
-            )
-            right = split.column(align=True)
-            mup = right.operator(WheelBrushSetMove.bl_idname, text="", icon="TRIA_UP")
-            mup.direction = "UP"
-            mdn = right.operator(WheelBrushSetMove.bl_idname, text="", icon="TRIA_DOWN")
-            mdn.direction = "DOWN"
+        col = box.column(align=True)
+        col.label(text="Wheel brush set (click a row):")
+        sync_brush_set_list_index_to_wheel(context)
+        n_cfg = len(wm.brush_set_configs)
+        rows = min(8, max(4, n_cfg)) if n_cfg else 4
+        split = col.split(factor=0.9)
+        left = split.column()
+        left.template_list(
+            SculptWheelBrushSetsUIList.bl_idname,
+            "",
+            wm,
+            "brush_set_configs",
+            wm,
+            "brush_set_config_active_index",
+            rows=rows,
+        )
+        right = split.column(align=True)
+        mup = right.operator(WheelBrushSetMove.bl_idname, text="", icon="TRIA_UP")
+        mup.direction = "UP"
+        mdn = right.operator(WheelBrushSetMove.bl_idname, text="", icon="TRIA_DOWN")
+        mdn.direction = "DOWN"
 
         cbox = layout.box()
         cbox.label(text="Custom button sets", icon="SETTINGS")

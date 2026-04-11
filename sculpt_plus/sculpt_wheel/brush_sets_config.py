@@ -27,6 +27,22 @@ DEFAULT_WHEEL_COLOR = (0.075, 0.078, 0.085, 0.97)
 _CFG_LOADING = False
 
 
+def ensure_brush_shelve_ready(*, force_rebuild: bool = False) -> tuple[bool, str]:
+    """Ensure disk shelve exists (background Blender if missing) and refresh in-memory cache."""
+    from .brush_library_cache import (
+        brush_database_exists,
+        force_rebuild_brush_database,
+        refresh_brush_library_cache,
+    )
+
+    if force_rebuild or not brush_database_exists():
+        ok, err = force_rebuild_brush_database()
+        if not ok:
+            return False, err
+    refresh_brush_library_cache()
+    return True, ""
+
+
 def _item_custom_set_int(it: Any) -> int:
     try:
         return max(0, min(9, int(it.custom_button_set)))
@@ -398,19 +414,45 @@ def get_wheel_base_color_tuple(context: Context, set_key: str) -> tuple[float, f
 def load_wheel_brush_data(context: Context, *, force_rebuild: bool = False) -> tuple[bool, str]:
     """Refresh shelve (rebuild if missing or *force_rebuild*), sync WM + JSON, set loaded flag."""
     from .brush_assets import clear_preview_cache
-    from .brush_library_cache import (
-        brush_database_exists,
-        force_rebuild_brush_database,
-        refresh_brush_library_cache,
-    )
-    from .data import SculptWheelData
 
-    if force_rebuild or not brush_database_exists():
-        ok, err = force_rebuild_brush_database()
-        if not ok:
-            return False, err
-    refresh_brush_library_cache()
+    ok, err = ensure_brush_shelve_ready(force_rebuild=force_rebuild)
+    if not ok:
+        return False, err
     sync_brush_set_configs_from_shelve(context)
+    clear_preview_cache()
+    return True, ""
+
+
+def bootstrap_wheel_brush_data_all_windows(*, force_rebuild: bool = False) -> tuple[bool, str]:
+    """After add-on enable: ensure shelve, then sync ``brush_set_configs`` on every window manager."""
+    from .brush_assets import clear_preview_cache
+
+    ok, err = ensure_brush_shelve_ready(force_rebuild=force_rebuild)
+    if not ok:
+        return False, err
+    ctx = bpy.context
+    if ctx is None:
+        clear_preview_cache()
+        return True, ""
+    override = getattr(ctx, "temp_override", None)
+    wms = list(bpy.data.window_managers)
+    if override is None or not wms:
+        try:
+            sync_brush_set_configs_from_shelve(ctx)
+        except Exception:
+            print_debug(
+                f"[Sculpt+] brush bootstrap sync failed: {traceback.format_exc()}"
+            )
+        clear_preview_cache()
+        return True, ""
+    for wm in wms:
+        try:
+            with ctx.temp_override(window_manager=wm):
+                sync_brush_set_configs_from_shelve(bpy.context)
+        except Exception:
+            print_debug(
+                f"[Sculpt+] brush bootstrap sync (wm) failed: {traceback.format_exc()}"
+            )
     clear_preview_cache()
     return True, ""
 
@@ -423,5 +465,28 @@ def ensure_brush_sets_loaded(context: Context) -> bool:
         return True
     ok, _err = load_wheel_brush_data(context, force_rebuild=False)
     return ok
+
+
+def schedule_wheel_brush_bootstrap() -> None:
+    """Deferred one-shot: build shelve if missing, then sync all window managers (after enable)."""
+    from ..core.globals import GLOBALS
+
+    def _timer():
+        try:
+            c = bpy.context
+            if c is None:
+                return 0.1
+            if c.preferences.addons.get(GLOBALS.ADDON.PACKAGE_NAME) is None:
+                return 0.1
+            ok, err = bootstrap_wheel_brush_data_all_windows(force_rebuild=False)
+            if not ok:
+                print_debug(f"[Sculpt+] brush library bootstrap failed: {err}")
+        except Exception:
+            print_debug(
+                f"[Sculpt+] brush library bootstrap: {traceback.format_exc()}"
+            )
+        return None
+
+    bpy.app.timers.register(_timer, first_interval=0.15)
 
 
