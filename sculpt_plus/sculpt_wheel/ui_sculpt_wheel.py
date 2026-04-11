@@ -5,13 +5,21 @@ from __future__ import annotations
 from bpy.types import Context, UILayout
 
 from ..core import bl_types
+from ..core.globals import GLOBALS
 
-from .data import SculptWheelData, get_wheel_storage
+from .data import (
+    SculptWheelData,
+    get_active_custom_button_buttons,
+    get_wheel_storage,
+)
+from .op_wheel_ui import WheelBrushSetMove
 from .persistence import touch_wheel_storage_save_debounced
+from .ui_wheel_brush_sets import SculptWheelBrushSetsUIList, SculptWheelCustomButtonSetsUIList
 
 
 class SculptWheelSidebarPanel(bl_types.PanelPresets.VIEW_3D_SIDEBAR):
     """Sculpt mode sidebar: wheel library + custom buttons."""
+
     bl_label = "Sculpt Wheel"
 
     @classmethod
@@ -25,18 +33,71 @@ class SculptWheelSidebarPanel(bl_types.PanelPresets.VIEW_3D_SIDEBAR):
         touch_wheel_storage_save_debounced(context)
 
         box = layout.box()
-        box.label(text="Brush library", icon="ASSET_MANAGER")
-        row = box.row(align=True)
-        row.operator(
-            "sculpt_plus.wheelreloadbrushlibraries",
-            icon="FILE_REFRESH",
-        )
-        col = box.column(align=True)
-        col.prop(wm, "wheel_brush_set", text="Brush set")
+        box.label(text="Brush sets", icon="ASSET_MANAGER")
+        aid = GLOBALS.ADDON.ID
+        if not wm.brush_sets_loaded:
+            box.operator(
+                f"{aid}.wheelloadbrushdata",
+                text="Load brush sets",
+                icon="IMPORT",
+            )
+        else:
+            row = box.row(align=True)
+            row.operator(
+                f"{aid}.wheelreloadbrushlibraries",
+                text="Rebuild cache",
+                icon="FILE_REFRESH",
+            )
+            col = box.column(align=True)
+            col.prop(wm, "wheel_brush_set", text="Active set")
+            col.separator()
+            n_cfg = len(wm.brush_set_configs)
+            rows = min(8, max(4, n_cfg)) if n_cfg else 4
+            split = col.split(factor=0.9)
+            left = split.column()
+            left.template_list(
+                SculptWheelBrushSetsUIList.bl_idname,
+                "",
+                wm,
+                "brush_set_configs",
+                wm,
+                "brush_set_config_active_index",
+                rows=rows,
+            )
+            right = split.column(align=True)
+            mup = right.operator(WheelBrushSetMove.bl_idname, text="", icon="TRIA_UP")
+            mup.direction = "UP"
+            mdn = right.operator(WheelBrushSetMove.bl_idname, text="", icon="TRIA_DOWN")
+            mdn.direction = "DOWN"
 
         cbox = layout.box()
-        cbox.label(text="Custom buttons", icon="SETTINGS")
-        cbox.label(text="Up to 10 actions with icons on the wheel center ring.")
+        cbox.label(text="Custom button sets", icon="SETTINGS")
+        cbox.label(text="Up to 10 sets × 10 actions, shown on the wheel inner ring.")
+        r0 = cbox.row(align=True)
+        r0.operator(
+            f"{aid}.wheeladdcustombuttonset",
+            text="Add set",
+            icon="ADD",
+        )
+        r0.operator(
+            f"{aid}.wheelremovecustombuttonset",
+            text="Remove set",
+            icon="REMOVE",
+        )
+        n_sets = len(st.custom_button_sets)
+        set_rows = min(6, max(3, n_sets)) if n_sets else 3
+        cbox.template_list(
+            SculptWheelCustomButtonSetsUIList.bl_idname,
+            "",
+            st,
+            "custom_button_sets",
+            st,
+            "custom_button_set_active_index",
+            rows=set_rows,
+        )
+
+        cbox.separator()
+        cbox.label(text="Add button to active set", icon="PLUS")
         create = wm.create_custom_button
         col = cbox.column(align=True)
         col.prop(create, "name")
@@ -63,10 +124,11 @@ class SculptWheelSidebarPanel(bl_types.PanelPresets.VIEW_3D_SIDEBAR):
                 else:
                     col.prop(create, "custom_panel")
         row = cbox.row(align=True)
-        row.operator("sculpt_plus.wheeladdcustombutton", icon="ADD")
-        if len(st.custom_buttons) > 0:
-            for i, cb in enumerate(st.custom_buttons):
+        row.operator(f"{aid}.wheeladdcustombutton", icon="ADD")
+        buttons = get_active_custom_button_buttons(context)
+        if buttons is not None and len(buttons) > 0:
+            for i, cb in enumerate(buttons):
                 r = cbox.row(align=True)
                 r.label(text=f"{i}: {cb.name}")
-                rm = r.operator("sculpt_plus.wheelremovecustombutton", text="", icon="X")
+                rm = r.operator(f"{aid}.wheelremovecustombutton", text="", icon="X")
                 rm.index = i

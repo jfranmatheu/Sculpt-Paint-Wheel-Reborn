@@ -1,4 +1,4 @@
-"""Disk persistence for sculpt wheel custom buttons only."""
+"""Disk persistence for sculpt wheel custom button sets only."""
 
 from __future__ import annotations
 
@@ -15,7 +15,9 @@ from bpy.types import Context
 from ..core.debug import print_debug
 from ..core.globals import GLOBALS
 
-JSON_VERSION = 1
+from .data import MAX_CUSTOM_BUTTON_SETS, MAX_CUSTOM_BUTTONS_PER_SET
+
+JSON_VERSION = 2
 
 _save_timer_pending = False
 _last_saved_fingerprint: str | None = None
@@ -55,11 +57,11 @@ def _rel_under_root(abs_path: Path) -> str | None:
         return None
 
 
-def _copy_icon_to_custom_button(i: int, src: Path) -> str | None:
+def _copy_icon_to_custom_button(set_i: int, btn_i: int, src: Path) -> str | None:
     if not src.is_file():
         return None
     ext = src.suffix if src.suffix else ".png"
-    dest = custom_button_icons_dir() / f"btn_{i:02d}{ext}"
+    dest = custom_button_icons_dir() / f"set{set_i:02d}_btn{btn_i:02d}{ext}"
     try:
         if src.resolve() != dest.resolve():
             shutil.copy2(src, dest)
@@ -73,20 +75,21 @@ def _storage_fingerprint(context: Context) -> str:
     from .data import get_wheel_storage
 
     st = get_wheel_storage(context)
-    payload = {
-        "c": [],
-    }
-    for cb in st.custom_buttons:
-        payload["c"].append(
-            (cb.name, cb.type, cb.popup_type, cb.attr, (cb.image_path or "").strip())
-        )
+    payload: dict = {"sets": []}
+    for s in st.custom_button_sets:
+        row = {"n": s.name, "b": []}
+        for cb in s.custom_buttons:
+            row["b"].append(
+                (cb.name, cb.type, cb.popup_type, cb.attr, (cb.image_path or "").strip())
+            )
+        payload["sets"].append(row)
     return hashlib.sha256(
         json.dumps(payload, sort_keys=True).encode("utf-8")
     ).hexdigest()
 
 
 def save_wheel_storage(context: Context) -> None:
-    """Write custom buttons JSON and normalize icon files under data_root."""
+    """Write custom button sets JSON and normalize icon files under data_root."""
     from .data import get_wheel_storage
 
     global _last_saved_fingerprint
@@ -94,31 +97,39 @@ def save_wheel_storage(context: Context) -> None:
     ensure_data_dirs()
     st = get_wheel_storage(context)
 
-    buttons_out = []
-    for i, btn in enumerate(st.custom_buttons):
-        src = _norm_abs(btn.image_path)
-        icon_rel = None
-        if src.is_file():
-            new_abs = _copy_icon_to_custom_button(i, src)
-            if new_abs:
-                btn.image_path = new_abs
-                ir = _rel_under_root(Path(new_abs))
-                if ir:
-                    icon_rel = ir
-        buttons_out.append(
+    sets_out: list[dict] = []
+    for si, bset in enumerate(st.custom_button_sets):
+        buttons_out = []
+        for bi, btn in enumerate(bset.custom_buttons):
+            src = _norm_abs(btn.image_path)
+            icon_rel = None
+            if src.is_file():
+                new_abs = _copy_icon_to_custom_button(si, bi, src)
+                if new_abs:
+                    btn.image_path = new_abs
+                    ir = _rel_under_root(Path(new_abs))
+                    if ir:
+                        icon_rel = ir
+            buttons_out.append(
+                {
+                    "name": btn.name,
+                    "type": btn.type,
+                    "popup_type": btn.popup_type,
+                    "attr": btn.attr,
+                    "icon": icon_rel or "",
+                }
+            )
+        sets_out.append(
             {
-                "name": btn.name,
-                "type": btn.type,
-                "popup_type": btn.popup_type,
-                "attr": btn.attr,
-                "icon": icon_rel or "",
+                "name": bset.name,
+                "custom_buttons": buttons_out,
             }
         )
 
     try:
         custom_buttons_json_path().write_text(
             json.dumps(
-                {"version": JSON_VERSION, "custom_buttons": buttons_out},
+                {"version": JSON_VERSION, "custom_button_sets": sets_out},
                 indent=2,
                 ensure_ascii=False,
             )
@@ -155,6 +166,19 @@ def touch_wheel_storage_save_debounced(context: Context, delay: float = 0.4) -> 
     bpy.app.timers.register(_flush, first_interval=delay)
 
 
+def _load_button_dict_into_collection(bset, bd: dict) -> None:
+    b = bset.custom_buttons.add()
+    b.name = str(bd.get("name", "Custom"))
+    b.type = str(bd.get("type", "OPERATOR"))
+    b.popup_type = str(bd.get("popup_type", "NONE"))
+    b.attr = str(bd.get("attr", ""))
+    rel = bd.get("icon") or ""
+    if rel:
+        p = data_root() / str(rel)
+        if p.is_file():
+            b.image_path = str(p.resolve())
+
+
 def load_custom_buttons_if_empty(context: Context) -> None:
     global _last_saved_fingerprint
 
@@ -163,7 +187,17 @@ def load_custom_buttons_if_empty(context: Context) -> None:
     ensure_data_dirs()
     st = get_wheel_storage(context)
 
-    if len(st.custom_buttons) > 0 or not custom_buttons_json_path().is_file():
+    if len(st.custom_button_sets) > 0:
+        try:
+            _last_saved_fingerprint = _storage_fingerprint(context)
+        except Exception:
+            _last_saved_fingerprint = None
+        return
+
+    if not custom_buttons_json_path().is_file():
+        s = st.custom_button_sets.add()
+        s.name = "Default"
+        save_wheel_storage(context)
         try:
             _last_saved_fingerprint = _storage_fingerprint(context)
         except Exception:
@@ -172,23 +206,47 @@ def load_custom_buttons_if_empty(context: Context) -> None:
 
     try:
         raw = json.loads(custom_buttons_json_path().read_text(encoding="utf-8"))
-        arr = raw.get("custom_buttons")
-        if raw.get("version") == JSON_VERSION and isinstance(arr, list):
-            for bd in arr:
-                if not isinstance(bd, dict):
+        ver = raw.get("version", 1)
+
+        if ver >= 2 and isinstance(raw.get("custom_button_sets"), list):
+            for sd in raw["custom_button_sets"]:
+                if not isinstance(sd, dict):
                     continue
-                b = st.custom_buttons.add()
-                b.name = str(bd.get("name", "Custom"))
-                b.type = str(bd.get("type", "OPERATOR"))
-                b.popup_type = str(bd.get("popup_type", "NONE"))
-                b.attr = str(bd.get("attr", ""))
-                rel = bd.get("icon") or ""
-                if rel:
-                    p = data_root() / str(rel)
-                    if p.is_file():
-                        b.image_path = str(p.resolve())
+                if len(st.custom_button_sets) >= MAX_CUSTOM_BUTTON_SETS:
+                    break
+                s = st.custom_button_sets.add()
+                s.name = str(sd.get("name") or "Button set")
+                arr = sd.get("custom_buttons")
+                if not isinstance(arr, list):
+                    continue
+                for bd in arr:
+                    if not isinstance(bd, dict):
+                        continue
+                    if len(s.custom_buttons) >= MAX_CUSTOM_BUTTONS_PER_SET:
+                        break
+                    _load_button_dict_into_collection(s, bd)
+        else:
+            arr = raw.get("custom_buttons")
+            if isinstance(arr, list):
+                s = st.custom_button_sets.add()
+                s.name = "Default"
+                for bd in arr:
+                    if not isinstance(bd, dict):
+                        continue
+                    if len(s.custom_buttons) >= MAX_CUSTOM_BUTTONS_PER_SET:
+                        break
+                    _load_button_dict_into_collection(s, bd)
+
+        if len(st.custom_button_sets) == 0:
+            s = st.custom_button_sets.add()
+            s.name = "Default"
+
+        st.custom_button_set_active_index = 0
     except (OSError, json.JSONDecodeError, TypeError, ValueError):
         print_debug(f"[Sculpt+] custom buttons load failed: {traceback.format_exc()}")
+        if len(st.custom_button_sets) == 0:
+            s = st.custom_button_sets.add()
+            s.name = "Default"
 
     try:
         _last_saved_fingerprint = _storage_fingerprint(context)

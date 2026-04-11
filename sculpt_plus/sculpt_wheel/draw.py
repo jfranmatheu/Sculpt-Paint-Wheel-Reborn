@@ -59,9 +59,15 @@ def draw_wheel(context: Context, op: 'SculptWheelOperator') -> None:
     inner_r = _wheel_inner_radius(op, radius)
     inner_r = min(inner_r, radius - 32.0)
 
+    base_col = (
+        tuple(op.wheel_base_color)
+        if len(getattr(op, "wheel_base_color", ())) == 4
+        else COL_BASE
+    )
+
     with CM_GPU_BLEND('ALPHA'):
         if inner_r < radius - 1.0:
-            draw_annulus(cx, cy, radius, max(0.0, inner_r), COL_BASE, softness=1.2)
+            draw_annulus(cx, cy, radius, max(0.0, inner_r), base_col, softness=1.2)
 
         # draw_ring(cx, cy, radius, COL_BASE_RING, thickness=1.25, softness=0.008)
         # draw_ring_blr_gamma(cx, cy, max(8.0, radius - 5.0), 0.02, 0.01, COL_WHEEL_RING_SOFT_OUT)
@@ -79,8 +85,8 @@ def draw_wheel(context: Context, op: 'SculptWheelOperator') -> None:
 
 def _draw_custom_buttons(op: 'SculptWheelOperator', cx: float, cy: float, icon_scale: float) -> None:
     """Pie ring (DiRNGS_SPLITANG) + icons on the tarta radius (legacy px/sculpt.py order)."""
-    st = getattr(op, "_wheel_storage", None)
-    if st is None or len(st.custom_buttons) == 0:
+    coll = getattr(op, "_active_custom_buttons", None)
+    if coll is None or len(coll) == 0:
         return
     layout_n = op.custom_layout_n
     if layout_n <= 0 or op.tarta_ring_outer_radius <= 0.0:
@@ -114,7 +120,7 @@ def _draw_custom_buttons(op: 'SculptWheelOperator', cx: float, cy: float, icon_s
         bid = op.custom_layout_map[i]
         if bid < 0:
             continue
-        btn = st.custom_buttons[bid]
+        btn = coll[bid]
         is_hov = bid == op.hover_custom_index
         tex = get_custom_button_texture(btn.image_path)
         if tex is not None:

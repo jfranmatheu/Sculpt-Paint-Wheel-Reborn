@@ -24,8 +24,18 @@ from ..core import bl_types
 from ..core.utils.op_return import OpReturn
 from ..core.utils.mouse_utils import ModalMouse
 
-from .data import SculptWheelData, SculptWheelStorage, get_wheel_storage
-from .brush_library_cache import flatten_brushes_for_set, list_cached_brush_set_keys
+from .data import (
+    SculptWheelData,
+    SculptWheelStorage,
+    get_wheel_storage,
+    resolve_custom_buttons_for_brush_set,
+)
+from .brush_library_cache import flatten_brushes_for_set
+from .brush_sets_config import (
+    ensure_brush_sets_loaded,
+    get_wheel_base_color_tuple,
+    list_ordered_brush_set_keys,
+)
 from .gpu_utils import (
     compute_slot_radius,
     compute_slot_positions,
@@ -38,11 +48,13 @@ from .brush_assets import (
     wheel_brush_index_for_active,
     get_wheel_brush_preview_texture,
 )
-from .draw import draw_wheel
 from .custom_buttons import (
     invoke_wheel_custom_button,
     clear_custom_button_texture_cache,
 )
+from .draw import COL_BASE, draw_wheel
+
+
 class SculptWheelOperator(bl_types.OperatorModal):
     """Open a radial brush wheel for quick sculpt brush selection."""
 
@@ -79,6 +91,13 @@ class SculptWheelOperator(bl_types.OperatorModal):
     hover_custom_index: int = -1
     hover_custom_layout_slot: int = -1
 
+    wheel_base_color: tuple[float, float, float, float] = (
+        COL_BASE[0],
+        COL_BASE[1],
+        COL_BASE[2],
+        COL_BASE[3],
+    )
+
     _trigger_key: str = 'SPACE'
     _keep_open: bool = False
     _on_release_select: bool = False
@@ -106,6 +125,13 @@ class SculptWheelOperator(bl_types.OperatorModal):
     # ------------------------------------------------------------------
 
     def invoke(self, context: Context, event: Event) -> Set[str]:
+        if not ensure_brush_sets_loaded(context):
+            self.report(
+                {"WARNING"},
+                "Could not load brush sets (check Sidebar → Sculpt Wheel)",
+            )
+            return OpReturn.CANCEL
+
         prefs = self._get_prefs(context)
         self.wheel_radius = prefs.wheel_radius if prefs else 180
         self.icon_scale = prefs.wheel_icon_scale if prefs else 0.92
@@ -150,8 +176,13 @@ class SculptWheelOperator(bl_types.OperatorModal):
             return OpReturn.FINISH
 
         if self._custom_press_idx >= 0 and event.type == 'LEFTMOUSE' and event.value == 'RELEASE':
-            if self.hover_custom_index == self._custom_press_idx:
-                btn = self._wheel_storage.custom_buttons[self._custom_press_idx]
+            coll = getattr(self, "_active_custom_buttons", None)
+            if (
+                coll is not None
+                and self.hover_custom_index == self._custom_press_idx
+                and 0 <= self._custom_press_idx < len(coll)
+            ):
+                btn = coll[self._custom_press_idx]
                 invoke_wheel_custom_button(context, btn)
             self._custom_press_idx = -1
             context.region.tag_redraw()
@@ -237,7 +268,7 @@ class SculptWheelOperator(bl_types.OperatorModal):
         st = self._wheel_storage
         wd = self._wheel_data
 
-        self.brush_set_keys = list_cached_brush_set_keys()
+        self.brush_set_keys = list_ordered_brush_set_keys(context)
         self.brush_set_count = len(self.brush_set_keys)
         cur_set = wd.wheel_brush_set if wd is not None else "NONE"
 
@@ -246,6 +277,13 @@ class SculptWheelOperator(bl_types.OperatorModal):
                 wd.wheel_brush_set = "NONE"
             self.active_brush_set_index = 0
             self.brushes = []
+            self.wheel_base_color = (
+                COL_BASE[0],
+                COL_BASE[1],
+                COL_BASE[2],
+                COL_BASE[3],
+            )
+            self._active_custom_buttons = None
         else:
             if cur_set == "NONE" or cur_set not in self.brush_set_keys:
                 cur_set = self.brush_set_keys[0]
@@ -256,6 +294,10 @@ class SculptWheelOperator(bl_types.OperatorModal):
             except ValueError:
                 self.active_brush_set_index = 0
             self.brushes = flatten_brushes_for_set(cur_set)
+            self.wheel_base_color = get_wheel_base_color_tuple(context, cur_set)
+            self._active_custom_buttons = resolve_custom_buttons_for_brush_set(
+                context, cur_set,
+            )
 
         self.active_brush_slot_index = wheel_brush_index_for_active(context, self.brushes)
 
@@ -269,7 +311,8 @@ class SculptWheelOperator(bl_types.OperatorModal):
             self.slot_radius = compute_slot_radius(ring_radius, count)
             self.slot_positions = compute_slot_positions(cx, cy, ring_radius, count)
 
-        n_cb = len(st.custom_buttons) if st is not None else 0
+        cb_coll = getattr(self, "_active_custom_buttons", None)
+        n_cb = len(cb_coll) if cb_coll is not None else 0
         if n_cb > 0:
             layout_n = compute_custom_button_layout_count(n_cb)
             self.custom_layout_n = layout_n
@@ -305,7 +348,11 @@ class SculptWheelOperator(bl_types.OperatorModal):
         self.hover_custom_layout_slot = -1
 
         cx, cy = self.wheel_center_x, self.wheel_center_y
-        inner_r = min(42.0, self.wheel_radius * 0.24)
+        inner_r = (
+            self.tarta_ring_outer_radius
+            if self.custom_layout_n > 0 and self.tarta_ring_outer_radius > 1.0
+            else min(42.0, self.wheel_radius * 0.24)
+        )
 
         for i, (sx, sy) in enumerate(self.slot_positions):
             if i >= len(self.brushes):

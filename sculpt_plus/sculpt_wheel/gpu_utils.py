@@ -404,5 +404,5 @@ def compute_custom_button_layout_count(num_buttons: int) -> int:
 
 
 def map_custom_layout_indices(layout_count: int, num_buttons: int) -> list[int]:
-    """For each layout slot, index into ``custom_buttons`` or -1 if empty pad."""
+    """For each layout slot, index into the active custom-button list or -1 if empty pad."""
     return [i if i < num_buttons else -1 for i in range(layout_count)]
