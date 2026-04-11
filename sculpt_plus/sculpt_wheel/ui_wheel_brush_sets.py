@@ -28,24 +28,12 @@ class SculptWheelBrushSetsUIList(bl_types.UIList):
         if self.layout_type in {"DEFAULT", "COMPACT"}:
             if not item:
                 return
-            from .data import SculptWheelData
-            from .op_wheel_ui import WheelSetActiveBrushSet
-
-            wd = SculptWheelData.get(context)
             col = layout.column(align=True)
             row = col.row(align=True)
-            is_on = item.set_key == wd.wheel_brush_set and wd.wheel_brush_set != "NONE"
-            op = row.operator(
-                WheelSetActiveBrushSet.bl_idname,
-                text="",
-                icon="RADIOBUT_ON" if is_on else "RADIOBUT_OFF",
-                emboss=False,
-            )
-            op.set_key = item.set_key
             ph = (item.blend_name or item.set_key or "").strip() or "Blend / group"
-            row.prop(item, "display_name", text="", placeholder=ph)
+            row.prop(item, "display_name", text="", emboss=False, placeholder=ph)
             color_l = row.row(align=True)
-            color_l.ui_units_x = 2
+            color_l.ui_units_x = 1
             color_l.prop(item, "wheel_color", text="")
             cp_icon = "RESTRICT_COLOR_ON" if item.show_color_picker else "RESTRICT_COLOR_OFF"
             row.prop(

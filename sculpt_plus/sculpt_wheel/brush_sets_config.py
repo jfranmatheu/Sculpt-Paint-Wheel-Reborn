@@ -236,6 +236,9 @@ def sync_brush_set_configs_from_shelve(context: Context) -> None:
     # Must be True before assigning wheel_brush_set: enum items() still gated on this flag.
     wd.brush_sets_loaded = True
     _fix_wheel_brush_set_enum(wd, ordered)
+    from .data import sync_brush_set_list_index_to_wheel
+
+    sync_brush_set_list_index_to_wheel(context)
 
 
 def save_brush_set_configs_to_json(context: Context) -> None:

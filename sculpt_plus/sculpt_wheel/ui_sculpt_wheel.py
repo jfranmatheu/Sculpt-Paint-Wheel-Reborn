@@ -11,6 +11,7 @@ from .data import (
     SculptWheelData,
     get_active_custom_button_buttons,
     get_wheel_storage,
+    sync_brush_set_list_index_to_wheel,
 )
 from .op_wheel_ui import WheelBrushSetMove
 from .persistence import touch_wheel_storage_save_debounced
@@ -49,8 +50,8 @@ class SculptWheelSidebarPanel(bl_types.PanelPresets.VIEW_3D_SIDEBAR):
                 icon="FILE_REFRESH",
             )
             col = box.column(align=True)
-            col.prop(wm, "wheel_brush_set", text="Active set")
-            col.separator()
+            col.label(text="Wheel brush set (click a row):")
+            sync_brush_set_list_index_to_wheel(context)
             n_cfg = len(wm.brush_set_configs)
             rows = min(8, max(4, n_cfg)) if n_cfg else 4
             split = col.split(factor=0.9)

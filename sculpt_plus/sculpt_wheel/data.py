@@ -70,6 +70,61 @@ def _enum_wheel_brush_sets(self, context):
     return [(k, brush_set_enum_label(context, k), "") for k in keys]
 
 
+# Keep UIList highlight (``brush_set_config_active_index``) in sync with ``wheel_brush_set``.
+_BRUSH_ACTIVE_SYNC_DEPTH = 0
+
+
+def _sync_list_index_from_wheel_brush_set(wd: "SculptWheelData") -> None:
+    """Align list active row with ``wheel_brush_set`` (caller manages sync depth)."""
+    n = len(wd.brush_set_configs)
+    if n <= 0:
+        return
+    key = wd.wheel_brush_set
+    if not key or key == "NONE":
+        return
+    for i, it in enumerate(wd.brush_set_configs):
+        if it.set_key == key:
+            if int(wd.brush_set_config_active_index) != i:
+                wd.brush_set_config_active_index = i
+            break
+
+
+def _wheel_brush_set_active_updated(self, context: Context) -> None:
+    global _BRUSH_ACTIVE_SYNC_DEPTH
+    if _BRUSH_ACTIVE_SYNC_DEPTH:
+        return
+    _BRUSH_ACTIVE_SYNC_DEPTH += 1
+    try:
+        _sync_list_index_from_wheel_brush_set(self)
+    finally:
+        _BRUSH_ACTIVE_SYNC_DEPTH -= 1
+
+
+def _brush_set_config_active_index_updated(self, context: Context) -> None:
+    global _BRUSH_ACTIVE_SYNC_DEPTH
+    if _BRUSH_ACTIVE_SYNC_DEPTH:
+        return
+    wd = self
+    n = len(wd.brush_set_configs)
+    if n <= 0:
+        return
+    _BRUSH_ACTIVE_SYNC_DEPTH += 1
+    try:
+        idx = max(0, min(n - 1, int(wd.brush_set_config_active_index)))
+        if int(wd.brush_set_config_active_index) != idx:
+            wd.brush_set_config_active_index = idx
+        key = wd.brush_set_configs[idx].set_key
+        if wd.wheel_brush_set != key:
+            wd.wheel_brush_set = key
+    finally:
+        _BRUSH_ACTIVE_SYNC_DEPTH -= 1
+
+
+def sync_brush_set_list_index_to_wheel(context: Context) -> None:
+    """Ensure UIList selection matches ``wheel_brush_set`` (e.g. after modal wheel cycle)."""
+    _wheel_brush_set_active_updated(SculptWheelData.get(context), context)
+
+
 class WheelCustomButton(bl_types.PropertyGroup):
     """User-defined action on the inner ring of the wheel."""
 
@@ -283,12 +338,19 @@ class SculptWheelData(bl_types.PropertyGroupRoot.WINDOW_MANAGER):
         default=False,
     )
     brush_set_configs: CollectionProperty(type=WheelBrushSetConfigItem)
-    brush_set_config_active_index: IntProperty(name="Active brush set config", default=0)
+    brush_set_config_active_index: IntProperty(
+        name="Active brush set config",
+        description="UIList row; kept in sync with the wheel active brush set",
+        default=0,
+        min=0,
+        update=_brush_set_config_active_index_updated,
+    )
 
     wheel_brush_set: EnumProperty(
         name="Brush Set",
-        description="Cached brush set (one .blend / group) shown on the wheel",
+        description="Active brush set on the wheel (authoritative; list highlight follows)",
         items=_enum_wheel_brush_sets,
+        update=_wheel_brush_set_active_updated,
     )
     create_custom_button: PointerProperty(type=CreateWheelCustomButton)
 
