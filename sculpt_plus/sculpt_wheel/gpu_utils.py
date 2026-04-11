@@ -378,15 +378,19 @@ def compute_slot_radius(ring_radius: float, count: int) -> float:
 def compute_slot_positions(
     cx: float, cy: float, ring_radius: float, count: int,
 ) -> list[Tuple[float, float]]:
-    """Compute screen-space centre positions for *count* slots on a ring."""
+    """Compute screen-space centre positions for *count* slots on a ring.
+
+    The **first radial boundary** (start of slice 0, then clockwise) lies on the
+    **180°** ray (left). Slice centers sit at π − (i + ½)·step.
+    """
     if count <= 0:
         return []
     if count == 1:
-        return [(cx, cy + ring_radius)]
+        return [(cx - ring_radius, cy)]
     positions: list[Tuple[float, float]] = []
     angle_step = 2.0 * pi / count
     for i in range(count):
-        angle = pi / 2.0 - i * angle_step
+        angle = pi - (i + 0.5) * angle_step
         x = cx + ring_radius * cos(angle)
         y = cy + ring_radius * sin(angle)
         positions.append((x, y))

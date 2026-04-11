@@ -9,12 +9,18 @@ from typing import Set
 
 
 def layout_sector_from_pointer(mx: float, my: float, cx: float, cy: float, n: int) -> int:
-    """Wedge index 0..n-1 matching rendered pie sectors (top = 0, then clockwise)."""
+    """Wedge index 0..n-1 matching the pie shader (first slice starts at 180°, then CW).
+
+    Uses the same angle as ``compute_slot_positions`` / the pie fragment shader:
+    ``atan2(my - cy, mx - cx)`` (vector **from center toward** the pointer). The
+    shader uses ``atan(outward.y, outward.x)`` with ``outward = v_uv - 0.5``, which
+    matches that convention because the tarta quad UVs track region space (y up).
+    """
     if n <= 0:
         return 0
-    th = math.atan2(my - cy, mx - cx)
+    angle = math.atan2(my - cy, mx - cx)
     step = 2.0 * math.pi / n
-    shifted = (PI / 2.0 - th + step * 0.5 + 2.0 * PI) % (2.0 * PI)
+    shifted = (PI - angle + 2.0 * PI) % (2.0 * PI)
     i = int(math.floor(shifted / step))
     return i % n
 

@@ -80,6 +80,7 @@ void main() {
     const vec3 RIM_RGB = vec3(0.36, 0.38, 0.42);
 
     vec2 toCenter = vec2(0.5) - v_uv;
+    vec2 outward = v_uv - vec2(0.5);
     float radius = length(toCenter) * 2.0;
     if (radius < innerRatio) {
         discard;
@@ -94,9 +95,10 @@ void main() {
         discard;
     }
 
-    float angle = atan(-toCenter.y, toCenter.x);
+    /* Same convention as ``compute_slot_positions``: math angle from center to pixel. */
+    float angle = atan(outward.y, outward.x);
     float step = TWO_PI / float(n);
-    float shifted = mod(angle - PI * 0.5 + step * 0.5 + TWO_PI, TWO_PI);
+    float shifted = mod(PI - angle + TWO_PI, TWO_PI);
     float pos_in_seg = shifted / step;
 
     int sec = int(floor(pos_in_seg + 1e-5));
@@ -199,7 +201,7 @@ _shader_tex_boost: GPUShader | None = None
 
 
 def _build_pie_ring_shader() -> GPUShader:
-    iface = GPUStageInterfaceInfo("sculpt_wheel_pie_iface_v5_sector_fix")
+    iface = GPUStageInterfaceInfo("sculpt_wheel_pie_iface_v6_outward_angle")
     iface.smooth("VEC2", "v_uv")
     info = GPUShaderCreateInfo()
     info.push_constant("MAT4", "ModelViewProjectionMatrix")
