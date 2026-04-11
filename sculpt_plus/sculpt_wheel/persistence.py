@@ -13,7 +13,7 @@ from bpy.path import abspath as bpy_abspath
 from bpy.types import Context
 
 from ..core.debug import print_debug
-from ..core.globals import GLOBALS
+from ..core.globals import GLOBALS, PATHS
 
 from .data import MAX_CUSTOM_BUTTON_SETS, MAX_CUSTOM_BUTTONS_PER_SET
 
@@ -53,6 +53,14 @@ def _rel_under_root(abs_path: Path) -> str | None:
     try:
         rel = abs_path.relative_to(data_root())
         return rel.as_posix()
+    except ValueError:
+        return None
+
+
+def _rel_under_addon_root(abs_path: Path) -> str | None:
+    """Relative path from add-on root (for bundled icons); ``None`` if outside."""
+    try:
+        return abs_path.resolve().relative_to(PATHS.ROOT.resolve()).as_posix()
     except ValueError:
         return None
 
@@ -103,13 +111,19 @@ def save_wheel_storage(context: Context) -> None:
         for bi, btn in enumerate(bset.custom_buttons):
             src = _norm_abs(btn.image_path)
             icon_rel = None
+            icon_addon = ""
             if src.is_file():
-                new_abs = _copy_icon_to_custom_button(si, bi, src)
-                if new_abs:
-                    btn.image_path = new_abs
-                    ir = _rel_under_root(Path(new_abs))
-                    if ir:
-                        icon_rel = ir
+                addon_rel = _rel_under_addon_root(src)
+                if addon_rel is not None:
+                    # Bundled add-on icons: keep RNA path as-is; persist relative path only.
+                    icon_addon = addon_rel
+                else:
+                    new_abs = _copy_icon_to_custom_button(si, bi, src)
+                    if new_abs:
+                        btn.image_path = new_abs
+                        ir = _rel_under_root(Path(new_abs))
+                        if ir:
+                            icon_rel = ir
             buttons_out.append(
                 {
                     "name": btn.name,
@@ -117,6 +131,7 @@ def save_wheel_storage(context: Context) -> None:
                     "popup_type": btn.popup_type,
                     "attr": btn.attr,
                     "icon": icon_rel or "",
+                    "icon_addon": icon_addon,
                 }
             )
         sets_out.append(
@@ -172,6 +187,12 @@ def _load_button_dict_into_collection(bset, bd: dict) -> None:
     b.type = str(bd.get("type", "OPERATOR"))
     b.popup_type = str(bd.get("popup_type", "NONE"))
     b.attr = str(bd.get("attr", ""))
+    ia = (bd.get("icon_addon") or "").strip()
+    if ia:
+        p = PATHS.ROOT / ia.replace("\\", "/")
+        if p.is_file():
+            b.image_path = str(p.resolve())
+            return
     rel = bd.get("icon") or ""
     if rel:
         p = data_root() / str(rel)
@@ -188,6 +209,9 @@ def load_custom_buttons_if_empty(context: Context) -> None:
     st = get_wheel_storage(context)
 
     if len(st.custom_button_sets) > 0:
+        from .default_custom_buttons import repair_missing_icon_paths
+
+        repair_missing_icon_paths(st)
         try:
             _last_saved_fingerprint = _storage_fingerprint(context)
         except Exception:
@@ -195,8 +219,10 @@ def load_custom_buttons_if_empty(context: Context) -> None:
         return
 
     if not custom_buttons_json_path().is_file():
+        from .default_custom_buttons import apply_default_custom_button_set
+
         s = st.custom_button_sets.add()
-        s.name = "Default"
+        apply_default_custom_button_set(s)
         save_wheel_storage(context)
         try:
             _last_saved_fingerprint = _storage_fingerprint(context)
@@ -238,16 +264,23 @@ def load_custom_buttons_if_empty(context: Context) -> None:
                     _load_button_dict_into_collection(s, bd)
 
         if len(st.custom_button_sets) == 0:
+            from .default_custom_buttons import apply_default_custom_button_set
+
             s = st.custom_button_sets.add()
-            s.name = "Default"
+            apply_default_custom_button_set(s)
 
         st.custom_button_set_active_index = 0
     except (OSError, json.JSONDecodeError, TypeError, ValueError):
         print_debug(f"[Sculpt+] custom buttons load failed: {traceback.format_exc()}")
         if len(st.custom_button_sets) == 0:
-            s = st.custom_button_sets.add()
-            s.name = "Default"
+            from .default_custom_buttons import apply_default_custom_button_set
 
+            s = st.custom_button_sets.add()
+            apply_default_custom_button_set(s)
+
+    from .default_custom_buttons import repair_missing_icon_paths
+
+    repair_missing_icon_paths(st)
     try:
         _last_saved_fingerprint = _storage_fingerprint(context)
     except Exception:

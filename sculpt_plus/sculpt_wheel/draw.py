@@ -124,7 +124,7 @@ def _draw_custom_buttons(op: 'SculptWheelOperator', cx: float, cy: float, icon_s
         return
 
     # Square icons, uncropped (full texture alpha), slightly smaller than slot radius.
-    half = cr * 0.52 * icon_scale
+    half = cr * 0.9 * icon_scale
     for i, (sx, sy) in enumerate(op.custom_positions):
         if i >= len(op.custom_layout_map):
             break
