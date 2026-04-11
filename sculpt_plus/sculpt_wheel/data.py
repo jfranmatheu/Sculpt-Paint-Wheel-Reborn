@@ -39,7 +39,15 @@ EVENT_SET_ICONS = (
 )
 
 # Static enum items (no callback) so registration never depends on preferences context.
-_WHEEL_BRUSH_CUSTOM_SET_ITEMS = tuple(
+_WHEEL_BRUSH_CUSTOM_SET_ITEMS = (
+    (
+        "ACTIVE",
+        "Active",
+        "Use the custom button set selected in the sidebar (active index)",
+        "LINKED",
+        MAX_CUSTOM_BUTTON_SETS,
+    ),
+) + tuple(
     (str(i), str(i), f"Custom button set {i}", EVENT_SET_ICONS[i], i)
     for i in range(MAX_CUSTOM_BUTTON_SETS)
 )
@@ -301,9 +309,12 @@ class WheelBrushSetConfigItem(bl_types.PropertyGroup):
     )
     custom_button_set: EnumProperty(
         name="Custom button set",
-        description="Which custom button set (0–9) to show when this brush set is active",
+        description=(
+            "Active: follow the sidebar’s active custom set; 0–9: pin a specific set "
+            "when this brush set is on the wheel"
+        ),
         items=_WHEEL_BRUSH_CUSTOM_SET_ITEMS,
-        default="0",
+        default="ACTIVE",
         update=_wheel_brush_cfg_item_updated,
     )
 
@@ -385,13 +396,16 @@ def resolve_custom_buttons_for_brush_set(context: Context, set_key: str):
     idx = 0
     for it in wd.brush_set_configs:
         if it.set_key == set_key:
-            try:
-                idx = int(it.custom_button_set)
-            except (AttributeError, TypeError, ValueError):
-                idx = 0
-            idx = max(0, min(MAX_CUSTOM_BUTTON_SETS - 1, idx))
+            if getattr(it, "custom_button_set", None) == "ACTIVE":
+                idx = int(st.custom_button_set_active_index)
+            else:
+                try:
+                    idx = int(it.custom_button_set)
+                except (AttributeError, TypeError, ValueError):
+                    idx = 0
+                idx = max(0, min(MAX_CUSTOM_BUTTON_SETS - 1, idx))
             break
-    idx = min(idx, len(st.custom_button_sets) - 1)
+    idx = max(0, min(len(st.custom_button_sets) - 1, idx))
     return st.custom_button_sets[idx].custom_buttons
 
 

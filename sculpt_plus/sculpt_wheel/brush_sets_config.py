@@ -43,11 +43,27 @@ def ensure_brush_shelve_ready(*, force_rebuild: bool = False) -> tuple[bool, str
     return True, ""
 
 
-def _item_custom_set_int(it: Any) -> int:
+def _item_custom_button_set_persist(it: Any) -> str | int:
+    """JSON value: ``\"ACTIVE\"`` or pinned index ``0``..``9``."""
+    ident = getattr(it, "custom_button_set", None)
+    if ident == "ACTIVE":
+        return "ACTIVE"
     try:
-        return max(0, min(9, int(it.custom_button_set)))
+        return max(0, min(9, int(ident)))
     except (AttributeError, TypeError, ValueError):
         return 0
+
+
+def _coerce_custom_button_set_value(v: Any) -> str:
+    """RNA enum identifier: ``ACTIVE`` or ``\"0\"``..``\"9\"``."""
+    if v == "ACTIVE" or (isinstance(v, str) and v.strip().upper() == "ACTIVE"):
+        return "ACTIVE"
+    if v is not None:
+        try:
+            return str(max(0, min(9, int(v))))
+        except (TypeError, ValueError):
+            pass
+    return "ACTIVE"
 
 
 def _effective_display_name_for_item(it: Any) -> str:
@@ -75,28 +91,30 @@ def _default_entry(order: int, shelve_key: str, block: dict[str, Any]) -> dict[s
         "blend_name": name,
         "wheel_color": list(DEFAULT_WHEEL_COLOR),
         "show_color_picker": False,
-        "custom_button_set": 0,
+        "custom_button_set": "ACTIVE",
     }
 
 
-def _coerce_custom_button_set_from_ent(ent: dict[str, Any]) -> int:
-    """Brush row custom-button set index ``0``..``9`` (JSON key ``custom_button_set``)."""
+def _coerce_custom_button_set_from_ent(ent: dict[str, Any]) -> str:
+    """JSON ``custom_button_set``: ``\"ACTIVE\"`` or int/str ``0``..``9``."""
     v = ent.get("custom_button_set")
+    if v == "ACTIVE" or (isinstance(v, str) and v.strip().upper() == "ACTIVE"):
+        return "ACTIVE"
     if v is not None:
         try:
-            return max(0, min(9, int(v)))
+            return str(max(0, min(9, int(v))))
         except (TypeError, ValueError):
             pass
     old = ent.get("custom_buttons_set_id")
     if old is not None:
         try:
             if isinstance(old, str) and old.isdigit():
-                return max(0, min(9, int(old)))
+                return str(max(0, min(9, int(old))))
             if isinstance(old, int):
-                return max(0, min(9, int(old)))
+                return str(max(0, min(9, int(old))))
         except (TypeError, ValueError):
             pass
-    return 0
+    return "ACTIVE"
 
 
 def load_json_raw() -> dict[str, Any]:
@@ -237,14 +255,8 @@ def sync_brush_set_configs_from_shelve(context: Context) -> None:
             else:
                 it.wheel_color = DEFAULT_WHEEL_COLOR
             it.show_color_picker = bool(ent.get("show_color_picker"))
-            setattr(
-                it,
-                "custom_button_set",
-                str(
-                    _coerce_custom_button_set_from_ent(
-                        ent if isinstance(ent, dict) else {}
-                    )
-                ),
+            it.custom_button_set = _coerce_custom_button_set_from_ent(
+                ent if isinstance(ent, dict) else {}
             )
     finally:
         _CFG_LOADING = False
@@ -273,7 +285,7 @@ def save_brush_set_configs_to_json(context: Context) -> None:
             "blend_name": it.blend_name,
             "wheel_color": list(it.wheel_color),
             "show_color_picker": bool(it.show_color_picker),
-            "custom_button_set": _item_custom_set_int(it),
+            "custom_button_set": _item_custom_button_set_persist(it),
         }
     save_json_raw({"version": JSON_VERSION, "sets": sets})
 
@@ -299,7 +311,7 @@ def resort_brush_set_configs_collection(context: Context) -> None:
                 "display_name": _effective_display_name_for_item(it),
                 "wheel_color": tuple(float(x) for x in it.wheel_color),
                 "show_color_picker": bool(it.show_color_picker),
-                "custom_button_set": _item_custom_set_int(it),
+                "custom_button_set": _item_custom_button_set_persist(it),
             }
         )
     rows.sort(key=lambda r: (int(r["order"]), str(r["set_key"]).lower()))
@@ -315,9 +327,7 @@ def resort_brush_set_configs_collection(context: Context) -> None:
             it.display_name = r["display_name"]
             it.wheel_color = r["wheel_color"]
             it.show_color_picker = r["show_color_picker"]
-            it.custom_button_set = str(
-                max(0, min(9, int(r["custom_button_set"])))
-            )
+            it.custom_button_set = _coerce_custom_button_set_value(r.get("custom_button_set"))
     finally:
         _CFG_LOADING = False
     save_brush_set_configs_to_json(context)
