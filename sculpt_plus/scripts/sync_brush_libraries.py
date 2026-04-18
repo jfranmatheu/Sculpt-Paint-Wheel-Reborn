@@ -444,30 +444,32 @@ def main() -> None:
                     preview = brush.preview_ensure()
                     if preview is None:
                         preview_missing_count += 1
-                        print(f"    ! {brush.name}: no preview (indexed anyway)")
+                        print(f"    ! {brush.name}: no preview (skipped)")
+                        continue
                     else:
                         w, h = preview.image_size
                         if w <= 0 or h <= 0:
                             preview_missing_count += 1
-                            print(f"    ! {brush.name}: invalid preview size {w}x{h} (indexed anyway)")
-                            w = 0
-                            h = 0
+                            print(f"    ! {brush.name}: invalid preview size {w}x{h} (skipped)")
+                            continue
                         else:
                             try:
                                 pixels = preview.image_pixels_float[:]
                             except Exception:
                                 preview_missing_count += 1
-                                print(f"    ! {brush.name}: failed reading preview pixels (indexed anyway)")
-                                pixels = None
+                                print(f"    ! {brush.name}: failed reading preview pixels (skipped)")
+                                continue
+                            
                             if pixels is not None:
                                 if len(pixels) != w * h * 4:
                                     preview_missing_count += 1
-                                    print(f"    ! {brush.name}: pixel count mismatch (indexed anyway)")
-                                    w = 0
-                                    h = 0
+                                    print(f"    ! {brush.name}: pixel count mismatch (skipped)")
+                                    continue
                                 else:
                                     phash = _preview_hash(library_name, blend_file.stem, brush.name)
                                     prev_rel = _write_preview(cache_root, phash, w, h, pixels)
+                            else:
+                                continue
                     brid = _brush_id(str(blend_file), brush.name)
 
                     brushes_out[brid] = {
@@ -490,10 +492,11 @@ def main() -> None:
                 if not brushes_out:
                     print(
                         f"    ! No sculpt brushes indexed (loaded={len(loaded_brushes)}, "
-                        f"non_sculpt={non_sculpt_count}, skipped_builtin_like={skipped_builtin_like_count})"
+                        f"non_sculpt={non_sculpt_count}, skipped_builtin_like={skipped_builtin_like_count}, "
+                        f"invalid_previews={preview_missing_count})"
                     )
                 elif preview_missing_count:
-                    print(f"    · Indexed {len(brushes_out)} brushes ({preview_missing_count} without preview image)")
+                    print(f"    · Indexed {len(brushes_out)} brushes ({preview_missing_count} skipped due to invalid previews)")
             finally:
                 for brush in reversed(bpy.data.brushes):
                     try:
@@ -519,6 +522,10 @@ def main() -> None:
                         old_lib, str(blend_file.resolve()), bid,
                     ),
                 }
+
+        if not lib_data["blends"]:
+            print(f"[Sync] {library_name}: skipped library registration (no valid brushes found with previews).")
+            continue
 
         new_libraries[lid] = lib_data
 
