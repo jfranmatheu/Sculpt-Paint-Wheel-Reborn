@@ -103,6 +103,7 @@ ESSENTIAL_GROUPS: dict[str, set[str]] = {
         "Twist Boundary Cloth",
     },
 }
+ESSENTIAL_BRUSH_NAMES: set[str] = set().union(*ESSENTIAL_GROUPS.values())
 
 
 def _essentials_relative_id(brush_name: str) -> str:
@@ -111,13 +112,26 @@ def _essentials_relative_id(brush_name: str) -> str:
 
 
 def _user_relative_id(library_path: Path, blend_file: Path, brush_name: str) -> str:
+    import os
     lib = library_path.resolve()
     bf = blend_file.resolve()
     try:
-        rel_blend = bf.relative_to(lib).as_posix()
-    except ValueError:
+        rel_blend = os.path.relpath(bf, lib).replace(os.sep, "/")
+        if rel_blend.startswith(".."):
+            rel_blend = bf.name
+    except Exception:
         rel_blend = bf.name
     return f"{rel_blend}/Brush/{brush_name}"
+
+
+def _user_relative_id_from_brush(brush, library_path: Path, blend_file: Path, brush_name: str) -> str:
+    """Build identifier from current library root + blend path.
+
+    Some migrated assets keep stale ``asset_weak_reference.relative_asset_identifier``
+    values from old locations (e.g. user Documents library). Building from the
+    current library path avoids activation against outdated paths.
+    """
+    return _user_relative_id(library_path, blend_file, brush_name)
 
 
 # ──────────────────────────────────────────────────────────────────────
@@ -162,6 +176,13 @@ def _load_existing_index() -> dict[str, Any]:
 
 MAX_BRUSHES_PER_PAGE = 20
 INDEX_VERSION = 2
+
+
+def _load_brushes_from_blend(blend_file: Path, *, assets_only: bool) -> list[Any]:
+    """Load brushes from *blend_file* and return loaded Brush datablocks."""
+    with bpy.data.libraries.load(str(blend_file), link=False, assets_only=assets_only) as (data_from, data_to):
+        data_to.brushes = data_from.brushes
+    return [b for b in (data_to.brushes or []) if b is not None]
 
 
 def _default_user_prefs() -> dict[str, Any]:
@@ -318,9 +339,24 @@ def main() -> None:
         new_libraries[essentials_lib_id] = essentials_lib
 
     # ── User asset libraries ──────────────────────────────────────────
-    for asset_library in prefs.filepaths.asset_libraries:
-        library_name = asset_library.name
-        library_path = Path(bpy.path.abspath(asset_library.path))
+    libraries_to_scan = []
+    if "--" in sys.argv:
+        idx = sys.argv.index("--")
+        for arg in sys.argv[idx + 1:]:
+            if "|" in arg:
+                name, path_str = arg.split("|", 1)
+                libraries_to_scan.append({"name": name, "path": path_str})
+
+    if not libraries_to_scan:
+        for asset_library in prefs.filepaths.asset_libraries:
+            libraries_to_scan.append({
+                "name": asset_library.name,
+                "path": bpy.path.abspath(asset_library.path)
+            })
+
+    for lib_info in libraries_to_scan:
+        library_name = lib_info["name"]
+        library_path = Path(lib_info["path"])
         if not library_path.is_dir():
             print(f"[Sync] {library_name}: path not a directory, skipping.")
             continue
@@ -377,35 +413,61 @@ def main() -> None:
             print(f"  - {_display_title_from_blend_stem(blend_file.stem)} ({blend_file.name})")
             stat = blend_file.stat()
             bid = _blend_id(str(blend_file), stat.st_mtime, stat.st_size)
-
-            with bpy.data.libraries.load(str(blend_file), link=False, assets_only=True) as (data_from, data_to):
-                data_to.brushes = data_from.brushes
+            loaded_brushes = _load_brushes_from_blend(blend_file, assets_only=True)
+            used_fallback_load = False
+            if not loaded_brushes:
+                print("    · No asset-marked brushes found; retrying with assets_only=False")
+                loaded_brushes = _load_brushes_from_blend(blend_file, assets_only=False)
+                used_fallback_load = True
 
             brushes_out: dict[str, Any] = {}
+            non_sculpt_count = 0
+            skipped_builtin_like_count = 0
+            preview_missing_count = 0
+            fallback_drop_builtin_like = False
+            if used_fallback_load:
+                sculpt_names = [b.name for b in loaded_brushes if b and b.use_paint_sculpt]
+                # If file contains custom names besides Blender essentials, drop essentials-like entries.
+                fallback_drop_builtin_like = any(n not in ESSENTIAL_BRUSH_NAMES for n in sculpt_names)
             try:
-                for brush in data_to.brushes:
+                for brush in loaded_brushes:
                     if not brush.use_paint_sculpt:
+                        non_sculpt_count += 1
+                        continue
+                    if fallback_drop_builtin_like and brush.name in ESSENTIAL_BRUSH_NAMES:
+                        skipped_builtin_like_count += 1
                         continue
 
+                    prev_rel = ""
+                    w = 0
+                    h = 0
                     preview = brush.preview_ensure()
                     if preview is None:
-                        print(f"    ! {brush.name}: no preview")
-                        continue
-                    w, h = preview.image_size
-                    if w <= 0 or h <= 0:
-                        print(f"    ! {brush.name}: invalid preview size {w}x{h}")
-                        continue
-                    try:
-                        pixels = preview.image_pixels_float[:]
-                    except Exception:
-                        print(f"    ! {brush.name}: failed reading preview pixels")
-                        continue
-                    if len(pixels) != w * h * 4:
-                        print(f"    ! {brush.name}: pixel count mismatch")
-                        continue
-
-                    phash = _preview_hash(library_name, blend_file.stem, brush.name)
-                    prev_rel = _write_preview(cache_root, phash, w, h, pixels)
+                        preview_missing_count += 1
+                        print(f"    ! {brush.name}: no preview (indexed anyway)")
+                    else:
+                        w, h = preview.image_size
+                        if w <= 0 or h <= 0:
+                            preview_missing_count += 1
+                            print(f"    ! {brush.name}: invalid preview size {w}x{h} (indexed anyway)")
+                            w = 0
+                            h = 0
+                        else:
+                            try:
+                                pixels = preview.image_pixels_float[:]
+                            except Exception:
+                                preview_missing_count += 1
+                                print(f"    ! {brush.name}: failed reading preview pixels (indexed anyway)")
+                                pixels = None
+                            if pixels is not None:
+                                if len(pixels) != w * h * 4:
+                                    preview_missing_count += 1
+                                    print(f"    ! {brush.name}: pixel count mismatch (indexed anyway)")
+                                    w = 0
+                                    h = 0
+                                else:
+                                    phash = _preview_hash(library_name, blend_file.stem, brush.name)
+                                    prev_rel = _write_preview(cache_root, phash, w, h, pixels)
                     brid = _brush_id(str(blend_file), brush.name)
 
                     brushes_out[brid] = {
@@ -418,13 +480,20 @@ def main() -> None:
                             "format": "RGBA8",
                             "compression": "zlib",
                         },
-                        "asset_library_type": "LOCAL",
+                        "asset_library_type": "CUSTOM",
                         "asset_library_identifier": library_name,
-                        "relative_asset_identifier": _user_relative_id(
-                            library_path, blend_file, brush.name,
+                        "relative_asset_identifier": _user_relative_id_from_brush(
+                            brush, library_path, blend_file, brush.name,
                         ),
                     }
                     print(f"    > {brush.name}")
+                if not brushes_out:
+                    print(
+                        f"    ! No sculpt brushes indexed (loaded={len(loaded_brushes)}, "
+                        f"non_sculpt={non_sculpt_count}, skipped_builtin_like={skipped_builtin_like_count})"
+                    )
+                elif preview_missing_count:
+                    print(f"    · Indexed {len(brushes_out)} brushes ({preview_missing_count} without preview image)")
             finally:
                 for brush in reversed(bpy.data.brushes):
                     try:

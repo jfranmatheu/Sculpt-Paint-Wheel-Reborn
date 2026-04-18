@@ -76,6 +76,15 @@ def run_sync_background(*, force: bool = False) -> tuple[bool, str]:
     if force:
         cmd.append("--force")
 
+    # Pass current asset libraries as arguments to ensure unsaved preferences are seen
+    cmd.append("--")
+    try:
+        for al in bpy.context.preferences.filepaths.asset_libraries:
+            path_abs = bpy.path.abspath(al.path)
+            cmd.append(f"{al.name}|{path_abs}")
+    except Exception:
+        pass
+
     try:
         proc = subprocess.Popen(
             cmd,

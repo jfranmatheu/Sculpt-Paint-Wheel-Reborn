@@ -209,14 +209,50 @@ def activate_brush(context: Context, brush: BrushData) -> bool:
     rid = brush.relative_asset_identifier or ""
     if not rid:
         return False
-    try:
-        ret = bpy.ops.brush.asset_activate(
-            asset_library_type=lt,
+    rid = rid.replace("\\", "/")
+
+    def _activate(rid_value: str, lt_value: str):
+        return bpy.ops.brush.asset_activate(
+            asset_library_type=lt_value,
             asset_library_identifier=lid,
-            relative_asset_identifier=rid,
+            relative_asset_identifier=rid_value,
         )
+
+    rid_alt = ""
+    if "/Brush/" in rid:
+        pre, post = rid.split("/Brush/", 1)
+        rid_alt = f"{pre.lower()}/Brush/{post}"
+    elif "/brush/" in rid:
+        pre, post = rid.split("/brush/", 1)
+        rid_alt = f"{pre.lower()}/Brush/{post}"
+
+    try:
+        ret = _activate(rid, lt)
         return ret == {"FINISHED"}
     except Exception:
+        if rid_alt and rid_alt != rid:
+            try:
+                ret = _activate(rid_alt, lt)
+                if ret == {"FINISHED"}:
+                    return True
+            except Exception:
+                pass
+        # Backward-compat: older cached indices may still store LOCAL for external libraries.
+        if lt == "LOCAL":
+            try:
+                ret = _activate(rid, "CUSTOM")
+                if ret == {"FINISHED"}:
+                    return True
+            except Exception:
+                pass
+            if rid_alt and rid_alt != rid:
+                try:
+                    ret = _activate(rid_alt, "CUSTOM")
+                    if ret == {"FINISHED"}:
+                        return True
+                except Exception:
+                    pass
+        print(f"[Sculpt+] asset_activate args: type={lt!r}, id={lid!r}, rid={rid!r}, rid_alt={rid_alt!r}")
         print(f"[Sculpt+] brush activation failed: {traceback.format_exc()}")
         return False
 
