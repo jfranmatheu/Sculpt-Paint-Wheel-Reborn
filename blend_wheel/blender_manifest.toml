@@ -2,9 +2,9 @@ schema_version = "1.0.0"
 
 # Example of manifest file for a Blender extension
 # Change the values according to your extension
-id = "sculpt_plus"
+id = "blend_wheel"
 version = "1.0.0"
-name = "Sculpt+"
+name = "Blend Wheel"
 tagline = "This is another extension"
 maintainer = "Juan Fran Matheu (@jfranmatheu)"
 # Supported types: "add-on", "theme"
@@ -15,9 +15,9 @@ type = "add-on"
 
 # Optional list defined by Blender and server, see:
 # https://docs.blender.org/manual/en/dev/advanced/extensions/tags.html
-tags = ["Sculpt", "User Interface"]
+tags = ["3D View", "Sculpt", "User Interface", "Paint", "Grease Pencil", "Rigging"]
 
-blender_version_min = "5.0.0"
+blender_version_min = "5.1.0"
 # # Optional: Blender version that the extension does not support, earlier versions are supported.
 # # This can be omitted and defined later on the extensions platform if an issue is found.
 # blender_version_max = "5.1.0"
@@ -28,10 +28,9 @@ license = [
   "SPDX:GPL-2.0-or-later",
 ]
 # Optional: required by some licenses.
-# copyright = [
-#   "2002-2024 Developer Name",
-#   "1998 Company Name",
-# ]
+copyright = [
+  "20020-2026 Juan Fran Matheu"
+]
 
 # Optional list of supported platforms. If omitted, the extension will be available in all operating systems.
 # platforms = ["windows-x64", "macos-arm64", "linux-x64"]
@@ -58,9 +57,9 @@ license = [
 # Keep this a single short sentence without a period (.) at the end.
 # For longer explanations use the documentation or detail page.
 #
-# [permissions]
+[permissions]
+files = "Read/Write addon-related data from/to disk"
 # network = "Need to sync motion-capture data to server"
-# files = "Import/export FBX from/to disk"
 # clipboard = "Copy and paste bone transforms"
 
 # Optional: build settings.
@@ -76,8 +75,8 @@ license = [
 # AddonLoader.
 works_in_background = false
 auto_code_options = ["ICONS"]
-default_root_prop_group_datapath = "sculpt_plus"
-default_panels_category = "Sculpt+"
+default_root_prop_group_datapath = "blend_wheel"
+default_panels_category = "Blend Wheel"
 default_panels_context = ""
 default_panels_space_type = "VIEW_3D"
 default_panels_region_type = "UI"
