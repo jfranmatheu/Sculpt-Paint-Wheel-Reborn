@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Literal, Tuple
 from bpy.types import Context, UILayout
 
 from .._base import BType
@@ -16,9 +16,17 @@ class BType_UICommon(BType):
 
 
 class BType_UIExtra(BType_UICommon):
-    def draw_section(self, layout: UILayout, title: str, icon: str | int = 'NONE', align_content: bool = True) -> Tuple[UILayout, UILayout]:
+    def draw_section(self, layout: UILayout, title: str, icon: str | int = 'NONE', align_content: bool = True, content_layout_type: Literal['COLUMN', 'ROW', 'GRID_FLOW', 'COLUMN_FLOW'] = 'COLUMN') -> Tuple[UILayout, UILayout]:
         col = layout.column(align=True)
         title_box = col.box().row()
         title_box.label(text=title, icon=icon)
-        content_box = col.box().column(align=align_content)
+        match content_layout_type:
+            case 'COLUMN':
+                content_box = col.box().column(align=align_content)
+            case 'ROW':
+                content_box = col.box().row(align=align_content)
+            case 'GRID_FLOW':
+                content_box = col.box().grid_flow(align=align_content)
+            case 'COLUMN_FLOW':
+                content_box = col.box().column_flow(align=align_content)
         return title_box, content_box
