@@ -275,8 +275,8 @@ class SculptWheelOperator(bl_types.OperatorModal):
 
     def modal_end(self, context: Context, cancel: bool, mouse: ModalMouse) -> None:
         context.tool_settings.sculpt.show_brush = True
-        clear_texture_cache()
-        clear_custom_button_texture_cache()
+        # clear_texture_cache()
+        # clear_custom_button_texture_cache()
 
     def _colpk_submodal(self, context: Context, event: Event) -> bool:
         ch = self._colpk_channel
@@ -523,7 +523,7 @@ class SculptWheelOperator(bl_types.OperatorModal):
             return
         i = (self.active_blend_index + direction) % len(keys)
         self._wheel_data.wheel_active_blend = keys[i]
-        clear_texture_cache()
+        # clear_texture_cache()
         self._rebuild_layout(context)
         self._cache_previews()
 
@@ -535,6 +535,6 @@ class SculptWheelOperator(bl_types.OperatorModal):
             return
         new_page = (self.active_page + direction) % self.total_pages
         set_active_page(context, cur, new_page)
-        clear_texture_cache()
+        # clear_texture_cache()
         self._rebuild_layout(context)
         self._cache_previews()
