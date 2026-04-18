@@ -1,3 +1,4 @@
+from typing import Tuple
 from bpy.types import Context, UILayout
 
 from .._base import BType
@@ -15,7 +16,7 @@ class BType_UICommon(BType):
 
 
 class BType_UIExtra(BType_UICommon):
-    def draw_section(self, layout: UILayout, title: str, icon: str | int = 'NONE', align_content: bool = True) -> None:
+    def draw_section(self, layout: UILayout, title: str, icon: str | int = 'NONE', align_content: bool = True) -> Tuple[UILayout, UILayout]:
         col = layout.column(align=True)
         title_box = col.box().row()
         title_box.label(text=title, icon=icon)
