@@ -38,37 +38,10 @@ void main() {
 
 _PIE_RING_FRAG = """
 float sector_kind(int s) {
-    if (s < 4) {
-        if (s == 0) {
-            return sectorKinds0.x;
-        }
-        if (s == 1) {
-            return sectorKinds0.y;
-        }
-        if (s == 2) {
-            return sectorKinds0.z;
-        }
-        return sectorKinds0.w;
+    if (s < 0 || s > 30) {
+        return 0.0;
     }
-    if (s < 8) {
-        if (s == 4) {
-            return sectorKinds1.x;
-        }
-        if (s == 5) {
-            return sectorKinds1.y;
-        }
-        if (s == 6) {
-            return sectorKinds1.z;
-        }
-        return sectorKinds1.w;
-    }
-    if (s == 8) {
-        return sectorKinds2.x;
-    }
-    if (s == 9) {
-        return sectorKinds2.y;
-    }
-    return 0.0;
+    return float((sectorKindsMask >> s) & 1);
 }
 
 void main() {
@@ -207,9 +180,7 @@ def _build_pie_ring_shader() -> GPUShader:
     info.push_constant("MAT4", "ModelViewProjectionMatrix")
     info.push_constant("VEC4", "pieColorPopup")
     info.push_constant("VEC4", "pieColorOp")
-    info.push_constant("VEC4", "sectorKinds0")
-    info.push_constant("VEC4", "sectorKinds1")
-    info.push_constant("VEC4", "sectorKinds2")
+    info.push_constant("INT", "sectorKindsMask")
     info.push_constant("FLOAT", "innerRatio")
     info.push_constant("FLOAT", "inner_soft")
     info.push_constant("FLOAT", "outer_soft")
@@ -282,16 +253,13 @@ def _get_tex_boost_shader() -> GPUShader:
 _MAX_TARTA_SECTORS = 10
 
 
-def _pack_sector_kinds(kinds: Sequence[int]) -> tuple[tuple[float, float, float, float], ...]:
-    """Pack up to 10 values ``0`` (popup) / ``1`` (operator) into three vec4 uniforms."""
-    k = [float(int(x) & 1) for x in kinds[:_MAX_TARTA_SECTORS]]
-    while len(k) < 10:
-        k.append(0.0)
-    return (
-        (k[0], k[1], k[2], k[3]),
-        (k[4], k[5], k[6], k[7]),
-        (k[8], k[9], 0.0, 0.0),
-    )
+def _pack_sector_kinds_mask(kinds: Sequence[int]) -> int:
+    """Pack up to 10 values ``0``/``1`` into a bitmask int."""
+    mask = 0
+    for i, kind in enumerate(kinds[:_MAX_TARTA_SECTORS]):
+        if int(kind) & 1:
+            mask |= (1 << i)
+    return mask
 
 
 def draw_pie_split_ring(
@@ -315,9 +283,7 @@ def draw_pie_split_ring(
     if n_sectors <= 0 or outer_radius_px <= 0.0:
         return
     sk = list(sector_kinds[:n_sectors])
-    while len(sk) < 10:
-        sk.append(0)
-    pk = _pack_sector_kinds(sk)
+    sector_mask = _pack_sector_kinds_mask(sk)
     shader = _get_pie_ring_shader()
     positions, uvs, indices = _quad_verts(cx, cy, outer_radius_px)
     batch = batch_for_shader(shader, "TRIS", {"pos": positions, "uv": uvs}, indices=indices)
@@ -325,9 +291,7 @@ def draw_pie_split_ring(
         shader.bind()
         shader.uniform_float("pieColorPopup", color_popup)
         shader.uniform_float("pieColorOp", color_operator)
-        shader.uniform_float("sectorKinds0", pk[0])
-        shader.uniform_float("sectorKinds1", pk[1])
-        shader.uniform_float("sectorKinds2", pk[2])
+        shader.uniform_int("sectorKindsMask", sector_mask)
         shader.uniform_float("innerRatio", float(inner_ratio))
         shader.uniform_float("inner_soft", float(inner_soft))
         shader.uniform_float("outer_soft", float(outer_soft))
