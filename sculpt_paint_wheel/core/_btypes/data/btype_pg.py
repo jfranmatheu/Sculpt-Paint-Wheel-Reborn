@@ -3,6 +3,7 @@ from typing import Type, TypeVar
 import bpy
 from bpy.types import Context, UILayout
 
+from ..ui.btype_ui_base import BType_UIExtra
 from .._base import BType
 from ...globals import GLOBALS
 
@@ -10,7 +11,7 @@ from ...globals import GLOBALS
 TRoot = TypeVar("RootPropertyGroup", bound='BType_PGRoot')
 
 
-class BType_PropertyGroup(BType, bpy.types.PropertyGroup):
+class BType_PropertyGroup(BType, bpy.types.PropertyGroup, BType_UIExtra):
     pg_role: str
 
     @classmethod
