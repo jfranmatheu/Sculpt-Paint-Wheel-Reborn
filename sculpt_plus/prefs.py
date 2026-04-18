@@ -72,10 +72,10 @@ class SculptPlusPreferences(bl_types.AddonPreferences):
         box = layout.box()
         box.label(text="Sculpt Wheel", icon="BRUSH_DATA")
         box.label(
-            text="Brush sets load automatically when the add-on enables (first run may build a cache)."
+            text="Brush libraries sync automatically when the add-on enables (first run may build a cache)."
         )
         box.label(
-            text="Pick the active set in the Sidebar (Sculpt mode) and use Reload there to rescan libraries."
+            text="Pick the active library in the Sidebar (Sculpt mode) and use Reload there to rescan libraries."
         )
         col = box.column(align=True)
         col.prop(self, "wheel_radius")

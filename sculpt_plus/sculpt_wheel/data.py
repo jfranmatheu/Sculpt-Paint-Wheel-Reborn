@@ -1,4 +1,4 @@
-"""Sculpt Wheel data model — custom button sets (prefs) + active brush set (WM)."""
+"""Sculpt Wheel data model — custom button sets (prefs) + active brush library/blend (WM)."""
 
 from pathlib import Path
 
@@ -38,7 +38,6 @@ EVENT_SET_ICONS = (
     "EVENT_NINEKEY",
 )
 
-# Static enum items (no callback) so registration never depends on preferences context.
 _WHEEL_BRUSH_CUSTOM_SET_ITEMS = (
     (
         "ACTIVE",
@@ -51,6 +50,8 @@ _WHEEL_BRUSH_CUSTOM_SET_ITEMS = (
     (str(i), str(i), f"Custom button set {i}", EVENT_SET_ICONS[i], i)
     for i in range(MAX_CUSTOM_BUTTON_SETS)
 )
+
+DEFAULT_WHEEL_COLOR = (0.075, 0.078, 0.085, 0.97)
 
 
 def _enum_preset_menus(self, context):
@@ -65,78 +66,77 @@ def _enum_preset_operators(self, context):
     return [(a, b, c or "") for a, b, c in preset_operators]
 
 
-def _enum_wheel_brush_sets(self, context):
-    from .brush_sets_config import brush_set_enum_label, list_ordered_brush_set_keys
+def _enum_wheel_brush_libraries(self, context):
+    """Dynamic enum: one entry per (library_id, blend_id) in the loaded index."""
+    from ..src.brush_management import is_loaded, list_library_blend_keys
 
-    wd = SculptWheelData.get(context)
-    # During sync, the collection is filled before brush_sets_loaded flips; still list real keys.
-    if not wd.brush_sets_loaded and len(wd.brush_set_configs) == 0:
+    if not is_loaded():
         return [("NONE", "(Preparing brush data…)", "")]
-    keys = list_ordered_brush_set_keys(context)
+    keys = list_library_blend_keys()
     if not keys:
-        return [("NONE", "(No brush sets — add libraries or Reload)", "")]
-    return [(k, brush_set_enum_label(context, k), "") for k in keys]
+        return [("NONE", "(No brush libraries — sync or add asset libraries)", "")]
+    return [(f"{lid}|{bid}", label, "") for lid, bid, label in keys]
 
 
-# Keep UIList highlight (``brush_set_config_active_index``) in sync with ``wheel_brush_set``.
 _BRUSH_ACTIVE_SYNC_DEPTH = 0
 
 
-def _sync_list_index_from_wheel_brush_set(wd: "SculptWheelData") -> None:
-    """Align list active row with ``wheel_brush_set`` (caller manages sync depth)."""
-    n = len(wd.brush_set_configs)
+def _sync_list_index_from_active_blend(wd: "SculptWheelData") -> None:
+    n = len(wd.brush_lib_configs)
     if n <= 0:
         return
-    key = wd.wheel_brush_set
+    key = wd.wheel_active_blend
     if not key or key == "NONE":
         return
-    for i, it in enumerate(wd.brush_set_configs):
-        if it.set_key == key:
-            if int(wd.brush_set_config_active_index) != i:
-                wd.brush_set_config_active_index = i
+    for i, it in enumerate(wd.brush_lib_configs):
+        if it.blend_key == key:
+            if int(wd.brush_lib_config_active_index) != i:
+                wd.brush_lib_config_active_index = i
             break
 
 
-def _wheel_brush_set_active_updated(self, context: Context) -> None:
+def _wheel_active_blend_updated(self, context: Context) -> None:
     global _BRUSH_ACTIVE_SYNC_DEPTH
     if _BRUSH_ACTIVE_SYNC_DEPTH:
         return
     _BRUSH_ACTIVE_SYNC_DEPTH += 1
     try:
-        _sync_list_index_from_wheel_brush_set(self)
+        _sync_list_index_from_active_blend(self)
     finally:
         _BRUSH_ACTIVE_SYNC_DEPTH -= 1
 
 
-def _brush_set_config_active_index_updated(self, context: Context) -> None:
+def _brush_lib_config_active_index_updated(self, context: Context) -> None:
     global _BRUSH_ACTIVE_SYNC_DEPTH
     if _BRUSH_ACTIVE_SYNC_DEPTH:
         return
     wd = self
-    n = len(wd.brush_set_configs)
+    n = len(wd.brush_lib_configs)
     if n <= 0:
         return
     _BRUSH_ACTIVE_SYNC_DEPTH += 1
     try:
-        idx = max(0, min(n - 1, int(wd.brush_set_config_active_index)))
-        if int(wd.brush_set_config_active_index) != idx:
-            wd.brush_set_config_active_index = idx
-        key = wd.brush_set_configs[idx].set_key
-        if wd.wheel_brush_set != key:
-            wd.wheel_brush_set = key
+        idx = max(0, min(n - 1, int(wd.brush_lib_config_active_index)))
+        if int(wd.brush_lib_config_active_index) != idx:
+            wd.brush_lib_config_active_index = idx
+        key = wd.brush_lib_configs[idx].blend_key
+        if wd.wheel_active_blend != key:
+            wd.wheel_active_blend = key
     finally:
         _BRUSH_ACTIVE_SYNC_DEPTH -= 1
 
 
-def sync_brush_set_list_index_to_wheel(context: Context) -> None:
-    """Ensure UIList selection matches ``wheel_brush_set`` (e.g. after modal wheel cycle)."""
-    _wheel_brush_set_active_updated(SculptWheelData.get(context), context)
+def sync_brush_lib_list_index(context: Context) -> None:
+    """Ensure UIList selection matches ``wheel_active_blend``."""
+    _wheel_active_blend_updated(SculptWheelData.get(context), context)
 
+
+# ──────────────────────────────────────────────────────────────────────
+# Custom Buttons (unchanged from original)
+# ──────────────────────────────────────────────────────────────────────
 
 class WheelCustomButton(bl_types.PropertyGroup):
-    """User-defined action on the inner ring of the wheel."""
-
-    pg_parent = None  # WheelCustomButtonSet
+    pg_parent = None
 
     name: StringProperty(name="Name", default="Custom")
     type: EnumProperty(
@@ -161,7 +161,6 @@ class WheelCustomButton(bl_types.PropertyGroup):
 
 def _wheel_custom_set_name_updated(self, context):
     from .persistence import touch_wheel_storage_save_debounced
-
     try:
         touch_wheel_storage_save_debounced(context)
     except Exception:
@@ -169,9 +168,7 @@ def _wheel_custom_set_name_updated(self, context):
 
 
 class WheelCustomButtonSet(bl_types.PropertyGroup):
-    """Named group of up to 10 custom wheel buttons."""
-
-    pg_parent = None  # SculptWheelStorage
+    pg_parent = None
 
     name: StringProperty(
         name="Set name",
@@ -183,9 +180,7 @@ class WheelCustomButtonSet(bl_types.PropertyGroup):
 
 
 class CreateWheelCustomButton(bl_types.PropertyGroup):
-    """Temporary settings used when adding a custom button from the sidebar."""
-
-    pg_parent = None  # SculptWheelData
+    pg_parent = None
 
     name: StringProperty(name="Name", default="Button")
     image_path: StringProperty(name="Icon Image", default="", subtype="FILE_PATH")
@@ -247,77 +242,81 @@ class CreateWheelCustomButton(bl_types.PropertyGroup):
     )
 
 
-def _wheel_brush_cfg_item_updated(self, context):
-    from .brush_sets_config import save_brush_set_configs_to_json
+# ──────────────────────────────────────────────────────────────────────
+# Brush Library Config (per-blend metadata for the wheel)
+# ──────────────────────────────────────────────────────────────────────
 
-    save_brush_set_configs_to_json(context)
+def _wheel_brush_lib_cfg_updated(self, context):
+    from .brush_lib_config import save_brush_lib_configs_to_json
+    save_brush_lib_configs_to_json(context)
     if getattr(context, "region", None):
         context.region.tag_redraw()
 
 
-class WheelBrushSetConfigItem(bl_types.PropertyGroup):
-    """Per brush-set (shelve key) metadata persisted in JSON."""
+class WheelBrushLibConfigItem(bl_types.PropertyGroup):
+    """Per brush library/blend metadata for the wheel UI."""
 
-    pg_parent = None  # SculptWheelData
+    pg_parent = None
 
-    set_key: StringProperty(name="Shelve key", default="", maxlen=1024)
+    blend_key: StringProperty(name="Blend key", default="", maxlen=2048)
+    library_id: StringProperty(name="Library ID", default="", maxlen=256)
+    blend_id: StringProperty(name="Blend ID", default="", maxlen=256)
     library_name: StringProperty(
-        name="Asset library",
+        name="Library name",
         default="",
         maxlen=512,
-        update=_wheel_brush_cfg_item_updated,
+        update=_wheel_brush_lib_cfg_updated,
     )
     blend_name: StringProperty(
-        name="Blend / group name",
+        name="Blend name",
         default="",
         maxlen=512,
-        update=_wheel_brush_cfg_item_updated,
+        update=_wheel_brush_lib_cfg_updated,
     )
     order: IntProperty(
         name="Order",
-        description="Sort order in wheel / sidebar lists (lower first)",
         default=0,
         min=0,
         max=9999,
-        update=_wheel_brush_cfg_item_updated,
+        update=_wheel_brush_lib_cfg_updated,
     )
     display_name: StringProperty(
         name="Display name",
-        description="Shown in the wheel / lists; leave empty to use the blend or group name",
         default="",
         maxlen=256,
-        update=_wheel_brush_cfg_item_updated,
+        update=_wheel_brush_lib_cfg_updated,
     )
     wheel_color: FloatVectorProperty(
         name="Wheel base color",
-        description="RGBA tint for the wheel annulus when this set is active",
         size=4,
         min=0.0,
         max=1.0,
-        default=(0.075, 0.078, 0.085, 0.97),
+        default=DEFAULT_WHEEL_COLOR,
         subtype="COLOR",
-        update=_wheel_brush_cfg_item_updated,
+        update=_wheel_brush_lib_cfg_updated,
     )
     show_color_picker: BoolProperty(
         name="In-wheel color picker",
-        description=(
-            "When on, the wheel shows hue / saturation / value rings outside the custom-button ring "
-            "(LMB drag; Esc or RMB cancels the current drag)"
-        ),
         default=False,
-        update=_wheel_brush_cfg_item_updated,
+        update=_wheel_brush_lib_cfg_updated,
     )
     custom_button_set: EnumProperty(
         name="Custom button set",
-        description=(
-            "Active: follow the sidebar’s active custom set; 0–9: pin a specific set "
-            "when this brush set is on the wheel"
-        ),
         items=_WHEEL_BRUSH_CUSTOM_SET_ITEMS,
         default="ACTIVE",
-        update=_wheel_brush_cfg_item_updated,
+        update=_wheel_brush_lib_cfg_updated,
+    )
+    active_page: IntProperty(
+        name="Active page",
+        default=0,
+        min=0,
+        update=_wheel_brush_lib_cfg_updated,
     )
 
+
+# ──────────────────────────────────────────────────────────────────────
+# Storage (addon prefs) & WM data
+# ──────────────────────────────────────────────────────────────────────
 
 class SculptWheelStorage(BType_PropertyGroup):
     """Global wheel custom buttons (add-on preferences)."""
@@ -346,25 +345,23 @@ class SculptWheelStorage(BType_PropertyGroup):
 class SculptWheelData(bl_types.PropertyGroupRoot.WINDOW_MANAGER):
     """Per-window-manager sculpt wheel state."""
 
-    brush_sets_loaded: BoolProperty(
-        name="Brush sets loaded",
-        description="Brush shelve has been read and configs synced to this session",
+    brush_libs_loaded: BoolProperty(
+        name="Libraries loaded",
         default=False,
     )
-    brush_set_configs: CollectionProperty(type=WheelBrushSetConfigItem)
-    brush_set_config_active_index: IntProperty(
-        name="Active brush set config",
-        description="UIList row; kept in sync with the wheel active brush set",
+    brush_lib_configs: CollectionProperty(type=WheelBrushLibConfigItem)
+    brush_lib_config_active_index: IntProperty(
+        name="Active library config",
         default=0,
         min=0,
-        update=_brush_set_config_active_index_updated,
+        update=_brush_lib_config_active_index_updated,
     )
 
-    wheel_brush_set: EnumProperty(
-        name="Brush Set",
-        description="Active brush set on the wheel (authoritative; list highlight follows)",
-        items=_enum_wheel_brush_sets,
-        update=_wheel_brush_set_active_updated,
+    wheel_active_blend: EnumProperty(
+        name="Active Brush Library",
+        description="Active brush library blend on the wheel",
+        items=_enum_wheel_brush_libraries,
+        update=_wheel_active_blend_updated,
     )
     create_custom_button: PointerProperty(type=CreateWheelCustomButton)
 
@@ -378,7 +375,6 @@ def get_wheel_storage(context: Context) -> SculptWheelStorage:
 
 
 def get_active_custom_button_buttons(context: Context):
-    """``custom_buttons`` collection of the active custom set, or ``None`` if none."""
     st = get_wheel_storage(context)
     if len(st.custom_button_sets) == 0:
         return None
@@ -387,15 +383,15 @@ def get_active_custom_button_buttons(context: Context):
     return st.custom_button_sets[si].custom_buttons
 
 
-def resolve_custom_buttons_for_brush_set(context: Context, set_key: str):
-    """Custom buttons collection for the wheel brush set *set_key* (from WM config)."""
+def resolve_custom_buttons_for_blend(context: Context, blend_key: str):
+    """Custom buttons collection for the given blend_key (from WM config)."""
     wd = SculptWheelData.get(context)
     st = get_wheel_storage(context)
     if len(st.custom_button_sets) == 0:
         return None
     idx = 0
-    for it in wd.brush_set_configs:
-        if it.set_key == set_key:
+    for it in wd.brush_lib_configs:
+        if it.blend_key == blend_key:
             if getattr(it, "custom_button_set", None) == "ACTIVE":
                 idx = int(st.custom_button_set_active_index)
             else:
@@ -413,7 +409,6 @@ def wheel_add_custom_button_from_create(
     context: Context,
     create: CreateWheelCustomButton | None = None,
 ) -> bool:
-    """Append a custom button from *create* (defaults to WM ``create_custom_button``)."""
     from .custom_buttons import build_custom_button_attr
 
     st = get_wheel_storage(context)
@@ -440,7 +435,6 @@ def wheel_add_custom_button_from_create(
         ip = bpy_abspath(ip)
     b.image_path = ip
     from .persistence import save_wheel_storage
-
     save_wheel_storage(context)
     return True
 
@@ -452,7 +446,6 @@ def wheel_remove_custom_button(context: Context, button_index: int) -> None:
     if 0 <= button_index < len(buttons):
         buttons.remove(button_index)
         from .persistence import save_wheel_storage
-
         save_wheel_storage(context)
 
 
@@ -463,30 +456,57 @@ def wheel_remove_all_custom_buttons_in_active_set(context: Context) -> None:
     while len(buttons) > 0:
         buttons.remove(0)
     from .persistence import save_wheel_storage
-
     save_wheel_storage(context)
 
+
+# ──────────────────────────────────────────────────────────────────────
+# Parse active blend key
+# ──────────────────────────────────────────────────────────────────────
+
+def parse_blend_key(blend_key: str) -> tuple[str, str]:
+    """Split ``"library_id|blend_id"`` into ``(library_id, blend_id)``."""
+    if "|" in blend_key:
+        parts = blend_key.split("|", 1)
+        return parts[0], parts[1]
+    return "", ""
+
+
+def make_blend_key(library_id: str, blend_id: str) -> str:
+    return f"{library_id}|{blend_id}"
+
+
+# ──────────────────────────────────────────────────────────────────────
+# Register / Unregister
+# ──────────────────────────────────────────────────────────────────────
 
 def register() -> None:
     if GLOBALS.IN_BACKGROUND:
         return
-    from .brush_sets_config import schedule_wheel_brush_bootstrap
+    from ..src.brush_management.handlers import register_handlers
     from .persistence import load_custom_buttons_if_empty, schedule_custom_buttons_load
+    from .brush_lib_config import schedule_brush_lib_bootstrap
 
     sculpt_data_root = Path(bpy.utils.resource_path("USER")) / "sculpt_plus_data"
     sculpt_data_root.mkdir(parents=True, exist_ok=True)
+
+    register_handlers()
+
     try:
         load_custom_buttons_if_empty(bpy.context)
     except Exception:
         schedule_custom_buttons_load()
-    schedule_wheel_brush_bootstrap()
+
+    schedule_brush_lib_bootstrap()
 
 
 def unregister() -> None:
-    pass
+    from ..src.brush_management.handlers import unregister_handlers
+    from ..src.brush_management import reset
+    unregister_handlers()
+    reset()
 
 
 WheelCustomButton.pg_parent = WheelCustomButtonSet
 WheelCustomButtonSet.pg_parent = SculptWheelStorage
 CreateWheelCustomButton.pg_parent = SculptWheelData
-WheelBrushSetConfigItem.pg_parent = SculptWheelData
+WheelBrushLibConfigItem.pg_parent = SculptWheelData

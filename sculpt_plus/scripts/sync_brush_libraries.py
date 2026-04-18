@@ -1,0 +1,450 @@
+"""Run inside Blender (--background --python) to build/update libraries.json + preview .bin files.
+
+Scans preferences asset libraries, loads sculpt brushes from each .blend,
+compresses preview pixels as RGBA8 .bin, writes the global index.
+
+Usage:
+    blender --background --python sync_brush_libraries.py [--force]
+"""
+from __future__ import annotations
+
+import hashlib
+import json
+import shutil
+import sys
+import time
+import zlib
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
+
+import bpy
+
+
+# ──────────────────────────────────────────────────────────────────────
+# ID helpers (mirror of src/brush_management/ids.py, standalone here)
+# ──────────────────────────────────────────────────────────────────────
+
+def _sha1(s: str) -> str:
+    return hashlib.sha1(s.encode("utf-8")).hexdigest()
+
+
+def _library_id(library_path: str) -> str:
+    return _sha1(str(Path(library_path).resolve()))
+
+
+def _blend_id(blend_path: str, mtime: float, size: int) -> str:
+    return _sha1(f"{Path(blend_path).resolve()}|{mtime}|{size}")
+
+
+def _brush_id(blend_path: str, brush_name: str) -> str:
+    return _sha1(f"{Path(blend_path).resolve()}|{brush_name}")
+
+
+def _preview_hash(library_name: str, blend_stem: str, brush_name: str) -> str:
+    return _sha1(f"{library_name}|{blend_stem}|{brush_name}")
+
+
+def _preview_rel(hash_id: str) -> str:
+    return f"previews/{hash_id[:2]}/{hash_id[2:4]}/{hash_id}.bin"
+
+
+# ──────────────────────────────────────────────────────────────────────
+# Paths
+# ──────────────────────────────────────────────────────────────────────
+
+def _cache_dir() -> Path:
+    return Path(bpy.utils.resource_path("USER")) / "sculpt_plus_data" / "cache"
+
+
+def _libraries_json_path() -> Path:
+    return _cache_dir() / "libraries.json"
+
+
+# ──────────────────────────────────────────────────────────────────────
+# Essentials (builtin)
+# ──────────────────────────────────────────────────────────────────────
+
+ESSENTIAL_GROUPS: dict[str, set[str]] = {
+    "Essentials: Add": {
+        "Blob", "Clay", "Clay Strips", "Clay Thumb", "Crease Polish",
+        "Crease Sharp", "Draw", "Draw Sharp", "Inflate/Deflate", "Layer",
+    },
+    "Essentials: Trim/Scrape": {
+        "Fill/Deepen", "Flatten/Contrast", "Plateau", "Scrape Multiplane",
+        "Scrape/Fill", "Smooth", "Trim",
+    },
+    "Essentials: Grab/Rotate": {
+        "Boundary", "Elastic Grab", "Elastic Snake Hook", "Grab", "Grab 2D",
+        "Grab Shilouette", "Nudge", "Pinch/Magnify", "Pose", "Pull",
+        "Relax Pinch", "Relax Slide", "Snake Hook", "Thumb", "Twist",
+    },
+    "Essentials: Mask/Multi-res": {
+        "Density", "Eraser Multires Displacement", "Face Set Paint",
+        "Mask", "Smear Multires Displacement",
+    },
+    "Essentials: Paint": {
+        "Airbrush", "Blend Hard", "Blend Soft", "Blend Square", "Paint Blend",
+        "Paint Hard", "Paint Hard Pressure", "Paint Soft", "Paint Soft Pressure",
+        "Paint Square", "Sharpen", "Smear",
+    },
+    "Essentials: Cloth": {
+        "Bend Boundary Cloth", "Bend/Twist Cloth", "Drag Cloth",
+        "Expand/Contract Cloth", "Grab Cloth", "Grab Planar Cloth",
+        "Grab Random Cloth", "Inflate Cloth", "Pinch Folds Cloth",
+        "Pinch Point Cloth", "Push Cloth", "Stretch/Move Cloth",
+        "Twist Boundary Cloth",
+    },
+}
+
+
+def _essentials_relative_id(brush_name: str) -> str:
+    blend = "essentials_brushes-mesh_sculpt.blend"
+    return f"brushes/{blend}/Brush/{brush_name}".replace("\\", "/")
+
+
+def _user_relative_id(library_path: Path, blend_file: Path, brush_name: str) -> str:
+    lib = library_path.resolve()
+    bf = blend_file.resolve()
+    try:
+        rel_blend = bf.relative_to(lib).as_posix()
+    except ValueError:
+        rel_blend = bf.name
+    return f"{rel_blend}/Brush/{brush_name}"
+
+
+# ──────────────────────────────────────────────────────────────────────
+# Preview writing
+# ──────────────────────────────────────────────────────────────────────
+
+def _write_preview(cache_root: Path, hash_id: str, w: int, h: int, pixels_float) -> str:
+    """Compress float pixels to uint8, write .bin, return relative path."""
+    data = bytes(int(max(0.0, min(1.0, p)) * 255) for p in pixels_float)
+    compressed = zlib.compress(data, 6)
+    rel = _preview_rel(hash_id)
+    full = cache_root / rel
+    full.parent.mkdir(parents=True, exist_ok=True)
+    with full.open("wb") as f:
+        f.write(w.to_bytes(4, "little"))
+        f.write(h.to_bytes(4, "little"))
+        f.write(compressed)
+    return rel
+
+
+# ──────────────────────────────────────────────────────────────────────
+# Load existing index
+# ──────────────────────────────────────────────────────────────────────
+
+def _load_existing_index() -> dict[str, Any]:
+    path = _libraries_json_path()
+    if not path.is_file():
+        return {"version": 1, "generated_at": 0, "libraries": {}}
+    try:
+        with path.open("r", encoding="utf-8") as f:
+            data = json.load(f)
+        if isinstance(data, dict) and isinstance(data.get("libraries"), dict):
+            return data
+    except Exception:
+        pass
+    return {"version": 1, "generated_at": 0, "libraries": {}}
+
+
+# ──────────────────────────────────────────────────────────────────────
+# Main sync
+# ──────────────────────────────────────────────────────────────────────
+
+MAX_BRUSHES_PER_PAGE = 20
+
+
+def main() -> None:
+    force = "--force" in sys.argv
+
+    for brush in reversed(bpy.data.brushes):
+        bpy.data.brushes.remove(brush)
+
+    cache_root = _cache_dir()
+    cache_root.mkdir(parents=True, exist_ok=True)
+    (cache_root / "previews").mkdir(parents=True, exist_ok=True)
+
+    existing_index = _load_existing_index()
+    existing_libs: dict[str, Any] = existing_index.get("libraries", {})
+
+    prefs = bpy.context.preferences
+    blender_local = Path(bpy.utils.resource_path("LOCAL"))
+    essentials_blend = blender_local / "datafiles" / "assets" / "brushes" / "essentials_brushes-mesh_sculpt.blend"
+
+    new_libraries: dict[str, Any] = {}
+
+    # ── Essentials (builtin) ──────────────────────────────────────────
+    essentials_lib_id = _library_id("BUILTIN_ESSENTIALS")
+    old_essentials = existing_libs.get(essentials_lib_id)
+
+    if not force and old_essentials and old_essentials.get("builtin"):
+        print(f"[Sync] Essentials: unchanged (builtin), skipping.")
+        new_libraries[essentials_lib_id] = old_essentials
+    else:
+        print(f"[Sync] Essentials: scanning...")
+        essentials_lib: dict[str, Any] = {
+            "name": "Essentials",
+            "path": "",
+            "last_scan": time.time(),
+            "builtin": True,
+            "blends": {},
+        }
+
+        for group_name, brush_filter in ESSENTIAL_GROUPS.items():
+            if not essentials_blend.is_file():
+                print(f"  ! Essentials blend not found: {essentials_blend}")
+                break
+
+            stat = essentials_blend.stat()
+            bid = _blend_id(str(essentials_blend), stat.st_mtime, stat.st_size)
+
+            with bpy.data.libraries.load(str(essentials_blend), link=False, assets_only=True) as (data_from, data_to):
+                data_to.brushes = data_from.brushes
+
+            brushes_out: dict[str, Any] = {}
+            brush_idx = 0
+            try:
+                for brush in data_to.brushes:
+                    if not brush.use_paint_sculpt:
+                        continue
+                    if brush.name not in brush_filter:
+                        continue
+
+                    preview = brush.preview_ensure()
+                    if preview is None:
+                        continue
+                    w, h = preview.image_size
+                    if w <= 0 or h <= 0:
+                        continue
+                    try:
+                        pixels = preview.image_pixels_float[:]
+                    except Exception:
+                        continue
+                    if len(pixels) != w * h * 4:
+                        continue
+
+                    phash = _preview_hash("Essentials", group_name, brush.name)
+                    prev_rel = _write_preview(cache_root, phash, w, h, pixels)
+                    brid = _brush_id(str(essentials_blend), brush.name)
+
+                    page = brush_idx // MAX_BRUSHES_PER_PAGE
+                    index_in_page = brush_idx % MAX_BRUSHES_PER_PAGE
+
+                    brushes_out[brid] = {
+                        "name": brush.name,
+                        "type": "SCULPT",
+                        "wheel": {"page": page, "index": index_in_page},
+                        "preview": {
+                            "path": prev_rel,
+                            "width": w,
+                            "height": h,
+                            "format": "RGBA8",
+                            "compression": "zlib",
+                        },
+                        "asset_library_type": "ESSENTIALS",
+                        "asset_library_identifier": "",
+                        "relative_asset_identifier": _essentials_relative_id(brush.name),
+                    }
+                    brush_idx += 1
+                    print(f"    > {brush.name}")
+            finally:
+                for brush in reversed(bpy.data.brushes):
+                    try:
+                        bpy.data.brushes.remove(brush)
+                    except Exception:
+                        pass
+
+            if brushes_out:
+                blend_key = f"essentials_{group_name.lower().replace(' ', '_').replace('/', '_')}"
+                essentials_lib["blends"][blend_key] = {
+                    "file_name": group_name,
+                    "path": str(essentials_blend.resolve()),
+                    "mtime": stat.st_mtime,
+                    "size": stat.st_size,
+                    "brush_count": len(brushes_out),
+                    "brushes": brushes_out,
+                    "user_prefs": _get_old_user_prefs(old_essentials, blend_key),
+                }
+
+        new_libraries[essentials_lib_id] = essentials_lib
+
+    # ── User asset libraries ──────────────────────────────────────────
+    for asset_library in prefs.filepaths.asset_libraries:
+        library_name = asset_library.name
+        library_path = Path(bpy.path.abspath(asset_library.path))
+        if not library_path.is_dir():
+            print(f"[Sync] {library_name}: path not a directory, skipping.")
+            continue
+
+        lid = _library_id(str(library_path))
+        old_lib = existing_libs.get(lid)
+
+        blend_files = sorted(
+            [fp for fp in library_path.rglob("*.blend") if fp.is_file()],
+            key=lambda p: p.name.lower(),
+        )
+
+        if not blend_files:
+            print(f"[Sync] {library_name}: no .blend files found.")
+            continue
+
+        lib_changed = force
+        if not lib_changed and old_lib:
+            old_blends = old_lib.get("blends", {})
+            old_paths = {b.get("path"): b for b in old_blends.values() if isinstance(b, dict)}
+            for bf in blend_files:
+                stat = bf.stat()
+                old_blend = old_paths.get(str(bf.resolve()))
+                if old_blend is None:
+                    lib_changed = True
+                    break
+                if abs(old_blend.get("mtime", 0) - stat.st_mtime) > 0.01 or old_blend.get("size", 0) != stat.st_size:
+                    lib_changed = True
+                    break
+        elif not old_lib:
+            lib_changed = True
+
+        if not lib_changed:
+            print(f"[Sync] {library_name}: unchanged, keeping cached data.")
+            new_libraries[lid] = old_lib
+            continue
+
+        print(f"[Sync] {library_name}: changes detected, rebuilding...")
+
+        # Clean old previews for this library
+        lib_preview_dir = cache_root / "previews" / lid[:2] / lid[2:4]
+        if lib_preview_dir.is_dir():
+            shutil.rmtree(lib_preview_dir, ignore_errors=True)
+
+        lib_data: dict[str, Any] = {
+            "name": library_name,
+            "path": str(library_path.resolve()),
+            "last_scan": time.time(),
+            "builtin": False,
+            "blends": {},
+        }
+
+        for blend_file in blend_files:
+            print(f"  - {blend_file.name}")
+            stat = blend_file.stat()
+            bid = _blend_id(str(blend_file), stat.st_mtime, stat.st_size)
+
+            with bpy.data.libraries.load(str(blend_file), link=False, assets_only=True) as (data_from, data_to):
+                data_to.brushes = data_from.brushes
+
+            brushes_out: dict[str, Any] = {}
+            brush_idx = 0
+            try:
+                for brush in data_to.brushes:
+                    if not brush.use_paint_sculpt:
+                        continue
+
+                    preview = brush.preview_ensure()
+                    if preview is None:
+                        print(f"    ! {brush.name}: no preview")
+                        continue
+                    w, h = preview.image_size
+                    if w <= 0 or h <= 0:
+                        print(f"    ! {brush.name}: invalid preview size {w}x{h}")
+                        continue
+                    try:
+                        pixels = preview.image_pixels_float[:]
+                    except Exception:
+                        print(f"    ! {brush.name}: failed reading preview pixels")
+                        continue
+                    if len(pixels) != w * h * 4:
+                        print(f"    ! {brush.name}: pixel count mismatch")
+                        continue
+
+                    phash = _preview_hash(library_name, blend_file.stem, brush.name)
+                    prev_rel = _write_preview(cache_root, phash, w, h, pixels)
+                    brid = _brush_id(str(blend_file), brush.name)
+
+                    page = brush_idx // MAX_BRUSHES_PER_PAGE
+                    index_in_page = brush_idx % MAX_BRUSHES_PER_PAGE
+
+                    brushes_out[brid] = {
+                        "name": brush.name,
+                        "type": "SCULPT",
+                        "wheel": {"page": page, "index": index_in_page},
+                        "preview": {
+                            "path": prev_rel,
+                            "width": w,
+                            "height": h,
+                            "format": "RGBA8",
+                            "compression": "zlib",
+                        },
+                        "asset_library_type": "LOCAL",
+                        "asset_library_identifier": library_name,
+                        "relative_asset_identifier": _user_relative_id(
+                            library_path, blend_file, brush.name,
+                        ),
+                    }
+                    brush_idx += 1
+                    print(f"    > {brush.name}")
+            finally:
+                for brush in reversed(bpy.data.brushes):
+                    try:
+                        bpy.data.brushes.remove(brush)
+                    except Exception:
+                        pass
+
+            if brushes_out:
+                old_user_prefs = _get_old_user_prefs(old_lib, bid)
+                if not old_user_prefs.get("active_page"):
+                    # Try matching by path
+                    if old_lib:
+                        for ob in old_lib.get("blends", {}).values():
+                            if isinstance(ob, dict) and ob.get("path") == str(blend_file.resolve()):
+                                old_user_prefs = ob.get("user_prefs") or old_user_prefs
+                                break
+
+                lib_data["blends"][bid] = {
+                    "file_name": blend_file.stem,
+                    "path": str(blend_file.resolve()),
+                    "mtime": stat.st_mtime,
+                    "size": stat.st_size,
+                    "brush_count": len(brushes_out),
+                    "brushes": brushes_out,
+                    "user_prefs": old_user_prefs,
+                }
+
+        new_libraries[lid] = lib_data
+
+    # ── Write final index ─────────────────────────────────────────────
+    output = {
+        "version": 1,
+        "generated_at": time.time(),
+        "libraries": new_libraries,
+    }
+
+    json_path = _libraries_json_path()
+    json_path.parent.mkdir(parents=True, exist_ok=True)
+    with json_path.open("w", encoding="utf-8") as f:
+        json.dump(output, f, indent=2, ensure_ascii=False)
+
+    total_brushes = sum(
+        b.get("brush_count", 0)
+        for lib in new_libraries.values()
+        for b in (lib.get("blends") or {}).values()
+        if isinstance(b, dict)
+    )
+    print(f"\n[Sync] Done: {len(new_libraries)} libraries, {total_brushes} brushes total.")
+    sys.exit(0)
+
+
+def _get_old_user_prefs(old_lib: dict | None, blend_key: str) -> dict[str, Any]:
+    """Extract user_prefs from old index for a given blend key."""
+    if old_lib is None:
+        return {"active_page": 0, "custom_order": [], "favorites": []}
+    blends = old_lib.get("blends") or {}
+    old_blend = blends.get(blend_key)
+    if isinstance(old_blend, dict):
+        return dict(old_blend.get("user_prefs") or {"active_page": 0, "custom_order": [], "favorites": []})
+    return {"active_page": 0, "custom_order": [], "favorites": []}
+
+
+if __name__ == "__main__":
+    main()

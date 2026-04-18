@@ -9,13 +9,7 @@ from typing import Set
 
 
 def layout_sector_from_pointer(mx: float, my: float, cx: float, cy: float, n: int) -> int:
-    """Wedge index 0..n-1 matching the pie shader (first slice starts at 180°, then CW).
-
-    Uses the same angle as ``compute_slot_positions`` / the pie fragment shader:
-    ``atan2(my - cy, mx - cx)`` (vector **from center toward** the pointer). The
-    shader uses ``atan(outward.y, outward.x)`` with ``outward = v_uv - 0.5``, which
-    matches that convention because the tarta quad UVs track region space (y up).
-    """
+    """Wedge index 0..n-1 matching the pie shader (first slice starts at 180 deg, then CW)."""
     if n <= 0:
         return 0
     angle = math.atan2(my - cy, mx - cx)
@@ -30,18 +24,30 @@ from ..core import bl_types
 from ..core.utils.op_return import OpReturn
 from ..core.utils.mouse_utils import ModalMouse
 
+from ..src.brush_management import (
+    BrushData,
+    activate_brush,
+    active_brush_index_in_list,
+    get_brush_preview_texture,
+    get_brushes_for_blend,
+    page_count_for_blend,
+    clear_texture_cache,
+)
+
 from .data import (
     SculptWheelData,
     SculptWheelStorage,
     get_wheel_storage,
-    resolve_custom_buttons_for_brush_set,
+    resolve_custom_buttons_for_blend,
+    parse_blend_key,
 )
-from .brush_library_cache import flatten_brushes_for_set
-from .brush_sets_config import (
-    ensure_brush_sets_loaded,
-    get_active_brush_set_show_color_picker,
-    get_wheel_base_color_tuple,
-    list_ordered_brush_set_keys,
+from .brush_lib_config import (
+    ensure_brush_libs_loaded,
+    get_active_blend_show_color_picker,
+    get_wheel_base_color,
+    get_active_page,
+    set_active_page,
+    list_ordered_blend_keys,
 )
 from .colpk_wheel import (
     colpk_pick_channel,
@@ -54,12 +60,6 @@ from .gpu_utils import (
     compute_slot_positions,
     compute_custom_button_layout_count,
     map_custom_layout_indices,
-)
-from .brush_assets import (
-    clear_preview_cache,
-    activate_wheel_brush_entry,
-    wheel_brush_index_for_active,
-    get_wheel_brush_preview_texture,
 )
 from .custom_buttons import (
     invoke_wheel_custom_button,
@@ -77,7 +77,6 @@ class SculptWheelOperator(bl_types.OperatorModal):
     cancel_on = {"ESC"}
     confirm_on: Set[str] = set()
 
-    # -- Runtime state (not saved) --
     wheel_center_x: float = 0
     wheel_center_y: float = 0
     wheel_radius: float = 180
@@ -87,13 +86,14 @@ class SculptWheelOperator(bl_types.OperatorModal):
     icon_scale: float = 0.92
     show_names: bool = False
 
-    brushes: list[dict] = []
-    brush_set_keys: list[str] = []
-    active_brush_set_index: int = 0
-    brush_set_count: int = 0
+    brushes: list[BrushData] = []
+    blend_keys: list[str] = []
+    active_blend_index: int = 0
+    blend_count: int = 0
     active_brush_slot_index: int = -1
+    active_page: int = 0
+    total_pages: int = 1
 
-    # Inner ring (custom buttons) — “tarta” pie layout
     custom_positions: list[tuple[float, float]] = []
     custom_radius: float = 0.0
     custom_layout_map: list[int] = []
@@ -105,10 +105,7 @@ class SculptWheelOperator(bl_types.OperatorModal):
     hover_custom_layout_slot: int = -1
 
     wheel_base_color: tuple[float, float, float, float] = (
-        COL_BASE[0],
-        COL_BASE[1],
-        COL_BASE[2],
-        COL_BASE[3],
+        COL_BASE[0], COL_BASE[1], COL_BASE[2], COL_BASE[3],
     )
 
     _trigger_key: str = 'SPACE'
@@ -117,11 +114,8 @@ class SculptWheelOperator(bl_types.OperatorModal):
     _can_close: bool = False
     _wheel_data: SculptWheelData | None = None
     _wheel_storage: SculptWheelStorage | None = None
-
-    # Custom button click
     _custom_press_idx: int = -1
 
-    # HSV color pickers (when active brush set has show_color_picker)
     show_color_picker: bool = False
     colpk_hue_inner_r: float = 0.0
     colpk_hue_outer_r: float = 0.0
@@ -129,6 +123,10 @@ class SculptWheelOperator(bl_types.OperatorModal):
     colpk_sv_outer_r: float = 0.0
     _colpk_channel: str | None = None
     _colpk_prev_rgb: tuple[float, float, float] | None = None
+
+    # Current blend identification for brush_management queries.
+    _cur_library_id: str = ""
+    _cur_blend_id: str = ""
 
     # ------------------------------------------------------------------
     # Poll
@@ -147,10 +145,10 @@ class SculptWheelOperator(bl_types.OperatorModal):
     # ------------------------------------------------------------------
 
     def invoke(self, context: Context, event: Event) -> Set[str]:
-        if not ensure_brush_sets_loaded(context):
+        if not ensure_brush_libs_loaded(context):
             self.report(
                 {"WARNING"},
-                "Could not load brush sets (Sidebar → Sculpt Wheel → reload libraries)",
+                "Could not load brush libraries (Sidebar → Sculpt Wheel → reload libraries)",
             )
             return OpReturn.CANCEL
 
@@ -252,7 +250,7 @@ class SculptWheelOperator(bl_types.OperatorModal):
                 return OpReturn.RUN
 
         if event.type in {'WHEELUPMOUSE', 'WHEELDOWNMOUSE'}:
-            self._cycle_brush_set(context, 1 if event.type == 'WHEELUPMOUSE' else -1)
+            self._cycle_blend(context, 1 if event.type == 'WHEELUPMOUSE' else -1)
             context.region.tag_redraw()
             return OpReturn.RUN
 
@@ -261,14 +259,14 @@ class SculptWheelOperator(bl_types.OperatorModal):
     def modal_step_move(self, context: Context, event: Event, mouse: ModalMouse, **kw) -> bool:
         mx, my = float(event.mouse_region_x), float(event.mouse_region_y)
         self._update_hover(mx, my)
-        self.active_brush_slot_index = wheel_brush_index_for_active(context, self.brushes)
+        self.active_brush_slot_index = active_brush_index_in_list(context, self.brushes)
 
         context.region.tag_redraw()
         return True
 
     def modal_end(self, context: Context, cancel: bool, mouse: ModalMouse) -> None:
         context.tool_settings.sculpt.show_brush = True
-        clear_preview_cache()
+        clear_texture_cache()
         clear_custom_button_texture_cache()
 
     def _colpk_submodal(self, context: Context, event: Event) -> bool:
@@ -337,38 +335,45 @@ class SculptWheelOperator(bl_types.OperatorModal):
         st = self._wheel_storage
         wd = self._wheel_data
 
-        self.brush_set_keys = list_ordered_brush_set_keys(context)
-        self.brush_set_count = len(self.brush_set_keys)
-        cur_set = wd.wheel_brush_set if wd is not None else "NONE"
+        self.blend_keys = list_ordered_blend_keys(context)
+        self.blend_count = len(self.blend_keys)
+        cur_blend = wd.wheel_active_blend if wd is not None else "NONE"
 
-        if not self.brush_set_keys:
+        if not self.blend_keys:
             if wd is not None:
-                wd.wheel_brush_set = "NONE"
-            self.active_brush_set_index = 0
+                wd.wheel_active_blend = "NONE"
+            self.active_blend_index = 0
             self.brushes = []
-            self.wheel_base_color = (
-                COL_BASE[0],
-                COL_BASE[1],
-                COL_BASE[2],
-                COL_BASE[3],
-            )
+            self._cur_library_id = ""
+            self._cur_blend_id = ""
+            self.active_page = 0
+            self.total_pages = 1
+            self.wheel_base_color = (COL_BASE[0], COL_BASE[1], COL_BASE[2], COL_BASE[3])
             self._active_custom_buttons = None
         else:
-            if cur_set == "NONE" or cur_set not in self.brush_set_keys:
-                cur_set = self.brush_set_keys[0]
+            if cur_blend == "NONE" or cur_blend not in self.blend_keys:
+                cur_blend = self.blend_keys[0]
                 if wd is not None:
-                    wd.wheel_brush_set = cur_set
+                    wd.wheel_active_blend = cur_blend
             try:
-                self.active_brush_set_index = self.brush_set_keys.index(cur_set)
+                self.active_blend_index = self.blend_keys.index(cur_blend)
             except ValueError:
-                self.active_brush_set_index = 0
-            self.brushes = flatten_brushes_for_set(cur_set)
-            self.wheel_base_color = get_wheel_base_color_tuple(context, cur_set)
-            self._active_custom_buttons = resolve_custom_buttons_for_brush_set(
-                context, cur_set,
-            )
+                self.active_blend_index = 0
 
-        self.active_brush_slot_index = wheel_brush_index_for_active(context, self.brushes)
+            lid, bid = parse_blend_key(cur_blend)
+            self._cur_library_id = lid
+            self._cur_blend_id = bid
+            self.active_page = get_active_page(context, cur_blend)
+            self.total_pages = max(1, page_count_for_blend(lid, bid))
+            if self.active_page >= self.total_pages:
+                self.active_page = 0
+                set_active_page(context, cur_blend, 0)
+
+            self.brushes = get_brushes_for_blend(lid, bid, self.active_page)
+            self.wheel_base_color = get_wheel_base_color(context, cur_blend)
+            self._active_custom_buttons = resolve_custom_buttons_for_blend(context, cur_blend)
+
+        self.active_brush_slot_index = active_brush_index_in_list(context, self.brushes)
 
         n_br = len(self.brushes)
         if n_br == 0:
@@ -407,7 +412,7 @@ class SculptWheelOperator(bl_types.OperatorModal):
             self.tarta_inner_ratio = 0.5
             self.icon_ring_radius = 0.0
 
-        self.show_color_picker = bool(get_active_brush_set_show_color_picker(context))
+        self.show_color_picker = bool(get_active_blend_show_color_picker(context))
         if self.show_color_picker:
             base_outer = (
                 self.tarta_ring_outer_radius
@@ -429,8 +434,9 @@ class SculptWheelOperator(bl_types.OperatorModal):
             self.colpk_sv_outer_r = 0.0
 
     def _cache_previews(self) -> None:
-        for entry in self.brushes:
-            get_wheel_brush_preview_texture(entry)
+        for brush in self.brushes:
+            if brush.preview.path:
+                get_brush_preview_texture(brush.preview.path, brush.name)
 
     def _update_hover(self, mx: float, my: float) -> None:
         self.hover_index = -1
@@ -481,25 +487,25 @@ class SculptWheelOperator(bl_types.OperatorModal):
     def _select_hovered(self, context: Context) -> None:
         if self.hover_index < 0 or self.hover_index >= len(self.brushes):
             return
-        entry = self.brushes[self.hover_index]
-        if activate_wheel_brush_entry(context, entry):
+        brush = self.brushes[self.hover_index]
+        if activate_brush(context, brush):
             self.active_brush_slot_index = self.hover_index
 
     def _select_brush_at_index(self, context: Context, index: int) -> None:
         if index < 0 or index >= len(self.brushes):
             return
-        entry = self.brushes[index]
-        if activate_wheel_brush_entry(context, entry):
+        brush = self.brushes[index]
+        if activate_brush(context, brush):
             self.active_brush_slot_index = index
 
-    def _cycle_brush_set(self, context: Context, direction: int) -> None:
-        if self.brush_set_count <= 1 or self._wheel_data is None:
+    def _cycle_blend(self, context: Context, direction: int) -> None:
+        if self.blend_count <= 1 or self._wheel_data is None:
             return
-        keys = self.brush_set_keys
+        keys = self.blend_keys
         if not keys:
             return
-        i = (self.active_brush_set_index + direction) % len(keys)
-        self._wheel_data.wheel_brush_set = keys[i]
-        clear_preview_cache()
+        i = (self.active_blend_index + direction) % len(keys)
+        self._wheel_data.wheel_active_blend = keys[i]
+        clear_texture_cache()
         self._rebuild_layout(context)
         self._cache_previews()

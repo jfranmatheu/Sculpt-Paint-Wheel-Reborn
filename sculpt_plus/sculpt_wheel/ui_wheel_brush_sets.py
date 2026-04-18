@@ -1,4 +1,4 @@
-"""UIList for brush set configuration (JSON-backed, inline editing)."""
+"""UIList for brush library configuration (JSON-backed, inline editing)."""
 
 from __future__ import annotations
 
@@ -9,10 +9,10 @@ from ..core import bl_types
 from .data import EVENT_SET_ICONS
 
 
-class SculptWheelBrushSetsUIList(bl_types.UIList):
-    """Brush sets with inline display name, color, options, and custom-set picker."""
+class SculptWheelBrushLibsUIList(bl_types.UIList):
+    """Brush libraries with inline display name, color, options, and custom-set picker."""
 
-    bl_label = "Brush sets"
+    bl_label = "Brush libraries"
 
     def draw_item(
         self,
@@ -30,7 +30,7 @@ class SculptWheelBrushSetsUIList(bl_types.UIList):
                 return
             col = layout.column(align=True)
             row = col.row(align=True)
-            ph = (item.blend_name or item.set_key or "").strip() or "Blend / group"
+            ph = (item.blend_name or item.blend_key or "").strip() or "Brush Library"
             row.prop(item, "display_name", text="", emboss=False, placeholder=ph)
             color_l = row.row(align=True)
             color_l.ui_units_x = 1

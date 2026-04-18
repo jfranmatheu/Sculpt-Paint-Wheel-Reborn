@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from bpy.types import Context
 
-from ..sculpt_wheel.sculpt_paint_compat import get_sculpt_unified_paint_settings
+from ...sculpt_wheel.sculpt_paint_compat import get_sculpt_unified_paint_settings
 
 
 def brush_size_get(context: Context) -> float:

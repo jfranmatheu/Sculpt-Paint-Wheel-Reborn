@@ -1,4 +1,4 @@
-"""N-panel UI: brush asset library + custom buttons."""
+"""N-panel UI: brush library + custom buttons."""
 
 from __future__ import annotations
 
@@ -11,11 +11,11 @@ from .data import (
     SculptWheelData,
     get_active_custom_button_buttons,
     get_wheel_storage,
-    sync_brush_set_list_index_to_wheel,
+    sync_brush_lib_list_index,
 )
-from .op_wheel_ui import WheelBrushSetMove
+from .op_wheel_ui import WheelBrushLibMove
 from .persistence import touch_wheel_storage_save_debounced
-from .ui_wheel_brush_sets import SculptWheelBrushSetsUIList, SculptWheelCustomButtonSetsUIList
+from .ui_wheel_brush_sets import SculptWheelBrushLibsUIList, SculptWheelCustomButtonSetsUIList
 
 
 class SculptWheelSidebarPanel(bl_types.PanelPresets.VIEW_3D_SIDEBAR):
@@ -37,7 +37,7 @@ class SculptWheelSidebarPanel(bl_types.PanelPresets.VIEW_3D_SIDEBAR):
         aid = GLOBALS.ADDON.ID
         hdr = box.row()
         split = hdr.split(factor=0.88)
-        split.label(text="Brush sets", icon="ASSET_MANAGER")
+        split.label(text="Brush libraries", icon="ASSET_MANAGER")
         row = split.row()
         row.ui_units_x = 1
         row.alignment = 'RIGHT'
@@ -46,30 +46,30 @@ class SculptWheelSidebarPanel(bl_types.PanelPresets.VIEW_3D_SIDEBAR):
             text="",
             icon="FILE_REFRESH",
         )
-        if not wm.brush_sets_loaded:
+        if not wm.brush_libs_loaded:
             box.label(
                 text="Preparing libraries (first run may take a minute). Use reload if this persists.",
             )
         col = box.column(align=True)
-        col.label(text="Wheel brush set (click a row):")
-        sync_brush_set_list_index_to_wheel(context)
-        n_cfg = len(wm.brush_set_configs)
+        col.label(text="Wheel brush library (click a row):")
+        sync_brush_lib_list_index(context)
+        n_cfg = len(wm.brush_lib_configs)
         rows = min(8, max(4, n_cfg)) if n_cfg else 4
         split = col.split(factor=0.9)
         left = split.column()
         left.template_list(
-            SculptWheelBrushSetsUIList.bl_idname,
+            SculptWheelBrushLibsUIList.bl_idname,
             "",
             wm,
-            "brush_set_configs",
+            "brush_lib_configs",
             wm,
-            "brush_set_config_active_index",
+            "brush_lib_config_active_index",
             rows=rows,
         )
         right = split.column(align=True)
-        mup = right.operator(WheelBrushSetMove.bl_idname, text="", icon="TRIA_UP")
+        mup = right.operator(WheelBrushLibMove.bl_idname, text="", icon="TRIA_UP")
         mup.direction = "UP"
-        mdn = right.operator(WheelBrushSetMove.bl_idname, text="", icon="TRIA_DOWN")
+        mdn = right.operator(WheelBrushLibMove.bl_idname, text="", icon="TRIA_DOWN")
         mdn.direction = "DOWN"
 
         cbox = layout.box()

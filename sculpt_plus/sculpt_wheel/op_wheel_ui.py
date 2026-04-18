@@ -7,20 +7,20 @@ from bpy.types import Context
 
 from ..core import bl_types
 
-from .brush_sets_config import (
-    bootstrap_wheel_brush_data_all_windows,
-    brush_set_config_move,
-    load_wheel_brush_data,
+from .brush_lib_config import (
+    bootstrap_all_windows,
+    brush_lib_config_move,
+    load_brush_lib_data,
 )
 from .data import SculptWheelData
 
 
 class WheelLoadBrushData(bl_types.Operator):
-    """First-time or refresh: read shelve (build DB if missing) and sync configs."""
+    """First-time or refresh: read libraries.json and sync configs."""
 
-    bl_label = "Load brush sets"
+    bl_label = "Load brush libraries"
     bl_description = (
-        "Build or read the brush preview shelve from asset libraries and load set configuration"
+        "Load or refresh brush library data and sync the wheel configuration"
     )
     bl_options = {"REGISTER"}
 
@@ -29,20 +29,20 @@ class WheelLoadBrushData(bl_types.Operator):
         return True
 
     def execute(self, context: Context) -> set[str]:
-        ok, err = load_wheel_brush_data(context, force_rebuild=False)
+        ok, err = load_brush_lib_data(context, force_rebuild=False)
         if ok:
-            self.report({"INFO"}, "Brush sets loaded")
+            self.report({"INFO"}, "Brush libraries loaded")
             return {"FINISHED"}
         self.report({"ERROR"}, f"Brush load failed: {err[:500]}")
         return {"CANCELLED"}
 
 
 class WheelReloadBrushLibraries(bl_types.Operator):
-    """Full rescan of asset libraries, rebuild shelve, sync all windows + JSON."""
+    """Full rescan of asset libraries, rebuild cache, sync all windows."""
 
     bl_label = "Reload brush libraries"
     bl_description = (
-        "Rescan asset libraries and rebuild brush preview data (runs background Blender)"
+        "Rescan asset libraries and rebuild brush cache (runs background Blender)"
     )
     bl_options = {"REGISTER"}
 
@@ -51,7 +51,7 @@ class WheelReloadBrushLibraries(bl_types.Operator):
         return True
 
     def execute(self, context: Context) -> set[str]:
-        ok, err = bootstrap_wheel_brush_data_all_windows(force_rebuild=True)
+        ok, err = bootstrap_all_windows(force_rebuild=True)
         if ok:
             self.report({"INFO"}, "Brush libraries reloaded")
             return {"FINISHED"}
@@ -59,37 +59,37 @@ class WheelReloadBrushLibraries(bl_types.Operator):
         return {"CANCELLED"}
 
 
-class WheelSetActiveBrushSet(bl_types.Operator):
-    """Set the wheel’s active brush set (from UIList radio)."""
+class WheelSetActiveBrushLib(bl_types.Operator):
+    """Set the wheel's active brush library (from UIList radio)."""
 
-    bl_label = "Use brush set"
-    bl_description = "Make this brush set active on the sculpt wheel"
+    bl_label = "Use brush library"
+    bl_description = "Make this brush library active on the sculpt wheel"
     bl_options = {"REGISTER", "INTERNAL"}
 
-    set_key: StringProperty(name="Set key", default="", maxlen=1024)
+    blend_key: StringProperty(name="Blend key", default="", maxlen=2048)
 
     @classmethod
     def poll_operator(cls, context: Context) -> bool | str:
         return context.mode == "SCULPT"
 
     def execute(self, context: Context) -> set[str]:
-        key = (self.set_key or "").strip()
+        key = (self.blend_key or "").strip()
         if not key:
             return {"CANCELLED"}
         wd = SculptWheelData.get(context)
-        if not any(it.set_key == key for it in wd.brush_set_configs):
+        if not any(it.blend_key == key for it in wd.brush_lib_configs):
             return {"CANCELLED"}
-        wd.wheel_brush_set = key
+        wd.wheel_active_blend = key
         if getattr(context, "region", None):
             context.region.tag_redraw()
         return {"FINISHED"}
 
 
-class WheelBrushSetMove(bl_types.Operator):
-    """Reorder brush set config rows (swap sort order with neighbor)."""
+class WheelBrushLibMove(bl_types.Operator):
+    """Reorder brush library config rows."""
 
-    bl_label = "Move brush set"
-    bl_description = "Change sort order of the selected brush set in the list"
+    bl_label = "Move brush library"
+    bl_description = "Change sort order of the selected brush library in the list"
     bl_options = {"REGISTER", "UNDO", "INTERNAL"}
 
     direction: EnumProperty(
@@ -106,11 +106,11 @@ class WheelBrushSetMove(bl_types.Operator):
         if context.mode != "SCULPT":
             return False
         wd = SculptWheelData.get(context)
-        return wd.brush_sets_loaded and len(wd.brush_set_configs) > 1
+        return wd.brush_libs_loaded and len(wd.brush_lib_configs) > 1
 
     def execute(self, context: Context) -> set[str]:
         d = -1 if self.direction == "UP" else 1
-        if brush_set_config_move(context, d):
+        if brush_lib_config_move(context, d):
             if getattr(context, "region", None):
                 context.region.tag_redraw()
             return {"FINISHED"}

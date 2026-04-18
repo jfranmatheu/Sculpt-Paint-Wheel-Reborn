@@ -15,8 +15,12 @@ from gpu.texture import from_image
 from .state_control import CM_GPU_BLEND, gpu_state
 
 
-UNIFORM_COLOR_SHADER = from_builtin('UNIFORM_COLOR')
-POLYLINE_UNIFORM_COLOR_SHADER = from_builtin('POLYLINE_UNIFORM_COLOR')
+if not bpy.app.background:
+    UNIFORM_COLOR_SHADER = from_builtin('UNIFORM_COLOR')
+    POLYLINE_UNIFORM_COLOR_SHADER = from_builtin('POLYLINE_UNIFORM_COLOR')
+else:
+    UNIFORM_COLOR_SHADER = None
+    POLYLINE_UNIFORM_COLOR_SHADER = None
 
 
 def draw_circle_3d(center: Vector, normal: Vector, radius: float, color: Color, segments: int = 32, thickness: float = 1.0):

@@ -6,9 +6,9 @@ from typing import TYPE_CHECKING
 
 from bpy.types import Context
 
-from ..core.gpu.state_control import CM_GPU_BLEND
-from ..sculpt_wheel.gpu_utils import draw_ring
-from ..sculpt_wheel.sculpt_paint_compat import get_sculpt_unified_paint_settings
+from ...core.gpu.state_control import CM_GPU_BLEND
+from ...sculpt_wheel.gpu_utils import draw_ring
+from ...sculpt_wheel.sculpt_paint_compat import get_sculpt_unified_paint_settings
 
 if TYPE_CHECKING:
     from .op_rmb_sculpt_gesture import RmbSculptGestureOperator

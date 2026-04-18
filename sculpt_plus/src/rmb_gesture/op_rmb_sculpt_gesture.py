@@ -6,11 +6,11 @@ from typing import Set
 
 from bpy.types import Context, Event
 
-from ..core import bl_types
-from ..core.utils.op_return import OpReturn
-from ..core.utils.mouse_utils import ModalMouse
-from ..prefs import SculptPlusPreferences
-from ..sculpt_wheel.brush_assets import get_active_sculpt_brush
+from ...core import bl_types
+from ...core.utils.op_return import OpReturn
+from ...core.utils.mouse_utils import ModalMouse
+from ...prefs import SculptPlusPreferences
+from ...src.brush_management import get_active_sculpt_brush
 from .brush_adjust import (
     brush_size_get,
     brush_size_set,
