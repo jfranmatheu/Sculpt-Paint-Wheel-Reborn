@@ -244,6 +244,11 @@ class WheelBrushLibConfigItem(bl_types.PropertyGroup):
     blend_id: StringProperty(name="Blend ID", default="", maxlen=256)
     library_name: StringProperty(name="Library name", default="", maxlen=512)
     blend_name: StringProperty(name="Blend file stem", default="", maxlen=512)
+    wheel_pages_expanded: BoolProperty(
+        name="Show pages",
+        description="Expand to list wheel pages for this library",
+        default=False,
+    )
 
 
 # ──────────────────────────────────────────────────────────────────────

@@ -13,8 +13,6 @@ from .data import (
     get_wheel_storage,
     sync_brush_lib_list_index,
 )
-from .brush_lib_config import blend_display_label, get_active_page, page_rows_for_blend_item
-from .op_wheel_ui import WheelSetBrushLibActivePage
 from .persistence import touch_wheel_storage_save_debounced
 from .ui_wheel_brush_sets import SculptWheelBrushLibsUIList, SculptWheelCustomButtonSetsUIList
 
@@ -60,56 +58,11 @@ class SculptWheelSidebarPanel(bl_types.PanelPresets.VIEW_3D_SIDEBAR):
             "brush_lib_config_active_index",
             rows=rows,
         )
-
-        if n_cfg > 0:
-            ai = int(wm.brush_lib_config_active_index)
-            if 0 <= ai < n_cfg:
-                it = wm.brush_lib_configs[ai]
-                pages = page_rows_for_blend_item(context, it)
-                title = blend_display_label(context, it.blend_key)
-                ap = int(get_active_page(context, it.blend_key))
-
-                if len(pages) > 1:
-                    pg = box.box()
-                    hd = pg.row(align=True)
-                    hd.label(text="Wheel pages", icon="FILE_FOLDER")
-                    hd.label(text=title)
-                    if 0 <= ap < len(pages):
-                        _i, pna, cn = pages[ap]
-                        pg.label(text=f"Page {ap}: {pna}  ·  {cn} brushes")
-                    flow = pg.grid_flow(
-                        row_major=True,
-                        columns=6,
-                        align=True,
-                    )
-                    for pi, _pname, _cnt in pages:
-                        b = flow.operator(
-                            WheelSetBrushLibActivePage.bl_idname,
-                            text=str(pi),
-                            depress=(pi == ap),
-                        )
-                        b.blend_key = it.blend_key
-                        b.page_index = pi
-                    pg.label(
-                        text="Open wheel: mouse wheel = pages · Shift + wheel = other libraries",
-                        icon="INFO",
-                    )
-                elif len(pages) == 1:
-                    col.label(
-                        text=f"{title}: single page ({pages[0][2]} brushes).",
-                        icon="DOT",
-                    )
-                elif not pages:
-                    col.label(
-                        text=f"{title}: page list unavailable (reload libraries).",
-                        icon="ERROR",
-                    )
-
-                if n_cfg > 1 and len(pages) <= 1:
-                    col.label(
-                        text="Shift + mouse wheel on the wheel switches between libraries.",
-                        icon="INFO",
-                    )
+        if n_cfg > 0 and wm.brush_libs_loaded:
+            col.label(
+                text="Arrow: expand pages for a library. Wheel: scroll = pages · Shift+scroll = libraries.",
+                icon="INFO",
+            )
 
         cbox = layout.box()
         cbox.label(text="Custom button sets", icon="SETTINGS")

@@ -86,7 +86,7 @@ def list_library_blend_keys() -> list[tuple[str, str, str]]:
         for bid, blend in lib.blends.items():
             title = blend_file_display_title(blend.file_name or bid)
             if lib.name:
-                label = f"{lib.name} — {title}" if title else lib.name
+                label = title if title else lib.name
             else:
                 label = title or bid
             results.append((lid, bid, label))

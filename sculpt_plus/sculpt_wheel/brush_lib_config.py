@@ -34,6 +34,12 @@ def sync_brush_lib_configs(context: Context) -> None:
     idx = get_index()
     blend_rows = list_library_blend_keys()
 
+    prev_pages_expanded: dict[str, bool] = {}
+    for i in range(len(wd.brush_lib_configs)):
+        it = wd.brush_lib_configs[i]
+        bk0 = (it.blend_key or "").strip()
+        if bk0:
+            prev_pages_expanded[bk0] = bool(it.wheel_pages_expanded)
     wd.brush_lib_configs.clear()
     for lid, bid, _label in blend_rows:
         bk = make_blend_key(lid, bid)
@@ -48,6 +54,8 @@ def sync_brush_lib_configs(context: Context) -> None:
         it.blend_id = bid
         it.library_name = lib_name
         it.blend_name = blend_name
+        if bk in prev_pages_expanded:
+            it.wheel_pages_expanded = prev_pages_expanded[bk]
 
     _clamp_all_blend_active_pages()
     wd.brush_libs_loaded = True
