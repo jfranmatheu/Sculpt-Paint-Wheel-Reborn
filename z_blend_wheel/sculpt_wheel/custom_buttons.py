@@ -51,7 +51,7 @@ def preset_operator_attr_for_storage(preset_id: str) -> str:
 
 
 def build_custom_button_attr(create) -> str:
-    """Build executable / idname string from CreateWheelCustomButton (RNA group)."""
+    """Build executable / idname string from CreateTartaButton (RNA group)."""
     if create.type == "OPERATOR":
         if create.operator_type == "PRESET":
             line = _preset_operator_to_bpy_line(create.preset_operator)
