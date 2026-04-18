@@ -9,7 +9,6 @@ from ..core.globals import GLOBALS
 
 from .data import (
     SculptWheelData,
-    get_active_custom_button_buttons,
     get_wheel_storage,
     sync_brush_lib_list_index,
 )
@@ -60,27 +59,17 @@ class SculptWheelSidebarPanel(bl_types.PanelPresets.VIEW_3D_SIDEBAR):
         )
         if n_cfg > 0 and wm.brush_libs_loaded:
             col.label(
-                text="Arrow: expand pages for a library. Wheel: scroll = pages · Shift+scroll = libraries.",
+                text="Wheel: scroll = pages · Shift+scroll = libraries.",
                 icon="INFO",
             )
 
         cbox = layout.box()
         cbox.label(text="Custom button sets", icon="SETTINGS")
         cbox.label(text="Up to 10 sets × 10 actions, shown on the wheel inner ring.")
-        r0 = cbox.row(align=True)
-        r0.operator(
-            f"{aid}.wheeladdcustombuttonset",
-            text="Add set",
-            icon="ADD",
-        )
-        r0.operator(
-            f"{aid}.wheelremovecustombuttonset",
-            text="Remove set",
-            icon="REMOVE",
-        )
         n_sets = len(st.custom_button_sets)
         set_rows = min(6, max(3, n_sets)) if n_sets else 3
-        cbox.template_list(
+        cbox_row = cbox.row()
+        cbox_row.template_list(
             SculptWheelCustomButtonSetsUIList.bl_idname,
             "",
             st,
@@ -89,40 +78,43 @@ class SculptWheelSidebarPanel(bl_types.PanelPresets.VIEW_3D_SIDEBAR):
             "custom_button_set_active_index",
             rows=set_rows,
         )
+        r0 = cbox_row.column(align=True)
+        r0.operator(
+            f"{aid}.wheeladdcustombuttonset",
+            text="",
+            icon="ADD",
+        )
+        r0.operator(
+            f"{aid}.wheelremovecustombuttonset",
+            text="",
+            icon="REMOVE",
+        )
 
-        cbox.separator()
-        cbox.label(text="Add button to active set", icon="PLUS")
+        header, newb = cbox.panel("TEMP_PT_custom_buttons_set_create_action")
+        header.label(text="Create Action (active set)", icon='PLUS')
         create = wm.create_custom_button
-        col = cbox.column(align=True)
-        col.prop(create, "name")
-        col.prop(create, "image_path")
-        col.prop(create, "type")
+        ncol = newb.column(align=True)
+        ncol.prop(create, "name")
+        ncol.prop(create, "image_path")
+        ncol.prop(create, "type")
         if create.type == "OPERATOR":
-            col.prop(create, "operator_type")
+            ncol.prop(create, "operator_type")
             if create.operator_type == "PRESET":
-                col.prop(create, "preset_operator")
+                ncol.prop(create, "preset_operator")
             else:
-                col.prop(create, "custom_operator", text="Code")
+                ncol.prop(create, "custom_operator", text="Code")
         else:
-            col.prop(create, "popup_type")
+            ncol.prop(create, "popup_type")
             if create.popup_type == "MENU":
-                col.prop(create, "menu_source")
+                ncol.prop(create, "menu_source")
                 if create.menu_source == "PRESET":
-                    col.prop(create, "preset_menu")
+                    ncol.prop(create, "preset_menu")
                 else:
-                    col.prop(create, "custom_menu")
+                    ncol.prop(create, "custom_menu")
             else:
-                col.prop(create, "panel_source")
+                ncol.prop(create, "panel_source")
                 if create.panel_source == "PRESET":
-                    col.prop(create, "preset_panel")
+                    ncol.prop(create, "preset_panel")
                 else:
-                    col.prop(create, "custom_panel")
-        row = cbox.row(align=True)
-        row.operator(f"{aid}.wheeladdcustombutton", icon="ADD")
-        buttons = get_active_custom_button_buttons(context)
-        if buttons is not None and len(buttons) > 0:
-            for i, cb in enumerate(buttons):
-                r = cbox.row(align=True)
-                r.label(text=f"{i}: {cb.name}")
-                rm = r.operator(f"{aid}.wheelremovecustombutton", text="", icon="X")
-                rm.index = i
+                    ncol.prop(create, "custom_panel")
+        newb.row(align=True).operator(f"{aid}.wheeladdcustombutton", icon="ADD")

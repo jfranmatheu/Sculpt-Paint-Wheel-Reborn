@@ -85,7 +85,11 @@ def _storage_fingerprint(context: Context) -> str:
     st = get_wheel_storage(context)
     payload: dict = {"sets": []}
     for s in st.custom_button_sets:
-        row = {"n": s.name, "b": []}
+        row = {
+            "n": s.name,
+            "ex": bool(getattr(s, "custom_set_expanded", False)),
+            "b": [],
+        }
         for cb in s.custom_buttons:
             row["b"].append(
                 (cb.name, cb.type, cb.popup_type, cb.attr, (cb.image_path or "").strip())
@@ -137,6 +141,7 @@ def save_wheel_storage(context: Context) -> None:
         sets_out.append(
             {
                 "name": bset.name,
+                "expanded": bool(getattr(bset, "custom_set_expanded", False)),
                 "custom_buttons": buttons_out,
             }
         )
@@ -242,6 +247,7 @@ def load_custom_buttons_if_empty(context: Context) -> None:
                     break
                 s = st.custom_button_sets.add()
                 s.name = str(sd.get("name") or "Button set")
+                s.custom_set_expanded = bool(sd.get("expanded", False))
                 arr = sd.get("custom_buttons")
                 if not isinstance(arr, list):
                     continue

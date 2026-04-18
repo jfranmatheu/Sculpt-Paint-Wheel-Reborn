@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 
 from bpy.path import abspath as bpy_abspath
-from bpy.props import IntProperty
+from bpy.props import EnumProperty, IntProperty
 from bpy.types import Context
 
 from ..core import bl_types
@@ -17,6 +17,7 @@ from .data import (
     get_active_custom_button_buttons,
     get_wheel_storage,
     wheel_add_custom_button_from_create,
+    wheel_move_custom_button,
     wheel_remove_custom_button,
 )
 from .persistence import save_wheel_storage
@@ -130,13 +131,51 @@ class WheelAddCustomButton(bl_types.Operator):
         return {"FINISHED"}
 
 
+class WheelMoveCustomButtonInSet(bl_types.Operator):
+    """Move one custom wheel button earlier or later within its set."""
+
+    bl_label = "Move custom wheel button"
+    bl_description = "Reorder a custom action within its button set"
+    bl_options = {"REGISTER", "UNDO", "INTERNAL"}
+
+    set_index: IntProperty(name="Set", default=0, min=0, max=MAX_CUSTOM_BUTTON_SETS - 1)
+    button_index: IntProperty(name="Button", default=0, min=0, max=MAX_CUSTOM_BUTTONS_PER_SET - 1)
+    direction: EnumProperty(
+        name="Direction",
+        items=(
+            ("UP", "Up", "Earlier in the set"),
+            ("DOWN", "Down", "Later in the set"),
+        ),
+        default="UP",
+    )
+
+    @classmethod
+    def poll_operator(cls, context: Context) -> bool | str:
+        return context.mode == "SCULPT"
+
+    def execute(self, context: Context) -> set[str]:
+        d = -1 if self.direction == "UP" else 1
+        if wheel_move_custom_button(context, int(self.set_index), int(self.button_index), d):
+            if getattr(context, "region", None):
+                context.region.tag_redraw()
+            return {"FINISHED"}
+        return {"CANCELLED"}
+
+
 class WheelRemoveCustomButton(bl_types.Operator):
-    """Remove one custom button by index in the active set."""
+    """Remove one custom button by index (optionally specify which set)."""
 
     bl_label = "Remove Custom Button"
     bl_options = {"REGISTER", "UNDO"}
 
-    index: IntProperty(name="Index", default=-1, min=-1)
+    index: IntProperty(name="Button index", default=-1, min=-1, max=MAX_CUSTOM_BUTTONS_PER_SET - 1)
+    set_index: IntProperty(
+        name="Set index",
+        description="Which custom button set (-1 = active set)",
+        default=-1,
+        min=-1,
+        max=MAX_CUSTOM_BUTTON_SETS - 1,
+    )
 
     @classmethod
     def poll_operator(cls, context: Context) -> bool | str:
@@ -145,5 +184,11 @@ class WheelRemoveCustomButton(bl_types.Operator):
     def execute(self, context: Context) -> set[str]:
         if self.index < 0:
             return {"CANCELLED"}
-        wheel_remove_custom_button(context, self.index)
+        si = int(self.set_index)
+        if si < 0:
+            wheel_remove_custom_button(context, int(self.index))
+        else:
+            wheel_remove_custom_button(context, int(self.index), set_index=si)
+        if getattr(context, "region", None):
+            context.region.tag_redraw()
         return {"FINISHED"}

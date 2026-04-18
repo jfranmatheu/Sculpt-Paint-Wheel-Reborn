@@ -154,6 +154,14 @@ def _wheel_custom_set_name_updated(self, context):
         pass
 
 
+def _wheel_custom_set_expanded_updated(self, context):
+    from .persistence import touch_wheel_storage_save_debounced
+    try:
+        touch_wheel_storage_save_debounced(context)
+    except Exception:
+        pass
+
+
 class WheelCustomButtonSet(bl_types.PropertyGroup):
     pg_parent = None
 
@@ -162,6 +170,12 @@ class WheelCustomButtonSet(bl_types.PropertyGroup):
         default="Button set",
         maxlen=256,
         update=_wheel_custom_set_name_updated,
+    )
+    custom_set_expanded: BoolProperty(
+        name="Show actions",
+        description="List actions in this set for reorder and remove",
+        default=False,
+        update=_wheel_custom_set_expanded_updated,
     )
     custom_buttons: CollectionProperty(type=WheelCustomButton)
 
@@ -363,14 +377,49 @@ def wheel_add_custom_button_from_create(
     return True
 
 
-def wheel_remove_custom_button(context: Context, button_index: int) -> None:
-    buttons = get_active_custom_button_buttons(context)
-    if buttons is None:
+def wheel_remove_custom_button(
+    context: Context,
+    button_index: int,
+    *,
+    set_index: int = -1,
+) -> None:
+    st = get_wheel_storage(context)
+    if len(st.custom_button_sets) == 0:
         return
+    si = int(st.custom_button_set_active_index) if set_index < 0 else int(set_index)
+    si = max(0, min(len(st.custom_button_sets) - 1, si))
+    buttons = st.custom_button_sets[si].custom_buttons
     if 0 <= button_index < len(buttons):
         buttons.remove(button_index)
         from .persistence import save_wheel_storage
         save_wheel_storage(context)
+
+
+def wheel_move_custom_button(
+    context: Context,
+    set_index: int,
+    button_index: int,
+    direction: int,
+) -> bool:
+    """Move a button within a set. ``direction`` -1 = earlier, +1 = later."""
+    st = get_wheel_storage(context)
+    if set_index < 0 or set_index >= len(st.custom_button_sets):
+        return False
+    coll = st.custom_button_sets[set_index].custom_buttons
+    n = len(coll)
+    if button_index < 0 or button_index >= n:
+        return False
+    if direction < 0 and button_index <= 0:
+        return False
+    if direction > 0 and button_index >= n - 1:
+        return False
+    if direction < 0:
+        coll.move(button_index, button_index - 1)
+    else:
+        coll.move(button_index, button_index + 1)
+    from .persistence import save_wheel_storage
+    save_wheel_storage(context)
+    return True
 
 
 def wheel_remove_all_custom_buttons_in_active_set(context: Context) -> None:
