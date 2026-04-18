@@ -30,6 +30,7 @@ from ..src.brush_management import (
     active_brush_index_in_list,
     get_brush_preview_texture,
     get_brushes_for_blend,
+    get_page_name,
     page_count_for_blend,
     clear_texture_cache,
 )
@@ -93,6 +94,7 @@ class SculptWheelOperator(bl_types.OperatorModal):
     active_brush_slot_index: int = -1
     active_page: int = 0
     total_pages: int = 1
+    active_page_title: str = ""
 
     custom_positions: list[tuple[float, float]] = []
     custom_radius: float = 0.0
@@ -250,7 +252,14 @@ class SculptWheelOperator(bl_types.OperatorModal):
                 return OpReturn.RUN
 
         if event.type in {'WHEELUPMOUSE', 'WHEELDOWNMOUSE'}:
-            self._cycle_blend(context, 1 if event.type == 'WHEELUPMOUSE' else -1)
+            direction = 1 if event.type == 'WHEELUPMOUSE' else -1
+            # Shift+wheel: switch brush library blend; otherwise wheel changes page when multi-page.
+            if event.shift and self.blend_count > 1:
+                self._cycle_blend(context, direction)
+            elif self.total_pages > 1:
+                self._cycle_page(context, direction)
+            elif self.blend_count > 1:
+                self._cycle_blend(context, direction)
             context.region.tag_redraw()
             return OpReturn.RUN
 
@@ -348,6 +357,7 @@ class SculptWheelOperator(bl_types.OperatorModal):
             self._cur_blend_id = ""
             self.active_page = 0
             self.total_pages = 1
+            self.active_page_title = ""
             self.wheel_base_color = (COL_BASE[0], COL_BASE[1], COL_BASE[2], COL_BASE[3])
             self._active_custom_buttons = None
         else:
@@ -370,6 +380,7 @@ class SculptWheelOperator(bl_types.OperatorModal):
                 set_active_page(context, cur_blend, 0)
 
             self.brushes = get_brushes_for_blend(lid, bid, self.active_page)
+            self.active_page_title = get_page_name(lid, bid, self.active_page)
             self.wheel_base_color = get_wheel_base_color(context, cur_blend)
             self._active_custom_buttons = resolve_custom_buttons_for_blend(context, cur_blend)
 
@@ -506,6 +517,18 @@ class SculptWheelOperator(bl_types.OperatorModal):
             return
         i = (self.active_blend_index + direction) % len(keys)
         self._wheel_data.wheel_active_blend = keys[i]
+        clear_texture_cache()
+        self._rebuild_layout(context)
+        self._cache_previews()
+
+    def _cycle_page(self, context: Context, direction: int) -> None:
+        if self.total_pages <= 1 or self._wheel_data is None:
+            return
+        cur = (self._wheel_data.wheel_active_blend or "").strip()
+        if not cur or cur == "NONE":
+            return
+        new_page = (self.active_page + direction) % self.total_pages
+        set_active_page(context, cur, new_page)
         clear_texture_cache()
         self._rebuild_layout(context)
         self._cache_previews()

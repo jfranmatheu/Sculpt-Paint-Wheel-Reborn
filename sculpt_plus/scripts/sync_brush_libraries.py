@@ -14,7 +14,6 @@ import shutil
 import sys
 import time
 import zlib
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -66,29 +65,29 @@ def _libraries_json_path() -> Path:
 # ──────────────────────────────────────────────────────────────────────
 
 ESSENTIAL_GROUPS: dict[str, set[str]] = {
-    "Essentials: Add": {
+    "Add": {
         "Blob", "Clay", "Clay Strips", "Clay Thumb", "Crease Polish",
         "Crease Sharp", "Draw", "Draw Sharp", "Inflate/Deflate", "Layer",
     },
-    "Essentials: Trim/Scrape": {
+    "Trim/Scrape": {
         "Fill/Deepen", "Flatten/Contrast", "Plateau", "Scrape Multiplane",
         "Scrape/Fill", "Smooth", "Trim",
     },
-    "Essentials: Grab/Rotate": {
+    "Grab/Rotate": {
         "Boundary", "Elastic Grab", "Elastic Snake Hook", "Grab", "Grab 2D",
         "Grab Shilouette", "Nudge", "Pinch/Magnify", "Pose", "Pull",
         "Relax Pinch", "Relax Slide", "Snake Hook", "Thumb", "Twist",
     },
-    "Essentials: Mask/Multi-res": {
+    "Mask/Multi-res": {
         "Density", "Eraser Multires Displacement", "Face Set Paint",
         "Mask", "Smear Multires Displacement",
     },
-    "Essentials: Paint": {
+    "Paint": {
         "Airbrush", "Blend Hard", "Blend Soft", "Blend Square", "Paint Blend",
         "Paint Hard", "Paint Hard Pressure", "Paint Soft", "Paint Soft Pressure",
         "Paint Square", "Sharpen", "Smear",
     },
-    "Essentials: Cloth": {
+    "Cloth": {
         "Bend Boundary Cloth", "Bend/Twist Cloth", "Drag Cloth",
         "Expand/Contract Cloth", "Grab Cloth", "Grab Planar Cloth",
         "Grab Random Cloth", "Inflate Cloth", "Pinch Folds Cloth",
@@ -154,6 +153,36 @@ def _load_existing_index() -> dict[str, Any]:
 # ──────────────────────────────────────────────────────────────────────
 
 MAX_BRUSHES_PER_PAGE = 20
+INDEX_VERSION = 2
+
+
+def _default_user_prefs() -> dict[str, Any]:
+    return {"active_page": 0, "custom_order": [], "favorites": []}
+
+
+def _chunk_pages_ordered(ordered_brush_ids: list[str]) -> list[dict[str, Any]]:
+    """Split ordered brush ids into pages of max size; names ``Page 1``, ``Page 2``, …."""
+    if not ordered_brush_ids:
+        return []
+    pages: list[dict[str, Any]] = []
+    for i in range(0, len(ordered_brush_ids), MAX_BRUSHES_PER_PAGE):
+        chunk = ordered_brush_ids[i : i + MAX_BRUSHES_PER_PAGE]
+        pages.append({"name": f"Page {len(pages) + 1}", "brushes": chunk})
+    return pages
+
+
+def _user_prefs_for_path(old_lib: dict | None, blend_path: str, blend_key: str) -> dict[str, Any]:
+    """Prefer prefs from an old blend with same *blend_path*; else ``blend_key``; else defaults."""
+    if old_lib is None:
+        return _default_user_prefs()
+    blends = old_lib.get("blends") or {}
+    for ob in blends.values():
+        if isinstance(ob, dict) and ob.get("path") == blend_path:
+            return dict(ob.get("user_prefs") or _default_user_prefs())
+    old_blend = blends.get(blend_key)
+    if isinstance(old_blend, dict):
+        return dict(old_blend.get("user_prefs") or _default_user_prefs())
+    return _default_user_prefs()
 
 
 def main() -> None:
@@ -192,24 +221,25 @@ def main() -> None:
             "blends": {},
         }
 
-        for group_name, brush_filter in ESSENTIAL_GROUPS.items():
-            if not essentials_blend.is_file():
-                print(f"  ! Essentials blend not found: {essentials_blend}")
-                break
-
+        if not essentials_blend.is_file():
+            print(f"  ! Essentials blend not found: {essentials_blend}")
+        else:
             stat = essentials_blend.stat()
             bid = _blend_id(str(essentials_blend), stat.st_mtime, stat.st_size)
+            essentials_path = str(essentials_blend.resolve())
+            allowed_names: set[str] = set()
+            for names in ESSENTIAL_GROUPS.values():
+                allowed_names |= names
 
             with bpy.data.libraries.load(str(essentials_blend), link=False, assets_only=True) as (data_from, data_to):
                 data_to.brushes = data_from.brushes
 
             brushes_out: dict[str, Any] = {}
-            brush_idx = 0
             try:
                 for brush in data_to.brushes:
                     if not brush.use_paint_sculpt:
                         continue
-                    if brush.name not in brush_filter:
+                    if brush.name not in allowed_names:
                         continue
 
                     preview = brush.preview_ensure()
@@ -225,17 +255,14 @@ def main() -> None:
                     if len(pixels) != w * h * 4:
                         continue
 
-                    phash = _preview_hash("Essentials", group_name, brush.name)
+                    stem = essentials_blend.stem
+                    phash = _preview_hash("Essentials", stem, brush.name)
                     prev_rel = _write_preview(cache_root, phash, w, h, pixels)
                     brid = _brush_id(str(essentials_blend), brush.name)
-
-                    page = brush_idx // MAX_BRUSHES_PER_PAGE
-                    index_in_page = brush_idx % MAX_BRUSHES_PER_PAGE
 
                     brushes_out[brid] = {
                         "name": brush.name,
                         "type": "SCULPT",
-                        "wheel": {"page": page, "index": index_in_page},
                         "preview": {
                             "path": prev_rel,
                             "width": w,
@@ -247,7 +274,6 @@ def main() -> None:
                         "asset_library_identifier": "",
                         "relative_asset_identifier": _essentials_relative_id(brush.name),
                     }
-                    brush_idx += 1
                     print(f"    > {brush.name}")
             finally:
                 for brush in reversed(bpy.data.brushes):
@@ -256,16 +282,29 @@ def main() -> None:
                     except Exception:
                         pass
 
+            pages_out: list[dict[str, Any]] = []
+            for group_name, brush_filter in ESSENTIAL_GROUPS.items():
+                page_ids = sorted(
+                    (
+                        brid
+                        for brid, bd in brushes_out.items()
+                        if isinstance(bd, dict) and bd.get("name") in brush_filter
+                    ),
+                    key=lambda x: brushes_out[x]["name"],
+                )
+                if page_ids:
+                    pages_out.append({"name": group_name, "brushes": page_ids})
+
             if brushes_out:
-                blend_key = f"essentials_{group_name.lower().replace(' ', '_').replace('/', '_')}"
-                essentials_lib["blends"][blend_key] = {
-                    "file_name": group_name,
-                    "path": str(essentials_blend.resolve()),
+                essentials_lib["blends"][bid] = {
+                    "file_name": essentials_blend.stem,
+                    "path": essentials_path,
                     "mtime": stat.st_mtime,
                     "size": stat.st_size,
                     "brush_count": len(brushes_out),
                     "brushes": brushes_out,
-                    "user_prefs": _get_old_user_prefs(old_essentials, blend_key),
+                    "pages": pages_out,
+                    "user_prefs": _user_prefs_for_path(old_essentials, essentials_path, bid),
                 }
 
         new_libraries[essentials_lib_id] = essentials_lib
@@ -335,7 +374,6 @@ def main() -> None:
                 data_to.brushes = data_from.brushes
 
             brushes_out: dict[str, Any] = {}
-            brush_idx = 0
             try:
                 for brush in data_to.brushes:
                     if not brush.use_paint_sculpt:
@@ -362,13 +400,9 @@ def main() -> None:
                     prev_rel = _write_preview(cache_root, phash, w, h, pixels)
                     brid = _brush_id(str(blend_file), brush.name)
 
-                    page = brush_idx // MAX_BRUSHES_PER_PAGE
-                    index_in_page = brush_idx % MAX_BRUSHES_PER_PAGE
-
                     brushes_out[brid] = {
                         "name": brush.name,
                         "type": "SCULPT",
-                        "wheel": {"page": page, "index": index_in_page},
                         "preview": {
                             "path": prev_rel,
                             "width": w,
@@ -382,7 +416,6 @@ def main() -> None:
                             library_path, blend_file, brush.name,
                         ),
                     }
-                    brush_idx += 1
                     print(f"    > {brush.name}")
             finally:
                 for brush in reversed(bpy.data.brushes):
@@ -392,15 +425,11 @@ def main() -> None:
                         pass
 
             if brushes_out:
-                old_user_prefs = _get_old_user_prefs(old_lib, bid)
-                if not old_user_prefs.get("active_page"):
-                    # Try matching by path
-                    if old_lib:
-                        for ob in old_lib.get("blends", {}).values():
-                            if isinstance(ob, dict) and ob.get("path") == str(blend_file.resolve()):
-                                old_user_prefs = ob.get("user_prefs") or old_user_prefs
-                                break
-
+                ordered_ids = sorted(
+                    brushes_out.keys(),
+                    key=lambda x: str(brushes_out[x].get("name", "")).lower(),
+                )
+                pages_out = _chunk_pages_ordered(ordered_ids)
                 lib_data["blends"][bid] = {
                     "file_name": blend_file.stem,
                     "path": str(blend_file.resolve()),
@@ -408,14 +437,17 @@ def main() -> None:
                     "size": stat.st_size,
                     "brush_count": len(brushes_out),
                     "brushes": brushes_out,
-                    "user_prefs": old_user_prefs,
+                    "pages": pages_out,
+                    "user_prefs": _user_prefs_for_path(
+                        old_lib, str(blend_file.resolve()), bid,
+                    ),
                 }
 
         new_libraries[lid] = lib_data
 
     # ── Write final index ─────────────────────────────────────────────
     output = {
-        "version": 1,
+        "version": INDEX_VERSION,
         "generated_at": time.time(),
         "libraries": new_libraries,
     }
@@ -433,17 +465,6 @@ def main() -> None:
     )
     print(f"\n[Sync] Done: {len(new_libraries)} libraries, {total_brushes} brushes total.")
     sys.exit(0)
-
-
-def _get_old_user_prefs(old_lib: dict | None, blend_key: str) -> dict[str, Any]:
-    """Extract user_prefs from old index for a given blend key."""
-    if old_lib is None:
-        return {"active_page": 0, "custom_order": [], "favorites": []}
-    blends = old_lib.get("blends") or {}
-    old_blend = blends.get(blend_key)
-    if isinstance(old_blend, dict):
-        return dict(old_blend.get("user_prefs") or {"active_page": 0, "custom_order": [], "favorites": []})
-    return {"active_page": 0, "custom_order": [], "favorites": []}
 
 
 if __name__ == "__main__":

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from bpy.props import EnumProperty, StringProperty
+from bpy.props import EnumProperty, IntProperty, StringProperty
 from bpy.types import Context
 
 from ..core import bl_types
@@ -11,6 +11,7 @@ from .brush_lib_config import (
     bootstrap_all_windows,
     brush_lib_config_move,
     load_brush_lib_data,
+    set_active_page,
 )
 from .data import SculptWheelData
 
@@ -80,6 +81,38 @@ class WheelSetActiveBrushLib(bl_types.Operator):
         if not any(it.blend_key == key for it in wd.brush_lib_configs):
             return {"CANCELLED"}
         wd.wheel_active_blend = key
+        if getattr(context, "region", None):
+            context.region.tag_redraw()
+        return {"FINISHED"}
+
+
+class WheelSetBrushLibActivePage(bl_types.Operator):
+    """Set the default wheel page for a brush library (prefs row)."""
+
+    bl_label = "Set wheel page"
+    bl_description = (
+        "Choose which page is active for this library (shown first when you open the wheel)"
+    )
+    bl_options = {"REGISTER", "INTERNAL"}
+
+    blend_key: StringProperty(name="Blend key", default="", maxlen=2048)
+    page_index: IntProperty(name="Page", default=0, min=0, max=511)
+
+    @classmethod
+    def poll_operator(cls, context: Context) -> bool | str:
+        if context.mode != "SCULPT":
+            return False
+        wd = SculptWheelData.get(context)
+        return bool(wd.brush_libs_loaded)
+
+    def execute(self, context: Context) -> set[str]:
+        key = (self.blend_key or "").strip()
+        if not key:
+            return {"CANCELLED"}
+        wd = SculptWheelData.get(context)
+        if not any(it.blend_key == key for it in wd.brush_lib_configs):
+            return {"CANCELLED"}
+        set_active_page(context, key, int(self.page_index))
         if getattr(context, "region", None):
             context.region.tag_redraw()
         return {"FINISHED"}

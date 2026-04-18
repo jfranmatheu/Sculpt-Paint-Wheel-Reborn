@@ -6,6 +6,7 @@ from .models import (
     BlendData,
     LibraryData,
     LibrariesIndex,
+    PageData,
     MAX_BRUSHES_PER_PAGE,
 )
 from .ids import library_id, blend_id, brush_id, preview_hash, preview_relative_path
@@ -35,6 +36,7 @@ from .runtime import (
     get_brushes_for_blend,
     get_all_brushes_for_blend,
     page_count_for_blend,
+    get_page_name,
     get_user_prefs_for_blend,
     set_user_pref,
     activate_brush,

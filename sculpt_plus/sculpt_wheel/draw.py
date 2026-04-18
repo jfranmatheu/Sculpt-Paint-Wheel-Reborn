@@ -82,8 +82,10 @@ def draw_wheel(context: Context, op: 'SculptWheelOperator') -> None:
         _draw_color_pickers(context, op)
         _draw_slots(context, op, cx, cy, slot_radius, icon_scale)
 
-        if op.blend_count > 1:
-            _draw_blend_dots(op, cx, cy, radius)
+        if getattr(op, "total_pages", 1) > 1 and getattr(op, "active_page_title", ""):
+            _draw_page_title(op, cx, cy, radius)
+        if getattr(op, "total_pages", 1) > 1:
+            _draw_page_dots(op, cx, cy, radius)
 
 
 def _draw_custom_buttons(op: 'SculptWheelOperator', cx: float, cy: float, icon_scale: float) -> None:
@@ -228,18 +230,42 @@ def _draw_slots(
             )
 
 
-def _draw_blend_dots(
-    op: 'SculptWheelOperator',
+def _draw_page_title(
+    op: "SculptWheelOperator",
     cx: float, cy: float,
     wheel_radius: float,
 ) -> None:
-    count = op.blend_count
-    active = op.active_blend_index
+    """Current wheel page name (e.g. Essentials group or ``Page 2``)."""
+    title = (getattr(op, "active_page_title", "") or "").strip()
+    if not title:
+        return
+    ty = cy - wheel_radius - (28.0 if getattr(op, "total_pages", 1) > 1 else 14.0)
+    draw_text(
+        title[:48],
+        cx,
+        ty - 10.0,
+        size=10.0,
+        color=COL_TEXT,
+        align="CENTER",
+        shadow=True,
+    )
+
+
+def _draw_page_dots(
+    op: "SculptWheelOperator",
+    cx: float, cy: float,
+    wheel_radius: float,
+) -> None:
+    """One dot per wheel page for the active brush library blend."""
+    count = int(getattr(op, "total_pages", 1))
+    active = int(getattr(op, "active_page", 0))
+    if count <= 1:
+        return
     dot_radius = 3.0
-    spacing = 10.0
+    spacing = min(10.0, max(5.0, 180.0 / max(count, 1)))
     total_w = (count - 1) * spacing
     start_x = cx - total_w * 0.5
-    dot_y = cy - wheel_radius - 16
+    dot_y = cy - wheel_radius - 14.0
 
     for i in range(count):
         dx = start_x + i * spacing

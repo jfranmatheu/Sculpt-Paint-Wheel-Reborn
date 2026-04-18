@@ -195,6 +195,8 @@ def sync_brush_lib_configs(context: Context) -> None:
             it.show_color_picker = bool(ent.get("show_color_picker"))
             it.custom_button_set = _coerce_custom_button_set(ent.get("custom_button_set"))
             it.active_page = int(ent.get("active_page", 0))
+        for it in wd.brush_lib_configs:
+            clamp_brush_lib_item_pages(context, it)
     finally:
         _CFG_LOADING = False
 
@@ -289,6 +291,44 @@ def get_wheel_base_color(context: Context, blend_key: str) -> tuple[float, float
     return DEFAULT_WHEEL_COLOR
 
 
+def clamp_brush_lib_item_pages(context: Context, item: Any) -> None:
+    """Keep ``item.active_page`` within ``[0, page_count - 1]`` for its blend."""
+    from ..src.brush_management import is_loaded, page_count_for_blend
+    if not is_loaded():
+        return
+    lid = (getattr(item, "library_id", None) or "").strip()
+    bid = (getattr(item, "blend_id", None) or "").strip()
+    if not lid or not bid:
+        return
+    n = max(1, page_count_for_blend(lid, bid))
+    v = max(0, min(n - 1, int(getattr(item, "active_page", 0))))
+    if int(item.active_page) != v:
+        item.active_page = v
+
+
+def page_rows_for_blend_item(context: Context, item: Any) -> list[tuple[int, str, int]]:
+    """``(page_index, page_name, brush_count)`` for the given config row (sidebar)."""
+    from ..src.brush_management import (
+        is_loaded,
+        page_count_for_blend,
+        get_brushes_for_blend,
+        get_page_name,
+    )
+    if not is_loaded():
+        return []
+    lid = (getattr(item, "library_id", None) or "").strip()
+    bid = (getattr(item, "blend_id", None) or "").strip()
+    if not lid or not bid:
+        return []
+    np = page_count_for_blend(lid, bid)
+    out: list[tuple[int, str, int]] = []
+    for i in range(np):
+        name = get_page_name(lid, bid, i)
+        n_br = len(get_brushes_for_blend(lid, bid, i))
+        out.append((i, name, n_br))
+    return out
+
+
 def get_active_page(context: Context, blend_key: str) -> int:
     from .data import SculptWheelData
     wd = SculptWheelData.get(context)
@@ -299,8 +339,12 @@ def get_active_page(context: Context, blend_key: str) -> int:
 
 
 def set_active_page(context: Context, blend_key: str, page: int) -> None:
-    from .data import SculptWheelData
+    from .data import SculptWheelData, parse_blend_key
+    from ..src.brush_management import page_count_for_blend
     wd = SculptWheelData.get(context)
+    lid, bid = parse_blend_key(blend_key)
+    n = max(1, page_count_for_blend(lid, bid))
+    page = max(0, min(n - 1, int(page)))
     for it in wd.brush_lib_configs:
         if it.blend_key == blend_key:
             it.active_page = page
@@ -381,6 +425,8 @@ def _resort_configs(context: Context) -> None:
             it.show_color_picker = r["show_color_picker"]
             it.custom_button_set = r["custom_button_set"]
             it.active_page = r["active_page"]
+        for it in wd.brush_lib_configs:
+            clamp_brush_lib_item_pages(context, it)
     finally:
         _CFG_LOADING = False
     save_brush_lib_configs_to_json(context)

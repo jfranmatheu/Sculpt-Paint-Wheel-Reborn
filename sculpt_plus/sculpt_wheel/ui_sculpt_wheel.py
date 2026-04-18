@@ -13,7 +13,8 @@ from .data import (
     get_wheel_storage,
     sync_brush_lib_list_index,
 )
-from .op_wheel_ui import WheelBrushLibMove
+from .brush_lib_config import page_rows_for_blend_item
+from .op_wheel_ui import WheelBrushLibMove, WheelSetBrushLibActivePage
 from .persistence import touch_wheel_storage_save_debounced
 from .ui_wheel_brush_sets import SculptWheelBrushLibsUIList, SculptWheelCustomButtonSetsUIList
 
@@ -35,13 +36,9 @@ class SculptWheelSidebarPanel(bl_types.PanelPresets.VIEW_3D_SIDEBAR):
 
         box = layout.box()
         aid = GLOBALS.ADDON.ID
-        hdr = box.row()
-        split = hdr.split(factor=0.88)
-        split.label(text="Brush libraries", icon="ASSET_MANAGER")
-        row = split.row()
-        row.ui_units_x = 1
-        row.alignment = 'RIGHT'
-        row.operator(
+        hdr = box.row(align=True)
+        hdr.label(text="Brush libraries", icon="ASSET_MANAGER")
+        hdr.operator(
             f"{aid}.wheelreloadbrushlibraries",
             text="",
             icon="FILE_REFRESH",
@@ -51,11 +48,10 @@ class SculptWheelSidebarPanel(bl_types.PanelPresets.VIEW_3D_SIDEBAR):
                 text="Preparing libraries (first run may take a minute). Use reload if this persists.",
             )
         col = box.column(align=True)
-        col.label(text="Wheel brush library (click a row):")
         sync_brush_lib_list_index(context)
         n_cfg = len(wm.brush_lib_configs)
         rows = min(8, max(4, n_cfg)) if n_cfg else 4
-        split = col.split(factor=0.9)
+        split = col.split(factor=0.92)
         left = split.column()
         left.template_list(
             SculptWheelBrushLibsUIList.bl_idname,
@@ -71,6 +67,56 @@ class SculptWheelSidebarPanel(bl_types.PanelPresets.VIEW_3D_SIDEBAR):
         mup.direction = "UP"
         mdn = right.operator(WheelBrushLibMove.bl_idname, text="", icon="TRIA_DOWN")
         mdn.direction = "DOWN"
+
+        if n_cfg > 0:
+            ai = int(wm.brush_lib_config_active_index)
+            if 0 <= ai < n_cfg:
+                it = wm.brush_lib_configs[ai]
+                pages = page_rows_for_blend_item(context, it)
+                title = (it.display_name or it.blend_name or it.blend_key or "Library").strip()
+                ap = int(it.active_page)
+
+                if len(pages) > 1:
+                    pg = box.box()
+                    hd = pg.row(align=True)
+                    hd.label(text="Wheel pages", icon="FILE_FOLDER")
+                    hd.label(text=title)
+                    if 0 <= ap < len(pages):
+                        _i, pna, cn = pages[ap]
+                        pg.label(text=f"Page {ap}: {pna}  ·  {cn} brushes")
+                    flow = pg.grid_flow(
+                        row_major=True,
+                        columns=6,
+                        align=True,
+                    )
+                    for pi, _pname, _cnt in pages:
+                        b = flow.operator(
+                            WheelSetBrushLibActivePage.bl_idname,
+                            text=str(pi),
+                            depress=(pi == ap),
+                        )
+                        b.blend_key = it.blend_key
+                        b.page_index = pi
+                    pg.label(
+                        text="Open wheel: mouse wheel = pages · Shift + wheel = other libraries",
+                        icon="INFO",
+                    )
+                elif len(pages) == 1:
+                    col.label(
+                        text=f"{title}: single page ({pages[0][2]} brushes).",
+                        icon="DOT",
+                    )
+                elif not pages:
+                    col.label(
+                        text=f"{title}: page list unavailable (reload libraries).",
+                        icon="ERROR",
+                    )
+
+                if n_cfg > 1 and len(pages) <= 1:
+                    col.label(
+                        text="Shift + mouse wheel on the wheel switches between libraries.",
+                        icon="INFO",
+                    )
 
         cbox = layout.box()
         cbox.label(text="Custom button sets", icon="SETTINGS")

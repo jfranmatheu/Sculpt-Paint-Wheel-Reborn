@@ -247,7 +247,8 @@ class CreateWheelCustomButton(bl_types.PropertyGroup):
 # ──────────────────────────────────────────────────────────────────────
 
 def _wheel_brush_lib_cfg_updated(self, context):
-    from .brush_lib_config import save_brush_lib_configs_to_json
+    from .brush_lib_config import clamp_brush_lib_item_pages, save_brush_lib_configs_to_json
+    clamp_brush_lib_item_pages(context, self)
     save_brush_lib_configs_to_json(context)
     if getattr(context, "region", None):
         context.region.tag_redraw()
@@ -308,8 +309,11 @@ class WheelBrushLibConfigItem(bl_types.PropertyGroup):
     )
     active_page: IntProperty(
         name="Active page",
+        description="Wheel page index for this library (clamped to available pages)",
         default=0,
         min=0,
+        max=511,
+        soft_max=31,
         update=_wheel_brush_lib_cfg_updated,
     )
 

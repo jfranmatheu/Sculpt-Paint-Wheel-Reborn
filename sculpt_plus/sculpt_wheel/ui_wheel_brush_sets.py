@@ -10,7 +10,7 @@ from .data import EVENT_SET_ICONS
 
 
 class SculptWheelBrushLibsUIList(bl_types.UIList):
-    """Brush libraries with inline display name, color, options, and custom-set picker."""
+    """Brush libraries: name, wheel color, color-picker toggle, custom-button set."""
 
     bl_label = "Brush libraries"
 
@@ -28,12 +28,15 @@ class SculptWheelBrushLibsUIList(bl_types.UIList):
         if self.layout_type in {"DEFAULT", "COMPACT"}:
             if not item:
                 return
-            col = layout.column(align=True)
-            row = col.row(align=True)
+            row = layout.row(align=True)
+            ix = row.row(align=True)
+            ix.alignment = "RIGHT"
+            ix.ui_units_x = 2.0
+            ix.label(text=f"{index + 1}")
             ph = (item.blend_name or item.blend_key or "").strip() or "Brush Library"
             row.prop(item, "display_name", text="", emboss=False, placeholder=ph)
             color_l = row.row(align=True)
-            color_l.ui_units_x = 1
+            color_l.ui_units_x = 1.1
             color_l.prop(item, "wheel_color", text="")
             cp_icon = "RESTRICT_COLOR_ON" if item.show_color_picker else "RESTRICT_COLOR_OFF"
             row.prop(

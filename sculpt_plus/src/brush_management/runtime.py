@@ -15,10 +15,8 @@ from bpy.types import Context
 from .cache import load_libraries_index, save_libraries_index, ensure_cache_dirs
 from .models import (
     LibrariesIndex,
-    LibraryData,
     BlendData,
     BrushData,
-    MAX_BRUSHES_PER_PAGE,
 )
 from .previews import get_brush_preview_texture, clear_texture_cache
 
@@ -85,6 +83,14 @@ def list_library_blend_keys() -> list[tuple[str, str, str]]:
     return results
 
 
+def _get_blend(library_id: str, blend_id: str) -> BlendData | None:
+    idx = get_index()
+    lib = idx.libraries.get(library_id)
+    if lib is None:
+        return None
+    return lib.blends.get(blend_id)
+
+
 def get_brushes_for_blend(
     library_id: str,
     blend_id: str,
@@ -92,15 +98,31 @@ def get_brushes_for_blend(
 ) -> list[BrushData]:
     """Return brushes for a specific blend file, optionally filtered by wheel page.
 
-    If *page* is negative, returns ALL brushes for that blend.
+    If *page* is negative, returns ALL brushes in page order (concatenated pages).
     """
-    idx = get_index()
-    lib = idx.libraries.get(library_id)
-    if lib is None:
-        return []
-    blend = lib.blends.get(blend_id)
+    blend = _get_blend(library_id, blend_id)
     if blend is None:
         return []
+
+    if blend.pages:
+        if page < 0:
+            out: list[BrushData] = []
+            for pg in blend.pages:
+                for bid in pg.brush_ids:
+                    b = blend.brushes.get(bid)
+                    if b is not None:
+                        out.append(b)
+            return out
+        if page >= len(blend.pages):
+            return []
+        out = []
+        for bid in blend.pages[page].brush_ids:
+            b = blend.brushes.get(bid)
+            if b is not None:
+                out.append(b)
+        return out
+
+    # Legacy v1: no pages — order by wheel page/index
     brushes = sorted(blend.brushes.values(), key=lambda b: (b.wheel_page, b.wheel_index))
     if page < 0:
         return brushes
@@ -108,17 +130,37 @@ def get_brushes_for_blend(
 
 
 def get_all_brushes_for_blend(library_id: str, blend_id: str) -> list[BrushData]:
-    """All brushes regardless of page, sorted by (page, index)."""
+    """All brushes regardless of page, in page order when ``pages`` exist."""
     return get_brushes_for_blend(library_id, blend_id, page=-1)
 
 
 def page_count_for_blend(library_id: str, blend_id: str) -> int:
     """Number of wheel pages for a blend file."""
-    brushes = get_all_brushes_for_blend(library_id, blend_id)
+    blend = _get_blend(library_id, blend_id)
+    if blend is None:
+        return 0
+    if blend.pages:
+        return len(blend.pages)
+    brushes = list(blend.brushes.values())
     if not brushes:
         return 0
     max_page = max(b.wheel_page for b in brushes)
     return max_page + 1
+
+
+def get_page_name(library_id: str, blend_id: str, page_index: int) -> str:
+    """Display name for page *page_index*, or ``Page {n}`` fallback."""
+    blend = _get_blend(library_id, blend_id)
+    if blend is None or not blend.pages:
+        if page_index >= 0:
+            return f"Page {page_index + 1}"
+        return ""
+    if 0 <= page_index < len(blend.pages):
+        nm = (blend.pages[page_index].name or "").strip()
+        if nm:
+            return nm
+        return f"Page {page_index + 1}"
+    return f"Page {page_index + 1}"
 
 
 def get_user_prefs_for_blend(library_id: str, blend_id: str) -> dict[str, Any]:
