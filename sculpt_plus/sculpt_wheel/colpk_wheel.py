@@ -53,6 +53,23 @@ def colpk_linked_preview_enabled(context: Context) -> bool:
     return bool(getattr(addon.preferences, "wheel_colpk_linked_preview", True))
 
 
+def active_sculpt_brush_has_color(context: Context) -> bool:
+    """True when the active sculpt brush supports color (wheel may show the HSV rings)."""
+    ts = getattr(context, "tool_settings", None)
+    if ts is None:
+        return False
+    sculpt = getattr(ts, "sculpt", None)
+    if sculpt is None:
+        return False
+    brush = getattr(sculpt, "brush", None)
+    if brush is None:
+        return False
+    cap = getattr(brush, "sculpt_capabilities", None)
+    if cap is None:
+        return False
+    return bool(getattr(cap, "has_color", False))
+
+
 def get_sculpt_brush_rgb(context: Context) -> tuple[float, float, float]:
     ts = context.tool_settings
     brush = ts.sculpt.brush

@@ -63,7 +63,6 @@ def _default_entry(order: int, lib_name: str, blend_name: str) -> dict[str, Any]
         "library_name": lib_name,
         "blend_name": blend_name,
         "wheel_color": list(DEFAULT_WHEEL_COLOR),
-        "show_color_picker": False,
         "custom_button_set": "ACTIVE",
         "active_page": 0,
     }
@@ -145,7 +144,6 @@ def sync_brush_lib_configs(context: Context) -> None:
         wc = ent.get("wheel_color")
         if not (isinstance(wc, list) and len(wc) == 4):
             ent["wheel_color"] = list(DEFAULT_WHEEL_COLOR)
-        ent.setdefault("show_color_picker", False)
         ent.setdefault("custom_button_set", "ACTIVE")
         ent.setdefault("active_page", 0)
 
@@ -192,7 +190,6 @@ def sync_brush_lib_configs(context: Context) -> None:
                 it.wheel_color = tuple(float(x) for x in wc)
             else:
                 it.wheel_color = DEFAULT_WHEEL_COLOR
-            it.show_color_picker = bool(ent.get("show_color_picker"))
             it.custom_button_set = _coerce_custom_button_set(ent.get("custom_button_set"))
             it.active_page = int(ent.get("active_page", 0))
         for it in wd.brush_lib_configs:
@@ -223,7 +220,6 @@ def save_brush_lib_configs_to_json(context: Context) -> None:
             "library_name": it.library_name,
             "blend_name": it.blend_name,
             "wheel_color": list(it.wheel_color),
-            "show_color_picker": bool(it.show_color_picker),
             "custom_button_set": _coerce_custom_button_set(
                 getattr(it, "custom_button_set", "ACTIVE")
             ),
@@ -267,18 +263,6 @@ def blend_display_label(context: Context, blend_key: str) -> str:
         if it.blend_key == blend_key:
             return (it.display_name or it.blend_name or blend_key).strip()
     return blend_key
-
-
-def get_active_blend_show_color_picker(context: Context) -> bool:
-    from .data import SculptWheelData
-    wd = SculptWheelData.get(context)
-    key = (wd.wheel_active_blend or "").strip()
-    if not key or key == "NONE":
-        return False
-    for it in wd.brush_lib_configs:
-        if it.blend_key == key:
-            return bool(it.show_color_picker)
-    return False
 
 
 def get_wheel_base_color(context: Context, blend_key: str) -> tuple[float, float, float, float]:
@@ -404,7 +388,6 @@ def _resort_configs(context: Context) -> None:
             "order": int(it.order),
             "display_name": (it.display_name or it.blend_name or it.blend_key).strip(),
             "wheel_color": tuple(float(x) for x in it.wheel_color),
-            "show_color_picker": bool(it.show_color_picker),
             "custom_button_set": _coerce_custom_button_set(getattr(it, "custom_button_set", "ACTIVE")),
             "active_page": int(it.active_page),
         })
@@ -422,7 +405,6 @@ def _resort_configs(context: Context) -> None:
             it.order = r["order"]
             it.display_name = r["display_name"]
             it.wheel_color = r["wheel_color"]
-            it.show_color_picker = r["show_color_picker"]
             it.custom_button_set = r["custom_button_set"]
             it.active_page = r["active_page"]
         for it in wd.brush_lib_configs:

@@ -38,14 +38,6 @@ class SculptWheelBrushLibsUIList(bl_types.UIList):
             color_l = row.row(align=True)
             color_l.ui_units_x = 1.1
             color_l.prop(item, "wheel_color", text="")
-            cp_icon = "RESTRICT_COLOR_ON" if item.show_color_picker else "RESTRICT_COLOR_OFF"
-            row.prop(
-                item,
-                "show_color_picker",
-                text="",
-                toggle=True,
-                icon=cp_icon,
-            )
             row.prop(item, "custom_button_set", text="", icon_only=True)
         elif self.layout_type in {"GRID"}:
             layout.alignment = "CENTER"

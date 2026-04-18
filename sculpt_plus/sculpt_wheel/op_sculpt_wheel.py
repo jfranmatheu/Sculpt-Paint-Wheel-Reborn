@@ -44,13 +44,13 @@ from .data import (
 )
 from .brush_lib_config import (
     ensure_brush_libs_loaded,
-    get_active_blend_show_color_picker,
     get_wheel_base_color,
     get_active_page,
     set_active_page,
     list_ordered_blend_keys,
 )
 from .colpk_wheel import (
+    active_sculpt_brush_has_color,
     colpk_pick_channel,
     colpk_update_from_mouse,
     get_sculpt_brush_rgb,
@@ -423,26 +423,7 @@ class SculptWheelOperator(bl_types.OperatorModal):
             self.tarta_inner_ratio = 0.5
             self.icon_ring_radius = 0.0
 
-        self.show_color_picker = bool(get_active_blend_show_color_picker(context))
-        if self.show_color_picker:
-            base_outer = (
-                self.tarta_ring_outer_radius
-                if self.tarta_ring_outer_radius > 1.0
-                else max(28.0, self.wheel_radius * 0.30)
-            )
-            gap = max(5.0, self.wheel_radius * 0.028)
-            hue_thick = max(14.0, self.wheel_radius * 0.062)
-            self.colpk_hue_inner_r = base_outer + gap
-            self.colpk_hue_outer_r = self.colpk_hue_inner_r + hue_thick
-            gap2 = max(4.0, self.wheel_radius * 0.022)
-            sv_thick = max(16.0, self.wheel_radius * 0.07)
-            self.colpk_sv_inner_r = self.colpk_hue_outer_r + gap2
-            self.colpk_sv_outer_r = self.colpk_sv_inner_r + sv_thick
-        else:
-            self.colpk_hue_inner_r = 0.0
-            self.colpk_hue_outer_r = 0.0
-            self.colpk_sv_inner_r = 0.0
-            self.colpk_sv_outer_r = 0.0
+        self._refresh_show_color_picker(context)
 
     def _cache_previews(self) -> None:
         for brush in self.brushes:
@@ -495,12 +476,36 @@ class SculptWheelOperator(bl_types.OperatorModal):
             (self.wheel_center_x, self.wheel_center_y),
         ) <= self.wheel_radius
 
+    def _refresh_show_color_picker(self, context: Context) -> None:
+        """Show HSV rings only when the active sculpt brush supports color (RNA)."""
+        self.show_color_picker = bool(active_sculpt_brush_has_color(context))
+        if self.show_color_picker:
+            base_outer = (
+                self.tarta_ring_outer_radius
+                if self.tarta_ring_outer_radius > 1.0
+                else max(28.0, self.wheel_radius * 0.30)
+            )
+            gap = max(5.0, self.wheel_radius * 0.028)
+            hue_thick = max(14.0, self.wheel_radius * 0.062)
+            self.colpk_hue_inner_r = base_outer + gap
+            self.colpk_hue_outer_r = self.colpk_hue_inner_r + hue_thick
+            gap2 = max(4.0, self.wheel_radius * 0.022)
+            sv_thick = max(16.0, self.wheel_radius * 0.07)
+            self.colpk_sv_inner_r = self.colpk_hue_outer_r + gap2
+            self.colpk_sv_outer_r = self.colpk_sv_inner_r + sv_thick
+        else:
+            self.colpk_hue_inner_r = 0.0
+            self.colpk_hue_outer_r = 0.0
+            self.colpk_sv_inner_r = 0.0
+            self.colpk_sv_outer_r = 0.0
+
     def _select_hovered(self, context: Context) -> None:
         if self.hover_index < 0 or self.hover_index >= len(self.brushes):
             return
         brush = self.brushes[self.hover_index]
         if activate_brush(context, brush):
             self.active_brush_slot_index = self.hover_index
+            self._refresh_show_color_picker(context)
 
     def _select_brush_at_index(self, context: Context, index: int) -> None:
         if index < 0 or index >= len(self.brushes):
@@ -508,6 +513,7 @@ class SculptWheelOperator(bl_types.OperatorModal):
         brush = self.brushes[index]
         if activate_brush(context, brush):
             self.active_brush_slot_index = index
+            self._refresh_show_color_picker(context)
 
     def _cycle_blend(self, context: Context, direction: int) -> None:
         if self.blend_count <= 1 or self._wheel_data is None:

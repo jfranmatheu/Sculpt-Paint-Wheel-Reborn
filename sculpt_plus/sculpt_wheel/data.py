@@ -296,11 +296,6 @@ class WheelBrushLibConfigItem(bl_types.PropertyGroup):
         subtype="COLOR",
         update=_wheel_brush_lib_cfg_updated,
     )
-    show_color_picker: BoolProperty(
-        name="In-wheel color picker",
-        default=False,
-        update=_wheel_brush_lib_cfg_updated,
-    )
     custom_button_set: EnumProperty(
         name="Custom button set",
         items=_WHEEL_BRUSH_CUSTOM_SET_ITEMS,
