@@ -1,13 +1,30 @@
-from bpy.props import BoolProperty, IntProperty, FloatProperty, EnumProperty, PointerProperty
+from bpy.props import (
+    BoolProperty,
+    IntProperty,
+    FloatProperty,
+    FloatVectorProperty,
+    EnumProperty,
+    PointerProperty,
+)
 from bpy.types import Context, UILayout
 
 from .core import bl_types
-from .sculpt_wheel.data import SculptWheelStorage
+from .sculpt_wheel.data import DEFAULT_WHEEL_COLOR, SculptWheelStorage
 
 
 class SculptPlusPreferences(bl_types.AddonPreferences):
 
     sculpt_wheel_storage: PointerProperty(type=SculptWheelStorage)
+
+    wheel_overlay_base_color: FloatVectorProperty(
+        name="Wheel overlay tint",
+        description="Background tint for the sculpt wheel (all brush libraries)",
+        size=4,
+        min=0.0,
+        max=1.0,
+        default=DEFAULT_WHEEL_COLOR,
+        subtype="COLOR",
+    )
 
     # -- Sculpt Wheel settings --
     wheel_radius: IntProperty(
@@ -78,6 +95,7 @@ class SculptPlusPreferences(bl_types.AddonPreferences):
             text="Pick the active library in the Sidebar (Sculpt mode) and use Reload there to rescan libraries."
         )
         col = box.column(align=True)
+        col.prop(self, "wheel_overlay_base_color")
         col.prop(self, "wheel_radius")
         col.prop(self, "wheel_icon_scale")
         col.prop(self, "wheel_show_names")

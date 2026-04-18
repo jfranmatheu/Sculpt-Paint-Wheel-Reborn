@@ -38,19 +38,6 @@ EVENT_SET_ICONS = (
     "EVENT_NINEKEY",
 )
 
-_WHEEL_BRUSH_CUSTOM_SET_ITEMS = (
-    (
-        "ACTIVE",
-        "Active",
-        "Use the custom button set selected in the sidebar (active index)",
-        "LINKED",
-        MAX_CUSTOM_BUTTON_SETS,
-    ),
-) + tuple(
-    (str(i), str(i), f"Custom button set {i}", EVENT_SET_ICONS[i], i)
-    for i in range(MAX_CUSTOM_BUTTON_SETS)
-)
-
 DEFAULT_WHEEL_COLOR = (0.075, 0.078, 0.085, 0.97)
 
 
@@ -243,74 +230,20 @@ class CreateWheelCustomButton(bl_types.PropertyGroup):
 
 
 # ──────────────────────────────────────────────────────────────────────
-# Brush Library Config (per-blend metadata for the wheel)
+# Brush library rows (synced from ``libraries.json``; no per-row prefs here)
 # ──────────────────────────────────────────────────────────────────────
-
-def _wheel_brush_lib_cfg_updated(self, context):
-    from .brush_lib_config import clamp_brush_lib_item_pages, save_brush_lib_configs_to_json
-    clamp_brush_lib_item_pages(context, self)
-    save_brush_lib_configs_to_json(context)
-    if getattr(context, "region", None):
-        context.region.tag_redraw()
 
 
 class WheelBrushLibConfigItem(bl_types.PropertyGroup):
-    """Per brush library/blend metadata for the wheel UI."""
+    """One brush blend row: ids + file name (labels and colors come from elsewhere)."""
 
     pg_parent = None
 
     blend_key: StringProperty(name="Blend key", default="", maxlen=2048)
     library_id: StringProperty(name="Library ID", default="", maxlen=256)
     blend_id: StringProperty(name="Blend ID", default="", maxlen=256)
-    library_name: StringProperty(
-        name="Library name",
-        default="",
-        maxlen=512,
-        update=_wheel_brush_lib_cfg_updated,
-    )
-    blend_name: StringProperty(
-        name="Blend name",
-        default="",
-        maxlen=512,
-        update=_wheel_brush_lib_cfg_updated,
-    )
-    order: IntProperty(
-        name="Order",
-        default=0,
-        min=0,
-        max=9999,
-        update=_wheel_brush_lib_cfg_updated,
-    )
-    display_name: StringProperty(
-        name="Display name",
-        default="",
-        maxlen=256,
-        update=_wheel_brush_lib_cfg_updated,
-    )
-    wheel_color: FloatVectorProperty(
-        name="Wheel base color",
-        size=4,
-        min=0.0,
-        max=1.0,
-        default=DEFAULT_WHEEL_COLOR,
-        subtype="COLOR",
-        update=_wheel_brush_lib_cfg_updated,
-    )
-    custom_button_set: EnumProperty(
-        name="Custom button set",
-        items=_WHEEL_BRUSH_CUSTOM_SET_ITEMS,
-        default="ACTIVE",
-        update=_wheel_brush_lib_cfg_updated,
-    )
-    active_page: IntProperty(
-        name="Active page",
-        description="Wheel page index for this library (clamped to available pages)",
-        default=0,
-        min=0,
-        max=511,
-        soft_max=31,
-        update=_wheel_brush_lib_cfg_updated,
-    )
+    library_name: StringProperty(name="Library name", default="", maxlen=512)
+    blend_name: StringProperty(name="Blend file stem", default="", maxlen=512)
 
 
 # ──────────────────────────────────────────────────────────────────────
@@ -383,24 +316,11 @@ def get_active_custom_button_buttons(context: Context):
 
 
 def resolve_custom_buttons_for_blend(context: Context, blend_key: str):
-    """Custom buttons collection for the given blend_key (from WM config)."""
-    wd = SculptWheelData.get(context)
+    """Custom buttons for the wheel: active set from preferences (per-blend choice removed)."""
     st = get_wheel_storage(context)
     if len(st.custom_button_sets) == 0:
         return None
-    idx = 0
-    for it in wd.brush_lib_configs:
-        if it.blend_key == blend_key:
-            if getattr(it, "custom_button_set", None) == "ACTIVE":
-                idx = int(st.custom_button_set_active_index)
-            else:
-                try:
-                    idx = int(it.custom_button_set)
-                except (AttributeError, TypeError, ValueError):
-                    idx = 0
-                idx = max(0, min(MAX_CUSTOM_BUTTON_SETS - 1, idx))
-            break
-    idx = max(0, min(len(st.custom_button_sets) - 1, idx))
+    idx = max(0, min(len(st.custom_button_sets) - 1, int(st.custom_button_set_active_index)))
     return st.custom_button_sets[idx].custom_buttons
 
 

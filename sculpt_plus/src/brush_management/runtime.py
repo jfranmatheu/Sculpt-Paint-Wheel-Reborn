@@ -68,16 +68,27 @@ def reset() -> None:
 # Wheel data helpers
 # ──────────────────────────────────────────────────────────────────────
 
+
+def blend_file_display_title(file_stem: str) -> str:
+    """Human-readable title from a blend file stem (matches sync script convention)."""
+    s = (file_stem or "").strip()
+    if not s:
+        return ""
+    return s.replace("_", " ").replace("-", " ").title()
+
+
 def list_library_blend_keys() -> list[tuple[str, str, str]]:
     """Return (library_id, blend_id, display_label) for every blend in the index,
-    sorted by library name then blend name."""
+    sorted by library name then blend display title."""
     idx = get_index()
     results: list[tuple[str, str, str]] = []
     for lid, lib in idx.libraries.items():
         for bid, blend in lib.blends.items():
-            label = blend.file_name or bid
+            title = blend_file_display_title(blend.file_name or bid)
             if lib.name:
-                label = f"{lib.name} — {label}"
+                label = f"{lib.name} — {title}" if title else lib.name
+            else:
+                label = title or bid
             results.append((lid, bid, label))
     results.sort(key=lambda t: t[2].lower())
     return results

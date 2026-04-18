@@ -13,8 +13,8 @@ from .data import (
     get_wheel_storage,
     sync_brush_lib_list_index,
 )
-from .brush_lib_config import page_rows_for_blend_item
-from .op_wheel_ui import WheelBrushLibMove, WheelSetBrushLibActivePage
+from .brush_lib_config import blend_display_label, get_active_page, page_rows_for_blend_item
+from .op_wheel_ui import WheelSetBrushLibActivePage
 from .persistence import touch_wheel_storage_save_debounced
 from .ui_wheel_brush_sets import SculptWheelBrushLibsUIList, SculptWheelCustomButtonSetsUIList
 
@@ -51,9 +51,7 @@ class SculptWheelSidebarPanel(bl_types.PanelPresets.VIEW_3D_SIDEBAR):
         sync_brush_lib_list_index(context)
         n_cfg = len(wm.brush_lib_configs)
         rows = min(8, max(4, n_cfg)) if n_cfg else 4
-        split = col.split(factor=0.92)
-        left = split.column()
-        left.template_list(
+        col.template_list(
             SculptWheelBrushLibsUIList.bl_idname,
             "",
             wm,
@@ -62,19 +60,14 @@ class SculptWheelSidebarPanel(bl_types.PanelPresets.VIEW_3D_SIDEBAR):
             "brush_lib_config_active_index",
             rows=rows,
         )
-        right = split.column(align=True)
-        mup = right.operator(WheelBrushLibMove.bl_idname, text="", icon="TRIA_UP")
-        mup.direction = "UP"
-        mdn = right.operator(WheelBrushLibMove.bl_idname, text="", icon="TRIA_DOWN")
-        mdn.direction = "DOWN"
 
         if n_cfg > 0:
             ai = int(wm.brush_lib_config_active_index)
             if 0 <= ai < n_cfg:
                 it = wm.brush_lib_configs[ai]
                 pages = page_rows_for_blend_item(context, it)
-                title = (it.display_name or it.blend_name or it.blend_key or "Library").strip()
-                ap = int(it.active_page)
+                title = blend_display_label(context, it.blend_key)
+                ap = int(get_active_page(context, it.blend_key))
 
                 if len(pages) > 1:
                     pg = box.box()

@@ -2,14 +2,13 @@
 
 from __future__ import annotations
 
-from bpy.props import EnumProperty, IntProperty, StringProperty
+from bpy.props import IntProperty, StringProperty
 from bpy.types import Context
 
 from ..core import bl_types
 
 from .brush_lib_config import (
     bootstrap_all_windows,
-    brush_lib_config_move,
     load_brush_lib_data,
     set_active_page,
 )
@@ -116,35 +115,3 @@ class WheelSetBrushLibActivePage(bl_types.Operator):
         if getattr(context, "region", None):
             context.region.tag_redraw()
         return {"FINISHED"}
-
-
-class WheelBrushLibMove(bl_types.Operator):
-    """Reorder brush library config rows."""
-
-    bl_label = "Move brush library"
-    bl_description = "Change sort order of the selected brush library in the list"
-    bl_options = {"REGISTER", "UNDO", "INTERNAL"}
-
-    direction: EnumProperty(
-        name="Direction",
-        items=(
-            ("UP", "Up", "Move earlier in the list"),
-            ("DOWN", "Down", "Move later in the list"),
-        ),
-        default="UP",
-    )
-
-    @classmethod
-    def poll_operator(cls, context: Context) -> bool | str:
-        if context.mode != "SCULPT":
-            return False
-        wd = SculptWheelData.get(context)
-        return wd.brush_libs_loaded and len(wd.brush_lib_configs) > 1
-
-    def execute(self, context: Context) -> set[str]:
-        d = -1 if self.direction == "UP" else 1
-        if brush_lib_config_move(context, d):
-            if getattr(context, "region", None):
-                context.region.tag_redraw()
-            return {"FINISHED"}
-        return {"CANCELLED"}

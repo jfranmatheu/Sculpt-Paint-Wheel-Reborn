@@ -48,6 +48,14 @@ def _preview_rel(hash_id: str) -> str:
     return f"previews/{hash_id[:2]}/{hash_id[2:4]}/{hash_id}.bin"
 
 
+def _display_title_from_blend_stem(stem: str) -> str:
+    """Match ``brush_management.runtime.blend_file_display_title`` for console labels."""
+    s = (stem or "").strip()
+    if not s:
+        return ""
+    return s.replace("_", " ").replace("-", " ").title()
+
+
 # ──────────────────────────────────────────────────────────────────────
 # Paths
 # ──────────────────────────────────────────────────────────────────────
@@ -366,7 +374,7 @@ def main() -> None:
         }
 
         for blend_file in blend_files:
-            print(f"  - {blend_file.name}")
+            print(f"  - {_display_title_from_blend_stem(blend_file.stem)} ({blend_file.name})")
             stat = blend_file.stat()
             bid = _blend_id(str(blend_file), stat.st_mtime, stat.st_size)
 

@@ -33,6 +33,7 @@ from .runtime import (
     set_index,
     reset,
     list_library_blend_keys,
+    blend_file_display_title,
     get_brushes_for_blend,
     get_all_brushes_for_blend,
     page_count_for_blend,

@@ -1,4 +1,4 @@
-"""UIList for brush library configuration (JSON-backed, inline editing)."""
+"""UIList: brush library rows (read-only labels from index)."""
 
 from __future__ import annotations
 
@@ -6,11 +6,12 @@ from bpy.types import Context, UIList, UILayout
 
 from ..core import bl_types
 
+from .brush_lib_config import blend_display_label
 from .data import EVENT_SET_ICONS
 
 
 class SculptWheelBrushLibsUIList(bl_types.UIList):
-    """Brush libraries: name, wheel color, color-picker toggle, custom-button set."""
+    """Brush libraries discovered from asset data (order fixed by index)."""
 
     bl_label = "Brush libraries"
 
@@ -33,12 +34,7 @@ class SculptWheelBrushLibsUIList(bl_types.UIList):
             ix.alignment = "RIGHT"
             ix.ui_units_x = 2.0
             ix.label(text=f"{index + 1}")
-            ph = (item.blend_name or item.blend_key or "").strip() or "Brush Library"
-            row.prop(item, "display_name", text="", emboss=False, placeholder=ph)
-            color_l = row.row(align=True)
-            color_l.ui_units_x = 1.1
-            color_l.prop(item, "wheel_color", text="")
-            row.prop(item, "custom_button_set", text="", icon_only=True)
+            row.label(text=blend_display_label(context, item.blend_key))
         elif self.layout_type in {"GRID"}:
             layout.alignment = "CENTER"
             layout.label(text="", icon_value=icon)
