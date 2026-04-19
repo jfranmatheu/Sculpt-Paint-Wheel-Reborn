@@ -1,8 +1,9 @@
 from bpy.props import CollectionProperty, IntProperty, StringProperty
+from bpy.types import UILayout
 
 from ..core.bl_types import PropertyGroup
 from .pg_tarta_button import WheelTartaButton
-from ..ui.lists.ul_tarta_button_list import TartaButtonList
+
 
 
 class WheelTartaSet(PropertyGroup):
@@ -19,6 +20,3 @@ class WheelTartaSet(PropertyGroup):
         description="Index of the active button",
         default=-1,
     )
-
-    def draw_list(self, layout: UILayout):
-        TartaButtonList.draw_list(layout, self, 'buttons', 'active_button_index')

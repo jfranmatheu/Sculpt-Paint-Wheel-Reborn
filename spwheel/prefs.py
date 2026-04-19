@@ -16,4 +16,4 @@ class BlendWheelPrefs(bl_types.AddonPreferences):
 
     def draw_ui(self, context: Context, layout: UILayout):
         # header, content = self.draw_section(layout, "Wheel Preferences", '', align_content=False, content_layout_type='GRID_FLOW')
-        self.wheel.draw_ui(context, layout.grid_flow(), in_preferences=True)
+        self.wheel.draw_preferences_ui(context, layout.grid_flow())

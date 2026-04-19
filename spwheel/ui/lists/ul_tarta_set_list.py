@@ -57,6 +57,6 @@ class TartaSetList(UIList):
         # else:
         #     sub = layout.row(align=True)
         row = layout.row(align=True)
-        row.prop(item, 'name', icon='OUTLINER_COLLECTION')
+        row.prop(item, 'name', text='', icon='OUTLINER_COLLECTION', emboss=False)
         # sub = row.row(align=True)
         # sub.operator() # delete

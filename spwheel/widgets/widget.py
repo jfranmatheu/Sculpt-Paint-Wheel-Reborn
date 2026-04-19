@@ -1,56 +1,66 @@
-from typing import Literal
+from typing import TYPE_CHECKING, Callable, Literal, Optional, Tuple
+
 from bpy.types import Context, Event
 import gpu
 from mathutils import Vector
 
-from ..core.utils import OpReturn
-
-
-class Transform:
-    def __init__(self, widget: "Widget", parent: "Transform" = None):
-        self.parent = parent
-        parent.children.append(self)
-        self.children = []
-        self.widget = widget
-        self._x_min = 0.0
-        self._y_min = 0.0
-        self._x_max = 0.0
-        self._y_max = 0.0
-        self.offset = Vector((0.0, 0.0)) # Offset from parent.
-        self.size = Vector((widget.default_width, widget.default_height))
-        self.pos = Vector((0.0, 0.0)) # World position.
-        self.rotation = 0.0
-        self.scale_x = 1.0
-        self.scale_y = 1.0
-
-    def set_anchor(self, x_min: float, y_min: float, x_max: float, y_max: float) -> None:
-        parent: Transform = self.parent
-        if parent is None:
-            return
-        self._x_min = parent.size.x * x_min
-        self._y_min = parent.size.y * y_min
-        self._x_max = parent.size.x * x_max
-        self._y_max = parent.size.y * y_max
-
-        self.pos = Vector((self._x_min, self._y_min))
-        self.size = Vector((self._x_max - self._x_min, self._y_max - self._y_min))
+from ..wheels.wheel import Wheel, WheelPrefs
+from ..pg.pg_wheel_theme import WheelTheme
 
 
 class Widget:
-    default_width = 100.0
-    default_height = 100.0
-    hitbox_shape: Literal["RECT", "CIRCLE"] = "RECT"
-    z_index = 0
     use_modal = False
 
-    def __init__(self, context: Context, parent: "Widget" = None):
-        self.parent = parent
+    # Parenting ------------
+    parent: "Widget"
+    children: list["Widget"]
+
+    # State ------------
+    enabled = True  # The widget is completely disabled (no interaction and no drawing).
+    interactable = True  # Whether the widget can be interacted with.
+    hovered = False  # Whether the widget is hovered hovered over.
+
+    # Transform Common -----------
+    scale_x = 1.0
+    scale_y = 1.0
+    offset = Vector((0, 0))
+
+    @property
+    def wheel(self) -> "Wheel":
+        if self.parent is None:
+            raise ValueError("Widget must have a parent to get the wheel")
+        if isinstance(self.parent, Wheel):
+            return self.parent
+        return self.parent.wheel
+
+    def __init__(self):
         self.children = []
-        parent.add_child(self)
-        self.visible = True
+        self.parent = None
+        self.hovered = False
         self.enabled = True
-        self.transform = Transform(self, parent.transform)
-        self.setup(context)
+        self.scale_x = 1.0
+        self.scale_y = 1.0
+        self.offset = Vector((0, 0))
+        self.init()
+
+    def init(self) -> None:
+        pass
+
+    def set_parent(self, parent: "Widget" = None) -> None:
+        assert isinstance(parent, (Widget, Wheel)), "Parent must be a Widget or a Wheel"
+        if parent is self:
+            raise ValueError("Widget cannot be its own parent")
+        self.parent = parent
+        parent.add_child(self)
+
+    def setup_event_subs(self) -> Tuple[Tuple[str, Callable[[Context], None]]] | None:
+        return None
+
+    def _activate(self, context: Context, prefs: WheelPrefs) -> None:
+        self.enabled = True
+        self.activate(context, prefs)
+        for child in self.children:
+            child._activate(context, prefs)
 
     def add_child(self, child: "Widget") -> None:
         if child.parent is not None:
@@ -58,57 +68,163 @@ class Widget:
         child.parent = self
         self.children.append(child)
 
-    def remove_child(self, child: "Widget") -> None:
+    def remove_child(self, child: "Widget", free: bool = False) -> None:
         if child.parent != self:
             return
         self.children.remove(child)
         child.parent = None
+        if free:
+            child.free()
 
-    def _handle_event(self, context: Context, event: Event) -> OpReturn:
-        if not self.handle_event(context, event):
-            return OpReturn.PASS
+    def _on_left_press(self, context: Context, event: Event) -> Callable[[Context, Event], bool]:
+        if not self.interactable:
+            return False
+        if not self.on_left_press(context, event):
+            return False
         if self.use_modal:
-            return OpReturn.RUN
-        return OpReturn.FINISH
+            return self.modal
+        return True
 
-    def test_hit(self, p: Vector) -> bool:
-        if not self.visible:
-            return False
+    def _test_hit(self, context: Context, p: Vector) ->  Optional["Widget"]:
         if not self.enabled:
-            return False
-        t = self.transform
-        if t is None:
-            return False
-        if self.hitbox_shape == "RECT":
-            return t.pos.x <= p.x <= t.pos.x + t.size.x and t.pos.y <= p.y <= t.pos.y + t.size.y
-        elif self.hitbox_shape == "CIRCLE":
-            return (p.x - t.pos.x) ** 2 + (p.y - t.pos.y) ** 2 <= (t.size.x / 2) ** 2
+            return None
+        for child in self.children:
+            result = child._test_hit(context, p)
+            if result is not None:
+                return result
+        if not self.interactable:
+            return None
+        if self.test_hit(context, p):
+            if self.hovered:
+                self.on_hover_enter(context, p)
+                self.hovered = True
+                context.region.tag_redraw()
+            return self
         else:
-            raise ValueError(f"Unknown hitbox shape: {self.hitbox_shape}")
+            if self.hovered:
+                self.on_hover_exit(context)
+                self.hovered = False
+                context.region.tag_redraw()
+        return None
 
-    def _draw(self, context: Context) -> None:
-        if not self.visible:
-            return
+    def test_hit(self, context: Context, p: Vector) -> bool:
+        raise NotImplementedError("Subclasses must implement test_hit")
+
+    def _draw(self, context: Context, theme: WheelTheme) -> None:
         if not self.enabled:
-            return
-        t = self.transform
-        if t is None:
             return
 
         with gpu.matrix.push_pop():
-            gpu.matrix.translate(t.offset)
-            if t.scale_x != 1.0 or t.scale_y != 1.0:
-                gpu.matrix.scale((t.scale_x, t.scale_y))
-                
-            self.draw(context)
+            gpu.matrix.translate(self.offset)
+            if self.scale_x != 1.0 or self.scale_y != 1.0:
+                gpu.matrix.scale((self.scale_x, self.scale_y))
+
+            self.draw(context, theme)
+            for child in self.children:
+                child._draw(context, theme)
+
+    def free(self) -> None:
+        for child in self.children:
+            child.free()
+        del self
 
     # -------------------------------------------------------
+    # Subclasses must implement the following methods: #
+    # -------------------------------------------------------
 
-    def setup(self, context: Context) -> None:
+    def set_transform(self, context: Context) -> None:
+        raise NotImplementedError("Subclasses must implement transform")
+
+    def activate(self, context: Context, prefs: WheelPrefs) -> None:
+        """ We are goind to use this widget! Let's prepare it! """
         pass
-    
-    def handle_event(self, context: Context, event: Event) -> bool:
+
+    def on_hover_enter(self, context: Context, p: Vector) -> None:
+        """ Called when we just enter the widget's hitbox. """
+        pass
+
+    def on_hover_exit(self, context: Context) -> None:
+        """ Called when the widget is no longer hovered over. """
+        pass
+
+    def on_left_press(self, context: Context, event: Event) -> bool:
+        """
+        Called when the left mouse button is pressed on the widget.
+        Returns True if the widget should consume the event, False otherwise.
+        """
+        pass
+
+    def modal(self, context: Context, event: Event) -> bool:
         return True
 
-    def draw(self, context: Context) -> None:
+    def draw(self, context: Context, theme: WheelTheme) -> None:
         pass
+
+
+
+class WidgetCircle(Widget):
+    radius: float
+    center: Vector
+
+    @property
+    def center(self) -> Vector:
+        return self.offset
+
+    def set_transform(self, offset_x: float, offset_y: float, radius: float) -> None:
+        self.offset = Vector((offset_x, offset_y))
+        if radius > 1.0:
+            self.radius = radius
+        else:
+            wheel = self.wheel
+            self.radius = wheel.radius * radius
+
+    def test_hit(self, context: Context, p: Vector) -> bool:
+        return (p.x - self.center.x) ** 2 + (p.y - self.center.y) ** 2 <= self.radius ** 2
+
+
+class WidgetRect(Widget):
+    width: float
+    height: float
+    pos: Vector
+
+    @property
+    def pos(self) -> Vector:
+        return self.offset
+
+    def set_transform(self, offset_x: float, offset_y: float, width: float, height: float) -> None:
+        self.offset = Vector((offset_x, offset_y))
+        self.width = width
+        self.height = height
+
+    def test_hit(self, context: Context, p: Vector) -> bool:
+        return self.pos.x <= p.x <= self.pos.x + self.width and self.pos.y <= p.y <= self.pos.y + self.height
+
+
+class WidgetRing(Widget):
+    radius_inner: float
+    radius_outer: float
+    thickness: float
+
+    @property
+    def center(self) -> Vector:
+        return self.offset
+
+    def set_transform(self, offset_x: float, offset_y: float, radius: float, thickness: float) -> None:
+        self.offset = Vector((offset_x, offset_y))
+        if radius > 1.0:
+            self.radius_outer = radius
+        else:
+            wheel = self.wheel
+            self.radius_outer = wheel.radius * radius
+        if thickness > 1.0:
+            self.thickness = thickness
+        else:
+            self.thickness = self.radius_outer * thickness
+        self.radius_inner = self.radius_outer - self.thickness
+
+    def test_hit(self, context: Context, p: Vector) -> bool:
+        if not (p.x - self.center.x) ** 2 + (p.y - self.center.y) ** 2 <= self.radius_outer ** 2:
+            return False
+        if not (p.x - self.center.x) ** 2 + (p.y - self.center.y) ** 2 >= self.radius_inner ** 2:
+            return False
+        return True

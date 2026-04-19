@@ -38,6 +38,7 @@ class BrushMetadata(PropertyGroup):
         name="Preview Size",
         description="Size of the preview image",
         default=(0, 0),
+        size=2
     )
 
     asset_library_type: StringProperty(

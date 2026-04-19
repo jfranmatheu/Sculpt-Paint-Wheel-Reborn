@@ -1,5 +1,5 @@
-from bpy.props import CollectionProperty, IntProperty
-from bpy.types import Brush, Context, StringProperty, UILayout
+from bpy.props import CollectionProperty, IntProperty, StringProperty
+from bpy.types import Brush, Context, UILayout
 
 from .pg_brush_metadata import BrushMetadata
 from ..core.bl_types import PropertyGroup
@@ -10,13 +10,13 @@ class BrushSet(PropertyGroup):
     name: StringProperty(
         name="Name",
         description="Name of the brush set",
-        default="Brush Set",
+        default="Brush Set"
     )
     items: CollectionProperty(type=BrushMetadata)
     active_item_index: IntProperty(
         name="Active Item Index",
         description="Index of the active item",
-        default=-1,
+        default=-1
     )
 
     @property

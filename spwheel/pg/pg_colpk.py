@@ -1,4 +1,5 @@
-from bpy.types import BoolProperty, Context, UILayout
+from bpy.props import BoolProperty
+from bpy.types import Context, UILayout
 
 from ..core.bl_types import PropertyGroup
 

@@ -6,7 +6,7 @@
 
 .vscode/
 .cursor/
-z_old_sculpt_paint_wheel/
+z_test/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

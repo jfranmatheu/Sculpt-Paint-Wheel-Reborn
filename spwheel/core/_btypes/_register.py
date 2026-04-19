@@ -69,6 +69,12 @@ def init():
         pg_classes = sort_property_group_classes(pg_classes)
         classes_per_btype[PropertyGroup] = pg_classes
 
+        # Link children PropertyGroups recursively
+        for cls in classes_per_btype.get(bpy.types.AddonPreferences, []):
+            set_pg_parent_recursively(cls)
+        for cls in pg_classes:
+            set_pg_parent_recursively(cls)
+
         # Group ROOT PropertyGroups by their pg_root_type
         print_debug(f"3. Grouping PropertyGroup classes by their pg_root_type...", indent=1)
         pg_root_groups.clear()
@@ -234,6 +240,16 @@ def get_dependency_from_annotation(value):
     if isinstance(value, bpy.props._PropertyDeferred):
         return value.keywords.get("type")
     return None
+
+def set_pg_parent_recursively(cls):
+    """ Assign the `pg_parent` class attribute recursively for PropertyGroups inside annotations. """
+    for key, value in get_type_hints(cls, {}, {}).items():
+        if hasattr(value, "keywords"):
+            child_cls = value.keywords.get("type")
+            if child_cls and issubclass(child_cls, BType_PropertyGroup):
+                child_cls.pg_prop_name = key
+                child_cls.pg_parent = cls
+                set_pg_parent_recursively(child_cls)
 
 def iter_my_deps_from_parent_id(cls, my_classes_by_idname):
     if bpy.types.Panel in cls.__bases__:

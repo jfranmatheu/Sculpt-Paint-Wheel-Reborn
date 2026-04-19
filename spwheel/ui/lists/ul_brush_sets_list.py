@@ -51,4 +51,5 @@ class BrushSetsList(UIList):
         # this will also make the row easily selectable in the list! The later also enables ctrl-click rename.
         # We use icon_value of label, as our given icon is an integer value, not an enum ID.
         # Note "data" names should never be translated!
-        layout.prop(item, 'name', icon='OUTLINER_COLLECTION')
+        row = layout.row(align=True)
+        row.prop(item, 'name', text='', icon='BRUSHES_ALL'  , emboss=False)

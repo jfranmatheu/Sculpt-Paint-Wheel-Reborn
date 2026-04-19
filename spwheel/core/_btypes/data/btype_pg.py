@@ -3,21 +3,24 @@ from typing import Type, TypeVar
 import bpy
 from bpy.types import Context, UILayout
 
+from .btype_prefs import BType_AddonPreferences
 from ..ui.btype_ui_base import BType_UIExtra
-from .._base import BType
 from ...globals import GLOBALS
 
 
 TRoot = TypeVar("RootPropertyGroup", bound='BType_PGRoot')
 
 
-class BType_PropertyGroup(BType, bpy.types.PropertyGroup, BType_UIExtra):
+class BType_PropertyGroup(BType_UIExtra, bpy.types.PropertyGroup):
     pg_role: str
+    pg_prop_name: str
 
     @classmethod
     def get_name(cls) -> str:
+        if prop_name := getattr(cls, "pg_prop_name", ""):
+            return prop_name
         return cls.__name__.lower()
-    
+
     @classmethod
     def get_datapath(cls) -> str:
         raise NotImplementedError("Not implemented!")
@@ -36,16 +39,30 @@ class BType_PropertyGroup(BType, bpy.types.PropertyGroup, BType_UIExtra):
 
 class BType_PGChild(BType_PropertyGroup):
     pg_role = 'CHILD'
-    pg_parent: Type[BType_PropertyGroup] | None = None
+    pg_parent: Type[BType_PropertyGroup] | Type[BType_AddonPreferences] | None = None
     
     @classmethod
     def get_datapath(cls) -> str:
+        if issubclass(cls.pg_parent, BType_AddonPreferences):
+            # Preferences are accessed differently from standard property groups
+            return cls.get_name()
         return f"{cls.pg_parent.get_datapath()}.{cls.get_name()}"
 
     @classmethod
     def get(cls, context: Context, *data_path: str) -> TRoot:
         if cls.pg_parent is None:
             raise ValueError("pg_parent is None!")
+    
+        if issubclass(cls.pg_parent, BType_AddonPreferences):
+            if isinstance(context, Context):
+                prefs = cls.pg_parent.get_prefs(context)
+                path = cls.get_name()
+                if data_path:
+                    path += '.' + '.'.join(data_path)
+                return prefs.path_resolve(path)
+            else:
+                raise ValueError("Requires Context to resolve BType_AddonPreferences child.")
+
         return cls.pg_parent.get(context, *data_path, cls.get_name())
 
 

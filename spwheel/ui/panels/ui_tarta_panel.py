@@ -3,13 +3,30 @@ from bpy.types import Context, UILayout
 from ...core.bl_types import PanelTypes
 from ...prefs import WheelPrefs
 from ...pg.pg_create_tarta_button import CreateTartaButton
+from ...pg.pg_wheel_prefs import WheelTartaSet
+from ...ui.lists.ul_tarta_set_list import TartaSetList
+from ...ui.lists.ul_tarta_button_list import TartaButtonList
+from ...ops.op_tarta_set_list import OpTartaSetListAdd, OpTartaSetListRemove, OpTartaSetListMove
 
 
 class WheelTartaButtonsPanel(PanelTypes.VIEW_3D_SIDEBAR):
     bl_context = ".paint_common"
 
-    bl_label = 'Custom Buttons'
+    bl_label = 'Custom Button Sets'
     bl_order = 2
+    
+    def draw_set_list(self, wheel_data: WheelPrefs, layout: UILayout):
+        row = layout.row()
+        TartaSetList.draw_list(row, wheel_data, 'tarta_sets', 'active_tarta_set_index')
+        col = row.column(align=True)
+        col.operator(OpTartaSetListAdd.bl_idname, text="", icon='ADD')
+        col.operator(OpTartaSetListRemove.bl_idname, text="", icon='REMOVE')
+        col.separator()
+        col.operator(OpTartaSetListMove.bl_idname, text="", icon='TRIA_UP').direction = 1
+        col.operator(OpTartaSetListMove.bl_idname, text="", icon='TRIA_DOWN').direction = -1
+
+    def draw_button_list(self, active_tarta_set: WheelTartaSet, layout: UILayout):
+        TartaButtonList.draw_list(layout, active_tarta_set, 'buttons', 'active_button_index')
 
     def draw_ui(self, context: Context, layout: UILayout):
         wheel_data: WheelPrefs = WheelPrefs.get(context)
@@ -18,11 +35,16 @@ class WheelTartaButtonsPanel(PanelTypes.VIEW_3D_SIDEBAR):
         main = layout.column()
         lists_row = main.row()
 
-        wheel_data.draw_tarta_set_list(lists_row)
-        if active_set := wheel_data.active_tarta_set:
-            active_set.draw_list(lists_row)
+        self.draw_set_list(wheel_data, lists_row)
+ 
+        
+        if active_tarta_set := wheel_data.active_tarta_set:
+            header, content = layout.panel('TEMP_PT_tarta_buttons')
+            header.label(text=f'Buttons for {active_tarta_set.name}')
+            if content:
+                self.draw_button_list(active_tarta_set, content)
         else:
-            lists_row.box().label(text="No set selected", icon="INFO")
+            main.box().label(text="No set selected", icon="INFO")
 
         return
 
