@@ -113,9 +113,9 @@ class Wheel:
         with gpu.matrix.push_pop():
             gpu.matrix.translate(self.center)
             gpu.matrix.scale((prefs.scale, prefs.scale))
+            self.draw(context, theme)
             for widget in self._widgets:
                 widget._draw(context, theme)
-            self.draw(context, theme)
 
     # -------------------------------------------------------
     # Subclasses must implement the following methods: #
