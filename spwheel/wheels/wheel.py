@@ -8,7 +8,8 @@ from mathutils import Vector
 
 from ..core.utils.callback_utils import CallbackDict
 from ..utils.fun import point_inside_circle
-from ..pg.pg_wheel_prefs import WheelPrefs
+from ..pg.pg_wheel_prefs import WheelPrefs, WheelTheme
+from ..gpu.draw import draw_circle_fill, draw_ring
 
 if TYPE_CHECKING:
     from ..widgets import Widget
@@ -129,9 +130,9 @@ class Wheel:
         """ We are goind to use this wheel! Let's prepare it! """
         pass
 
-    def draw(self, context: Context, prefs: WheelPrefs) -> None:
-        # To implement in subclasses!
-        pass
+    def draw(self, context: Context, theme: WheelTheme) -> None:
+        draw_circle_fill(0, 0, self.radius, theme.base_color)
+        draw_ring(0, 0, self.radius - 6, theme.base_outline_color)
 
 
 # -------------------------------------------------------
