@@ -4,6 +4,7 @@ from bpy.types import Context, Event
 from ..core import bl_types
 from ..core.utils.op_return import OpReturn
 from ..core.utils.mouse_utils import ModalMouse
+from ..utils.ups import get_tool_settings
 
 from ..wheels.wheel import Wheel, WheelPrefs
 
@@ -30,10 +31,18 @@ class WheelModal(bl_types.OperatorModal):
         return f'Current mode not in the supported modes: {supported_modes}'
 
     def modal_begin(self, context: Context, event: Event, modal_mouse: ModalMouse, **kw) -> None:
+        if ts := get_tool_settings(context):
+            if ts.brush:
+                ts.show_brush = False
         self.wheel = Wheel.get(context)
-        self.wheel.activate(context, modal_mouse.current)
         self.prefs = WheelPrefs.get(context)
+        self.wheel._activate(context, self.prefs, modal_mouse.init)
         self.wheel_is_hovered = True
+        
+    def modal_end(self, context: Context, cancel: bool, mouse: ModalMouse) -> None:
+        if ts := get_tool_settings(context):
+            if ts.brush:
+                ts.show_brush = True
 
     def modal_step_move(self, context: Context, event: Event, mouse: ModalMouse, **kw) -> bool:
         self.wheel_is_hovered = self.wheel.update_hover(context, mouse.current)
