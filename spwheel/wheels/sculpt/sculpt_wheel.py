@@ -4,6 +4,7 @@ from ..wheel import Wheel
 from ...widgets.brush_set_ring import BrushSetRing
 
 class SculptWheel(Wheel):
+    bl_context_mode = 'SCULPT'
 
     def setup(self, context: Context) -> None:
         brush_set_ring = BrushSetRing()
