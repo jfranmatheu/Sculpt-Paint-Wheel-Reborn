@@ -8,10 +8,12 @@ from ..gpu.utils import compute_slot_positions, compute_slot_radius
 
 from .buttons.pk_brush import PickerBrushButton
 from .widget import WidgetRing
+from ..gpu.draw import draw_circle_fill, draw_ring
+
 
 if TYPE_CHECKING:
     from bpy.types import Context
-    from ..pg.pg_wheel_prefs import WheelPrefs, BrushSet
+    from ..pg.pg_wheel_prefs import WheelPrefs, BrushSet, WheelTheme
 
 
 class BrushSetRing(WidgetRing):
@@ -81,3 +83,8 @@ class BrushSetRing(WidgetRing):
             self.add_child(pb)
             self._pickers.append(pb)
             pb.set_brush_metadata(brushes_metadata[i], show_label=False)
+
+
+    def draw(self, context: Context, theme: WheelTheme) -> None:
+        draw_ring(*self.offset, self.radius_outer, theme.base_outline_color)
+        draw_ring(*self.offset, self.radius_inner, theme.base_outline_color)
