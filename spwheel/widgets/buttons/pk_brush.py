@@ -28,4 +28,3 @@ class PickerBrushButton(ButtonCircle):
 
     def draw(self, context: Context, theme) -> None:
         super().draw(context, theme)
-        print(f"Drawing picker {self.label}")

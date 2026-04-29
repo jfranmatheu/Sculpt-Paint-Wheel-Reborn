@@ -104,7 +104,6 @@ class ButtonBase:
 class ButtonCircle(ButtonBase, WidgetCircle):
     def draw_base(self, context: Context, button_theme: ButtonTheme) -> None:
         base_color, outline_color = button_theme.get_color(self.hovered, self.active)
-        print(f"Drawing base: {self.radius}")
         draw_circle_fill(0.0, 0.0, self.radius, base_color, softness=0.015)
         draw_ring(0.0, 0.0, self.radius, outline_color, thickness=2.0 if self.active else 1.5 if self.hovered else 1.0, softness=0.012)
 
