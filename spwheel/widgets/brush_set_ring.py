@@ -11,9 +11,13 @@ from .widget import WidgetRing
 from ..gpu.draw import draw_circle_fill, draw_ring
 
 
+USE_DEBUG=True
+
+
 if TYPE_CHECKING:
-    from bpy.types import Context
+    from bpy.types import Context, Event
     from ..pg.pg_wheel_prefs import WheelPrefs, BrushSet, WheelTheme
+    from ..pg.pg_brush_metadata import BrushMetadata
 
 
 class BrushSetRing(WidgetRing):
@@ -21,6 +25,14 @@ class BrushSetRing(WidgetRing):
     _data: WheelPrefs
     _pickers: list[PickerBrushButton] = []
     _last_active_index: int = -1
+
+    interactable = False
+
+    def init(self) -> None:
+        super().init()
+        self._pickers = []
+        self.slot_count = 0
+        self._last_active_index = -1
 
     @property
     def active_brush_set(self) -> Optional[BrushSet]:
@@ -34,57 +46,147 @@ class BrushSetRing(WidgetRing):
     def active_brush_set_index(self) -> int:
         return self._data.active_brush_set_index
 
-    def setup_event_subs(self) -> Tuple[Tuple[str, Callable[[Context], None]]] | None:
+    def setup_event_subs(self) -> Tuple[Tuple[str, Callable[[Context, Event], None]]] | None:
         return (
             ('scroll_up', self.on_scroll_up),
             ('scroll_down', self.on_scroll_down)
         )
 
-    def on_scroll_up(self, context: Context) -> None:
-        self._data.active_brush_set_index += 1
-        if self._data.active_brush_set_index >= len(self.brush_sets):
-            self._data.active_brush_set_index = 0
-        if self._last_active_index != self.active_brush_set_index:
-            self._rebuild_pickers()
+    def on_scroll_up(self, context: Context, event: Event) -> None:
+        if event.shift:
+            # Shift + scroll up: change to next brush set
+            self._data.active_brush_set_index += 1
+            if self._data.active_brush_set_index >= len(self.brush_sets):
+                self._data.active_brush_set_index = 0
+            if self._last_active_index != self.active_brush_set_index:
+                self._rebuild_pickers()
+        else:
+            # Scroll up: change to next page.
+            active_brush_set: BrushSet = self.active_brush_set
+            slot_count: int = self.slot_count
+            max_page_index = (len(active_brush_set.items) + slot_count - 1) // slot_count - 1
+            last_page_index = active_brush_set.page_index
+            active_brush_set.page_index += 1
+            if active_brush_set.page_index > max_page_index:
+                active_brush_set.page_index = max_page_index
+            if last_page_index != active_brush_set.page_index:
+                self._rebuild_pickers()
 
-    def on_scroll_down(self, context: Context) -> None:
-        self._data.active_brush_set_index -= 1
-        if self._data.active_brush_set_index < 0:
-            self._data.active_brush_set_index = len(self.brush_sets) - 1
-        if self._last_active_index != self.active_brush_set_index:
-            self._rebuild_pickers()
+    def on_scroll_down(self, context: Context, event: Event) -> None:
+        if event.shift:
+            # Shift + scroll down: change to previous brush set
+            self._data.active_brush_set_index -= 1
+            if self._data.active_brush_set_index < 0:
+                self._data.active_brush_set_index = len(self.brush_sets) - 1
+            if self._last_active_index != self.active_brush_set_index:
+                self._rebuild_pickers()
+        else:
+            # Scroll down: change to previous page.
+            active_brush_set: BrushSet = self.active_brush_set
+            last_page_index = active_brush_set.page_index
+            active_brush_set.page_index -= 1
+            if active_brush_set.page_index < 0:
+                active_brush_set.page_index = 0
+            if last_page_index != active_brush_set.page_index:
+                self._rebuild_pickers()
 
     def activate(self, context: Context, prefs: WheelPrefs) -> None:
         self._data = prefs
-        if not hasattr(self, '_pickers'):
-            self._pickers = []
+        slot_count = prefs.brush_set_ring.slot_count
+        if slot_count != self.slot_count:
+            self.slot_count = slot_count
+            self._sync_picker_slots()
         self._rebuild_pickers()
 
-    def _rebuild_pickers(self) -> None:
-        self._last_active_index = self.active_brush_set_index
+    def get_page_brushes_metadata(self) -> list[BrushMetadata]:
+        active_brush_set: BrushSet = self.active_brush_set
+        slot_count: int = self.slot_count
+        start_index = active_brush_set.page_index * slot_count
+        end_index = start_index + slot_count
+        if end_index > len(active_brush_set.items):
+            end_index = len(active_brush_set.items)
+        return active_brush_set.items[start_index:end_index]
+
+    def _sync_picker_slots(self) -> None:
+        if USE_DEBUG:
+            print(f"Syncing picker slots: {self.slot_count}")
+        # Remove all pickers first.
         for p in self._pickers:
             self.remove_child(p, free=True)
         self._pickers.clear()
-        if self.active_brush_set_index == -1:
+
+        count = self.slot_count
+        if count == 0:
+            if USE_DEBUG:
+                print("No pickers to sync")
             return
-        brushes_metadata = self.active_brush_set.get_brushes_metadata()
-        if len(brushes_metadata) == 0:
-            return
-        n = len(brushes_metadata)
-        count = max(12, n)
+
+        # Compute slot positions and radius.
         ring_r = self.radius_outer
-        cx, cy = self.center, self.center
+        cx, cy = self.center
         positions = compute_slot_positions(cx, cy, ring_r, count)
         slot_r = compute_slot_radius(ring_r, count)
-        for i in range(n):
+
+        # Create and position pickers.
+        for i in range(count):
             pb = PickerBrushButton()
             px, py = positions[i]
+            # position is relative to the center of the ring (local coordinates)
             pb.set_transform(px - cx, py - cy, slot_r)
             self.add_child(pb)
             self._pickers.append(pb)
-            pb.set_brush_metadata(brushes_metadata[i], show_label=False)
+            if USE_DEBUG:
+                print(f"Added picker {i}: {pb.label}")
 
+    def _rebuild_pickers(self) -> None:
+        if USE_DEBUG:
+            print(f"Rebuilding pickers: {self.active_brush_set_index}")
+        self._last_active_index = self.active_brush_set_index
+        if not self._pickers:
+            if USE_DEBUG:
+                print("No pickers to rebuild")
+            return
+
+        # If no active brush set, clear all pickers.
+        if self.active_brush_set_index == -1:
+            for pb in self._pickers:
+                pb.clear_brush_metadata()
+            return
+
+        # Get brushes metadata for the current page.
+        brushes_metadata = self.get_page_brushes_metadata()
+        # Set brush metadata for each picker.
+        for i, pb in enumerate(self._pickers):
+            if i < len(brushes_metadata):
+                if USE_DEBUG:
+                    print(f"Setting brush metadata for picker {i}: {brushes_metadata[i].name}")
+                pb.set_brush_metadata(brushes_metadata[i], show_label=False)
+            else:
+                # If no brush metadata, clear the picker data.
+                if USE_DEBUG:
+                    print(f"Clearing brush metadata for picker {i}")
+                pb.clear_brush_metadata()
+
+        if USE_DEBUG:
+            print(f"Rebuilt {len(self._pickers)} pickers")
 
     def draw(self, context: Context, theme: WheelTheme) -> None:
         draw_ring(*self.offset, self.radius_outer, theme.base_outline_color)
         draw_ring(*self.offset, self.radius_inner, theme.base_outline_color)
+
+    '''def draw_page_indicator(self, context: Context, theme: WheelTheme) -> None:
+        active_brush_set: BrushSet = self.active_brush_set
+        page_index = active_brush_set.page_index
+        page_count = active_brush_set.page_count
+        if page_count <= 1:
+            return
+        dot_radius = 3.0
+        spacing = min(10.0, max(5.0, 180.0 / max(page_count, 1)))
+        total_w = (page_count - 1) * spacing
+        start_x = self.center - total_w * 0.5
+        dot_y = self.center + self.radius_outer + 14.0
+        for i in range(page_count):
+            dx = start_x + i * spacing
+            col = COL_TOOLSET_DOT_ACTIVE if i == page_index else COL_TOOLSET_DOT
+            draw_circle_fill(dx, dot_y, dot_radius, col, softness=0.04)
+        draw_ring(*self.offset, self.radius_outer, theme.base_outline_color)'''

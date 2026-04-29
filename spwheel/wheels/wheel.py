@@ -96,17 +96,17 @@ class Wheel:
             return self.hovered_widget._on_left_press(context, event)
         return None
 
-    def subscribe_to_event(self, event_name: str, callback: Callable[[Context], None]) -> None:
+    def subscribe_to_event(self, event_name: str, callback: Callable[[Context, Event], None]) -> None:
         self._event_subscriptions.add_callback(event_name, callback)
 
-    def propagate_event(self, context: Context, event_name: str) -> None:
-        self._event_subscriptions.call_callbacks(event_name, context)
+    def propagate_event(self, event_name: str, context: Context, event: Event) -> None:
+        self._event_subscriptions.call_callbacks(event_name, context, event)
 
-    def on_scroll_up(self, context: Context) -> None:
-        self.propagate_event(context, 'scroll_up')
+    def on_scroll_up(self, context: Context, event: Event) -> None:
+        self.propagate_event('scroll_up', context, event)
 
-    def on_scroll_down(self, context: Context) -> None:
-        self.propagate_event(context, 'scroll_down')
+    def on_scroll_down(self, context: Context, event: Event) -> None:
+        self.propagate_event('scroll_down', context, event)
 
     def _draw(self, context: Context, prefs: WheelPrefs) -> None:
         theme = prefs.theme

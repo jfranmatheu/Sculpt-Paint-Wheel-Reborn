@@ -6,7 +6,19 @@ from ..core.bl_types import PropertyGroup
 from ..ui.lists.ul_brush_metadata_list import BrushMetadataList
 
 
+
+class BrushSetPreferences(PropertyGroup):
+    slot_count: IntProperty(
+        name="Slot Count",
+        description="Number of slots in the brush set",
+        default=12,
+        min=8,
+        max=20,
+    )
+
+
 class BrushSet(PropertyGroup):
+
     name: StringProperty(
         name="Name",
         description="Name of the brush set",
@@ -17,6 +29,12 @@ class BrushSet(PropertyGroup):
         name="Active Item Index",
         description="Index of the active item",
         default=-1
+    )
+
+    page_index: IntProperty(
+        name="Page Index",
+        description="Index of the page",
+        default=0
     )
 
     @property

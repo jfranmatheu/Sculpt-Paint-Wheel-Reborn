@@ -4,7 +4,7 @@ from bpy.types import Context, UILayout
 from ..core.bl_types import PropertyGroup
 
 
-class ColorPicker(PropertyGroup):
+class ColorPickerPreferences(PropertyGroup):
     lock_ring_sv: BoolProperty(
         name="[Ring] Lock Saturation/Lightness",
         default=False,

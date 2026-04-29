@@ -67,11 +67,11 @@ class WheelModal(bl_types.OperatorModal):
                 return OpReturn.RUN
 
         if event.type == 'WHEELUPMOUSE':
-            self.wheel.on_scroll_up(context)
+            self.wheel.on_scroll_up(context, event)
             return OpReturn.RUN
 
         if event.type == 'WHEELDOWNMOUSE':
-            self.wheel.on_scroll_down(context)
+            self.wheel.on_scroll_down(context, event)
             return OpReturn.RUN
 
         return OpReturn.RUN

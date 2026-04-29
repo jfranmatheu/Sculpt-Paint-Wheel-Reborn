@@ -17,5 +17,15 @@ class PickerBrushButton(ButtonCircle):
         self.icon_gputex = brush_metadata.gputex
         self.label = brush_metadata.name if show_label else ''
 
+    def clear_brush_metadata(self) -> None:
+        self._brush_metadata = None
+        self.icon_gputex = None
+        self.label = ''
+
     def on_left_press(self, context: Context, event: Event) -> bool:
         self._brush_metadata.activate()
+        return True
+
+    def draw(self, context: Context, theme) -> None:
+        super().draw(context, theme)
+        print(f"Drawing picker {self.label}")

@@ -9,7 +9,7 @@ from ...gpu.draw import draw_text, draw_circle_fill, draw_ring, draw_textured_qu
 from ...pg.pg_wheel_theme import ButtonTheme
 
 
-class Button:
+class ButtonBase:
     button_theme_datapath = 'button'
 
     action_type: Literal['OPERATOR', 'POPUP']
@@ -23,6 +23,7 @@ class Button:
     active: bool
 
     def init(self) -> None:
+        super().init()
         self.action_type = 'OPERATOR'
         self.operator_id = ''
         self.popup_id = ''
@@ -74,20 +75,14 @@ class Button:
         self.draw_label(context, button_theme)
 
     def draw_base(self, context: Context, button_theme: ButtonTheme) -> None:
-        base_color, outline_color = button_theme.get_color(self.hovered, self.active)
-        if isinstance(self, WidgetCircle):
-            draw_circle_fill(*self.offset, self.radius, base_color, softness=0.015)
-        else:
-            raise NotImplementedError("WidgetRect button drawing is not implemented yet")
-            # draw_rect_fill(*self.offset, self.width, self.height, col, softness=0.015)
-        draw_ring(*self.offset, self.radius, outline_color, thickness=2.0 if self.active else 1.5 if self.hovered else 1.0, softness=0.012)
+        raise NotImplementedError("Button base drawing is not implemented yet")
 
     def draw_label(self, context: Context, button_theme: ButtonTheme) -> None:
         if not self.label:
             return
         draw_text(
             self.label,
-            self.offset.x + self.label_offset.x, self.offset.y + self.label_offset.y,
+            self.label_offset.x, self.label_offset.y,
             size=11.0,
             color=button_theme.label_color,
             align='CENTER',
@@ -98,7 +93,7 @@ class Button:
         if not self.icon_gputex:
             return
         draw_textured_circle(
-            *self.offset,
+            0.0, 0.0,
             self.radius,
             self.icon_gputex,
             opacity=button_theme.icon_opacity,
@@ -106,8 +101,14 @@ class Button:
         )
 
 
-class ButtonCircle(WidgetCircle, Button):
-    pass
+class ButtonCircle(ButtonBase, WidgetCircle):
+    def draw_base(self, context: Context, button_theme: ButtonTheme) -> None:
+        base_color, outline_color = button_theme.get_color(self.hovered, self.active)
+        print(f"Drawing base: {self.radius}")
+        draw_circle_fill(0.0, 0.0, self.radius, base_color, softness=0.015)
+        draw_ring(0.0, 0.0, self.radius, outline_color, thickness=2.0 if self.active else 1.5 if self.hovered else 1.0, softness=0.012)
 
-class ButtonRect(WidgetRect, Button):
-    pass
+class ButtonRect(ButtonBase, WidgetRect):
+    def draw_base(self, context: Context, button_theme: ButtonTheme) -> None:
+        raise NotImplementedError("WidgetRect button drawing is not implemented yet")
+        # draw_rect_fill(*self.offset, self.width, self.height, col, softness=0.015)

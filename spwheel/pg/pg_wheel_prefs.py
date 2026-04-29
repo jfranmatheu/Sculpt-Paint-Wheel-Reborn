@@ -2,8 +2,8 @@ from bpy.props import BoolProperty, CollectionProperty, FloatProperty, IntProper
 from bpy.types import Context, UILayout
 
 from ..core.bl_types import PropertyGroup
-from .pg_brush_set import BrushSet
-from .pg_colpk import ColorPicker
+from .pg_brush_set import BrushSet, BrushSetPreferences
+from .pg_colpk import ColorPickerPreferences
 from .pg_wheel_theme import WheelTheme
 from .pg_tarta_set import WheelTartaSet
 
@@ -43,7 +43,8 @@ class WheelPrefs(PropertyGroup):
     # Wheel Widgets Settings.
     # -----------------------------------------------------------------------
 
-    color_picker: PointerProperty(type=ColorPicker)
+    color_picker: PointerProperty(type=ColorPickerPreferences)
+    brush_set_ring: PointerProperty(type=BrushSetPreferences)
 
 
     # Tarta Sets.
