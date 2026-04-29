@@ -8,7 +8,7 @@ from ..gpu.utils import compute_slot_positions_in_double_ring, compute_slot_radi
 
 from .buttons.pk_brush import PickerBrushButton
 from .widget import WidgetRing
-from ..gpu.draw import draw_circle_fill, draw_ring
+from ..gpu.draw import draw_circle_fill, draw_ring, draw_text
 
 
 USE_DEBUG=True
@@ -19,6 +19,9 @@ if TYPE_CHECKING:
     from ..pg.pg_wheel_prefs import WheelPrefs, BrushSet, WheelTheme
     from ..pg.pg_brush_metadata import BrushMetadata
 
+
+COL_TOOLSET_DOT_ACTIVE = (0.72, 0.60, 0.26, 0.88)
+COL_TOOLSET_DOT = (0.32, 0.34, 0.38, 0.55)
 
 class BrushSetRing(WidgetRing):
     """Places ``PickerBrushButton`` children on a ring using ``gpu.utils`` layout."""
@@ -173,20 +176,55 @@ class BrushSetRing(WidgetRing):
     def draw(self, context: Context, theme: WheelTheme) -> None:
         draw_ring(*self.offset, self.radius_outer, theme.base_outline_color, thickness=1.25)
         draw_ring(*self.offset, self.radius_inner, theme.base_outline_color, thickness=1.25)
+        self.draw_active_brush_set_title(context, theme)
+        self.draw_page_indicator(context, theme)
 
-    '''def draw_page_indicator(self, context: Context, theme: WheelTheme) -> None:
+
+    def draw_active_brush_set_title(self, context: Context, theme: WheelTheme) -> None:
         active_brush_set: BrushSet = self.active_brush_set
+        if not active_brush_set:
+            return
+        title = active_brush_set.name
+        # Draw over the wheel.
+        wheel = self.wheel
+        draw_text(
+            title,
+            0,
+            0 + wheel.radius + 14.0,
+            size=14.0,
+            color=theme.text_color,
+            align="CENTER",
+            shadow=True,
+            valign='BOTTOM'
+        )
+
+    def draw_page_indicator(self, context: Context, theme: WheelTheme) -> None:
+        active_brush_set: BrushSet = self.active_brush_set
+        if not active_brush_set:
+            return
         page_index = active_brush_set.page_index
-        page_count = active_brush_set.page_count
+        page_count = 5 # (len(active_brush_set.items) + self.slot_count - 1) // self.slot_count - 1
         if page_count <= 1:
             return
+        wheel = self.wheel
         dot_radius = 3.0
         spacing = min(10.0, max(5.0, 180.0 / max(page_count, 1)))
         total_w = (page_count - 1) * spacing
-        start_x = self.center - total_w * 0.5
-        dot_y = self.center + self.radius_outer + 14.0
+        start_x = -total_w * 0.5
+        dot_y = -wheel.radius - 14.0
         for i in range(page_count):
             dx = start_x + i * spacing
             col = COL_TOOLSET_DOT_ACTIVE if i == page_index else COL_TOOLSET_DOT
             draw_circle_fill(dx, dot_y, dot_radius, col, softness=0.04)
-        draw_ring(*self.offset, self.radius_outer, theme.base_outline_color)'''
+
+        # draw page number
+        draw_text(
+            f"{page_index + 1} / {page_count}",
+            0,
+            dot_y - dot_radius - 5.0,
+            size=9.0,
+            color=theme.text_color,
+            align="CENTER",
+            shadow=True,
+            valign='TOP'
+        )
