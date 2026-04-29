@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Callable, Optional, Sequence, Tuple
 
-from ..gpu.utils import compute_slot_positions, compute_slot_radius
+from ..gpu.utils import compute_slot_positions_in_double_ring, compute_slot_radius_in_double_ring
 
 from .buttons.pk_brush import PickerBrushButton
 from .widget import WidgetRing
@@ -92,6 +92,7 @@ class BrushSetRing(WidgetRing):
 
     def activate(self, context: Context, prefs: WheelPrefs) -> None:
         self._data = prefs
+        self.ring_padding = prefs.brush_set_ring.ring_padding
         slot_count = prefs.brush_set_ring.slot_count
         if slot_count != self.slot_count:
             self.slot_count = slot_count
@@ -122,10 +123,9 @@ class BrushSetRing(WidgetRing):
             return
 
         # Compute slot positions and radius.
-        ring_r = self.radius_outer
         cx, cy = self.center
-        positions = compute_slot_positions(cx, cy, ring_r, count)
-        slot_r = compute_slot_radius(ring_r, count)
+        slot_r = compute_slot_radius_in_double_ring(self.radius_inner, self.radius_outer, count, ring_padding=self.ring_padding)
+        positions = compute_slot_positions_in_double_ring(cx, cy, self.radius_inner, self.radius_outer, count)
 
         # Create and position pickers.
         for i in range(count):
@@ -171,8 +171,8 @@ class BrushSetRing(WidgetRing):
             print(f"Rebuilt {len(self._pickers)} pickers")
 
     def draw(self, context: Context, theme: WheelTheme) -> None:
-        draw_ring(*self.offset, self.radius_outer, theme.base_outline_color)
-        draw_ring(*self.offset, self.radius_inner, theme.base_outline_color)
+        draw_ring(*self.offset, self.radius_outer, theme.base_outline_color, thickness=1.25)
+        draw_ring(*self.offset, self.radius_inner, theme.base_outline_color, thickness=1.25)
 
     '''def draw_page_indicator(self, context: Context, theme: WheelTheme) -> None:
         active_brush_set: BrushSet = self.active_brush_set

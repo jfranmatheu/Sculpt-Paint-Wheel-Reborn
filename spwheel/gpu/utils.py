@@ -366,7 +366,7 @@ def draw_textured_quad(
 # Wheel layout math
 # ---------------------------------------------------------------------------
 
-def compute_slot_radius(ring_radius: float, count: int) -> float:
+def compute_slot_radius_in_single_ring(ring_radius: float, count: int) -> float:
     """Compute the radius of each small slot circle so *count* fit around *ring_radius*."""
     if count <= 0:
         return 0.0
@@ -374,9 +374,39 @@ def compute_slot_radius(ring_radius: float, count: int) -> float:
         return ring_radius * 0.4
     return ring_radius * sin(pi / count) / (1.0 + sin(pi / count))
 
+def compute_slot_radius_in_double_ring(inner_radius: float, outer_radius: float, count: int, ring_padding: float = 8) -> float:
+    """Compute slot radius for circles packed inside an annulus.
 
-def compute_slot_positions(
-    cx: float, cy: float, ring_radius: float, count: int,
+    The returned value is constrained by:
+    - radial thickness available in the annulus (after ``ring_padding``), and
+    - angular spacing at the annulus mid-radius for ``count`` slots.
+    """
+    if count <= 0:
+        return 0.0
+    if count == 1:
+        return outer_radius * 0.4
+
+    inner_radius = inner_radius + ring_padding
+    outer_radius = outer_radius - ring_padding
+
+    # Normalize radii ordering.
+    inner_r = min(inner_radius, outer_radius)
+    outer_r = max(inner_radius, outer_radius)
+
+    # Keep slots away from annulus boundaries.
+    # Slot centers sit on the annulus midline.
+    center_radius = 0.5 * (inner_r + outer_r)
+
+    # (1) Radial fit: each circle must stay inside annulus thickness.
+    radial_limit = 0.5 * (outer_r - inner_r)
+
+    # (2) Tangential fit: neighboring circles around the ring cannot overlap.
+    tangential_limit = center_radius * sin(pi / count)
+
+    return max(0.0, min(radial_limit, tangential_limit))
+
+def compute_slot_positions_in_single_ring(
+    cx: float, cy: float, ring_radius: float, count: int, slot_radius: float,
 ) -> list[Tuple[float, float]]:
     """Compute screen-space centre positions for *count* slots on a ring.
 
@@ -391,10 +421,18 @@ def compute_slot_positions(
     angle_step = 2.0 * pi / count
     for i in range(count):
         angle = pi - (i + 0.5) * angle_step
-        x = cx + ring_radius * cos(angle)
-        y = cy + ring_radius * sin(angle)
+        x = cx + (ring_radius - slot_radius) * cos(angle)
+        y = cy + (ring_radius - slot_radius) * sin(angle)
         positions.append((x, y))
     return positions
+
+
+def compute_slot_positions_in_double_ring(
+    cx: float, cy: float, inner_radius: float, outer_radius: float, count: int
+) -> list[Tuple[float, float]]:
+    """Compute screen-space centre positions for *count* slots on a double ring. """
+    mid_radius = 0.5 * (inner_radius + outer_radius)
+    return compute_slot_positions_in_single_ring(cx, cy, mid_radius, count, 0.0)
 
 
 def compute_custom_button_layout_count(num_buttons: int) -> int:

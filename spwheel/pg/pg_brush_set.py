@@ -1,4 +1,4 @@
-from bpy.props import CollectionProperty, IntProperty, StringProperty
+from bpy.props import CollectionProperty, IntProperty, StringProperty, FloatProperty
 from bpy.types import Brush, Context, UILayout
 
 from .pg_brush_metadata import BrushMetadata
@@ -14,6 +14,22 @@ class BrushSetPreferences(PropertyGroup):
         default=12,
         min=8,
         max=20,
+    )
+
+    ring_padding: IntProperty(
+        name="Ring Padding",
+        description="Margin between ring edges and brush slots",
+        default=8,
+        min=0,
+        max=20,
+    )
+
+    thickness_factor: FloatProperty(
+        name="Thickness Factor",
+        description="Thickness factor for the brush set ring thickness",
+        default=0.4,
+        min=0.2,
+        max=0.5,
     )
 
 
