@@ -10,6 +10,7 @@ from ..core.utils.callback_utils import CallbackDict
 from ..utils.fun import point_inside_circle
 from ..pg.pg_wheel_prefs import WheelPrefs, WheelTheme
 from ..gpu.draw import draw_circle_fill, draw_ring
+from ..pg.pg_wheel_storage import SculptPaintWheelStorage
 
 if TYPE_CHECKING:
     from ..widgets import Widget
@@ -56,11 +57,11 @@ class Wheel:
             get_children(wg)
         return all_widgets
 
-    def _activate(self, context: Context, prefs: WheelPrefs, center: Vector) -> None:
+    def _activate(self, context: Context, prefs: WheelPrefs, storage: SculptPaintWheelStorage, center: Vector) -> None:
         self.center = center
-        self.activate(context, prefs)
+        self.activate(context, prefs, storage)
         for widget in self._widgets:
-            widget._activate(context, prefs)
+            widget._activate(context, prefs, storage)
 
     def to_region(self, lx: float, ly: float) -> tuple[float, float]:
         return (self.center.x + lx, self.center.y + ly)
@@ -126,7 +127,7 @@ class Wheel:
         # To implement in subclasses!
         pass
 
-    def activate(self, context: Context, prefs: WheelPrefs) -> None:
+    def activate(self, context: Context, prefs: WheelPrefs, storage: SculptPaintWheelStorage) -> None:
         """ We are goind to use this wheel! Let's prepare it! """
         pass
 
@@ -139,7 +140,11 @@ class Wheel:
 
 def register():
     for wheel_subcls in Wheel.__subclasses__():
-        _registered_types[wheel_subcls.bl_context_mode] = wheel_subcls
+        if wheel_subcls.__subclasses__():
+            for subcls in wheel_subcls.__subclasses__():
+                _registered_types[subcls.bl_context_mode] = subcls
+        else:
+            _registered_types[wheel_subcls.bl_context_mode] = wheel_subcls
 
 def unregister():
     _registered_types.clear()

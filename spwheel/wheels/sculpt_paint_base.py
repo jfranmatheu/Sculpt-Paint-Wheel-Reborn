@@ -3,6 +3,7 @@ from ..pg.pg_wheel_prefs import WheelPrefs
 from .wheel import Wheel
 from ..widgets.brush_set_ring import BrushSetRing
 from ..widgets.tarta_ring import TartaRing
+from ..pg.pg_wheel_storage import SculptPaintWheelStorage
 
 
 class SculptPaintWheel(Wheel):
@@ -20,5 +21,5 @@ class SculptPaintWheel(Wheel):
         self.tarta_ring = tarta_ring
 
 
-    def activate(self, context: Context, prefs: WheelPrefs) -> None:
+    def activate(self, context: Context, prefs: WheelPrefs, storage: SculptPaintWheelStorage) -> None:
         self.brush_set_ring.set_transform(0.0, 0.0, 0.97, prefs.brush_set_ring.thickness_factor)

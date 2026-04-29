@@ -6,6 +6,7 @@ from mathutils import Vector
 
 from ..wheels.wheel import Wheel, WheelPrefs
 from ..pg.pg_wheel_theme import WheelTheme
+from ..pg.pg_wheel_storage import SculptPaintWheelStorage
 
 
 class Widget:
@@ -56,11 +57,11 @@ class Widget:
     def setup_event_subs(self) -> Tuple[Tuple[str, Callable[[Context], None]]] | None:
         return None
 
-    def _activate(self, context: Context, prefs: WheelPrefs) -> None:
+    def _activate(self, context: Context, prefs: WheelPrefs, storage: SculptPaintWheelStorage) -> None:
         self.enabled = True
-        self.activate(context, prefs)
+        self.activate(context, prefs, storage)
         for child in self.children:
-            child._activate(context, prefs)
+            child._activate(context, prefs, storage)
 
     def add_child(self, child: "Widget") -> None:
         if child.parent is not None:
@@ -135,7 +136,7 @@ class Widget:
     def set_transform(self, context: Context) -> None:
         raise NotImplementedError("Subclasses must implement transform")
 
-    def activate(self, context: Context, prefs: WheelPrefs) -> None:
+    def activate(self, context: Context, prefs: WheelPrefs, storage: SculptPaintWheelStorage) -> None:
         """ We are goind to use this widget! Let's prepare it! """
         pass
 

@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Callable, Optional, Sequence, Tuple
 
+from ..pg.pg_wheel_storage import SculptPaintWheelStorage
+
 from ..gpu.utils import compute_slot_positions_in_double_ring, compute_slot_radius_in_double_ring
 
 from .buttons.pk_brush import PickerBrushButton
@@ -17,6 +19,7 @@ USE_DEBUG=True
 if TYPE_CHECKING:
     from bpy.types import Context, Event
     from ..pg.pg_wheel_prefs import WheelPrefs, BrushSet, WheelTheme
+    from ..pg.pg_wheel_storage import SculptPaintWheelStorage
     from ..pg.pg_brush_metadata import BrushMetadata
 
 
@@ -25,7 +28,7 @@ COL_TOOLSET_DOT = (0.32, 0.34, 0.38, 0.55)
 
 class BrushSetRing(WidgetRing):
     """Places ``PickerBrushButton`` children on a ring using ``gpu.utils`` layout."""
-    _data: WheelPrefs
+    _storage: SculptPaintWheelStorage
     _pickers: list[PickerBrushButton] = []
     _last_active_index: int = -1
 
@@ -39,15 +42,15 @@ class BrushSetRing(WidgetRing):
 
     @property
     def active_brush_set(self) -> Optional[BrushSet]:
-        return self._data.active_brush_set
+        return self._storage.active_brush_set
 
     @property
     def brush_sets(self) -> Sequence[BrushSet]:
-        return self._data.brush_sets
+        return self._storage.brush_sets
     
     @property
     def active_brush_set_index(self) -> int:
-        return self._data.active_brush_set_index
+        return self._storage.active_brush_set_index
 
     def setup_event_subs(self) -> Tuple[Tuple[str, Callable[[Context, Event], None]]] | None:
         return (
@@ -58,9 +61,9 @@ class BrushSetRing(WidgetRing):
     def on_scroll_up(self, context: Context, event: Event) -> None:
         if event.shift:
             # Shift + scroll up: change to next brush set
-            self._data.active_brush_set_index += 1
-            if self._data.active_brush_set_index >= len(self.brush_sets):
-                self._data.active_brush_set_index = 0
+            self._storage.active_brush_set_index += 1
+            if self._storage.active_brush_set_index >= len(self.brush_sets):
+                self._storage.active_brush_set_index = 0
             if self._last_active_index != self.active_brush_set_index:
                 self._rebuild_pickers()
         else:
@@ -78,9 +81,9 @@ class BrushSetRing(WidgetRing):
     def on_scroll_down(self, context: Context, event: Event) -> None:
         if event.shift:
             # Shift + scroll down: change to previous brush set
-            self._data.active_brush_set_index -= 1
-            if self._data.active_brush_set_index < 0:
-                self._data.active_brush_set_index = len(self.brush_sets) - 1
+            self._storage.active_brush_set_index -= 1
+            if self._storage.active_brush_set_index < 0:
+                self._storage.active_brush_set_index = len(self.brush_sets) - 1
             if self._last_active_index != self.active_brush_set_index:
                 self._rebuild_pickers()
         else:
@@ -93,8 +96,8 @@ class BrushSetRing(WidgetRing):
             if last_page_index != active_brush_set.page_index:
                 self._rebuild_pickers()
 
-    def activate(self, context: Context, prefs: WheelPrefs) -> None:
-        self._data = prefs
+    def activate(self, context: Context, prefs: WheelPrefs, storage: SculptPaintWheelStorage) -> None:
+        self._storage = storage
         self.ring_padding = prefs.brush_set_ring.ring_padding
         slot_count = prefs.brush_set_ring.slot_count
         if slot_count != self.slot_count:
@@ -203,7 +206,7 @@ class BrushSetRing(WidgetRing):
         if not active_brush_set:
             return
         page_index = active_brush_set.page_index
-        page_count = 5 # (len(active_brush_set.items) + self.slot_count - 1) // self.slot_count - 1
+        page_count = (len(active_brush_set.items) + self.slot_count - 1) // self.slot_count - 1
         if page_count <= 1:
             return
         wheel = self.wheel

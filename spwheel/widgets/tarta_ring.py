@@ -4,6 +4,8 @@ from math import pi as PI
 from mathutils import Vector
 from bpy.types import Context
 
+from ..pg.pg_wheel_theme import WheelTheme
+from ..pg.pg_wheel_storage import WheelTartaSetStorage
 from ..gpu.button_texture import get_custom_button_texture
 from ..gpu.draw import COL_PIE_TARTA, COL_PIE_TARTA_OP, draw_pie_split_ring, draw_textured_quad, draw_text
 from ..gpu.utils import compute_custom_button_layout_count, compute_slot_positions_in_single_ring, compute_slot_radius_in_single_ring, map_custom_layout_indices
@@ -38,8 +40,10 @@ class TartaRing(WidgetRing):
         self.hover_layout_slot: int = -1
         self.hover_custom_bid: int = -1
 
-    def activate(self, context: Context, prefs: WheelPrefs) -> None:
-        self._tarta_buttons = prefs.active_tarta_set.buttons
+    def activate(self, context: Context, prefs: WheelPrefs, storage: WheelTartaSetStorage) -> None:
+        # storage.active_tarta_set.ensure()
+        self._active_tarta_set = storage.active_tarta_set
+        self._tarta_buttons = self._active_tarta_set.buttons if self._active_tarta_set else []
         self.layout()
 
     def layout(self) -> None:
@@ -59,7 +63,7 @@ class TartaRing(WidgetRing):
         self.custom_radius = compute_slot_radius_in_single_ring(self.icon_ring_radius, self.layout_n) * 0.88
         self.custom_positions = compute_slot_positions_in_single_ring(cx, cy, self.icon_ring_radius, self.layout_n)
 
-    def draw(self, context: "Context") -> None:
+    def draw(self, context: Context, theme: WheelTheme) -> None:
         if self.layout_n <= 0 or self.tarta_outer_radius <= 0.0:
             return
         cx, cy = self.center
