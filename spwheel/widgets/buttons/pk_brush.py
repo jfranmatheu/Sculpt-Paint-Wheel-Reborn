@@ -17,9 +17,7 @@ class PickerBrushButton(ButtonCircle):
 
     def set_brush_metadata(self, brush_metadata: BrushMetadata, show_label: bool = True) -> None:
         self._brush_metadata = brush_metadata
-        # Do not snapshot gputex here: essentials previews may be generated after the wheel
-        # builds, and disk/GPU load should be resolved when drawing (cached in brush_previews).
-        self.icon_gputex = None
+        self.icon_gputex = brush_metadata.gputex
         self.label = brush_metadata.name if show_label else ''
 
     def clear_brush_metadata(self) -> None:
