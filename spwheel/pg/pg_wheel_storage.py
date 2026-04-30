@@ -150,7 +150,7 @@ class WheelStorage(PropertyGroup):
             return None
         return getattr(data, mode.lower(), None)
 
-    def initialize(self) -> None:
+    def initialize_defaults(self) -> None:
         if self.is_initialized:
             return
         self.is_initialized = True
@@ -161,9 +161,10 @@ class WheelStorage(PropertyGroup):
                 def_tarta_set: WheelTartaSet = tarta_storage.active_tarta_set()
                 for tool_set in def_tarta_set:
                     def_tarta_set.add_tarta_button_from_metadata(tool_set)'''
-            if defaults_metadata := get_brush_set(key.upper()):
+            mode = key.upper()
+            if default_brush_names := get_brush_set(mode):
                 brush_storage: WheelBrushSetStorage = getattr(self, key)
                 def_brush_set: BrushSet = brush_storage.add_brush_set()
                 def_brush_set.name = "Default Set"
-                for brush_metadata in defaults_metadata:
-                    def_brush_set.add_brush_from_metadata(brush_metadata)
+                for brush_name in default_brush_names:
+                    def_brush_set.add_brush_from_essential(mode, brush_name)

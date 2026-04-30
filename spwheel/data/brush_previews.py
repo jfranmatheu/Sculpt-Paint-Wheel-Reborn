@@ -19,8 +19,8 @@ _fallback_texture: GPUTexture | None = None
 def _sha1(s: str) -> str:
     return hashlib.sha1(s.encode("utf-8")).hexdigest()
 
-def generate_preview_hash(library_name: str, blend_stem: str, brush_name: str) -> str:
-    return _sha1(f"{library_name}|{blend_stem}|{brush_name}")
+def generate_preview_hash(library_name: str, blend_stem: str, brush_name: str, is_essential: bool = False) -> str:
+    return _sha1(f"{'E' if is_essential else 'C'}|{library_name}|{blend_stem}|{brush_name}")
 
 
 def _preview_rel(hash_id: str) -> str:
@@ -79,7 +79,10 @@ def get_brush_gputex(brush_id_key: str) -> GPUTexture | None:
     if cache_key in _texture_cache:
         return _texture_cache[cache_key]
 
-    w, h, data = read_preview(brush_id_key)
+    preview_data = read_preview(brush_id_key)
+    if preview_data is None:
+        return None
+    w, h, data = preview_data
     if w is None:
         return None
 

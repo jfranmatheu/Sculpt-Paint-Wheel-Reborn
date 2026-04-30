@@ -9,6 +9,22 @@ from ..utils.ups import get_tool_settings, get_active_brush_mode
 
 
 
+_MAP_MODE_TO_ESSENTIALS_ASSET_ID = {
+    "SCULPT": "mesh_sculpt",
+    "WEIGHT": "mesh_weight",
+    "PAINT_TEXTURE": "mesh_texture",
+    "VERTEX_PAINT": "mesh_vertex",
+    "WEIGHT_GREASE_PENCIL": "gp_weight",
+    "VERTEX_GREASE_PENCIL": "gp_vertex",
+    "PAINT_GREASE_PENCIL": "gp_draw",
+    "SCULPT_GREASE_PENCIL": "gp_sculpt",
+    "CURVE_SCULPT": "curve_sculpt",
+}
+
+def get_essentials_asset_id(mode: str) -> str | None:
+    return _MAP_MODE_TO_ESSENTIALS_ASSET_ID.get(mode,  None)
+
+
 class BrushMetadata(PropertyGroup):
     name: StringProperty(
         name="Name",
@@ -93,6 +109,8 @@ class BrushMetadata(PropertyGroup):
             asset_library_identifier=self.asset_library_identifier,
             relative_asset_identifier=self.relative_asset_identifier,
         )
+        if self.hash_id == "":
+            self.ensure_preview()
 
     def setup_from_active(self, context: Context) -> bool:
         """
@@ -112,10 +130,27 @@ class BrushMetadata(PropertyGroup):
 
         brush: Brush = ts.brush
         self.name = brush.name
-        self.hash_id = generate_preview_hash(self.asset_library_type, self.relative_asset_identifier, self.name)
-
         self.mode = get_active_brush_mode(context)
 
+        return self.ensure_preview(brush)
+
+    def setup_from_essential(self, mode: str, brush_name: str) -> bool:
+        relative_asset_identifier = get_essentials_asset_id(mode)
+        if relative_asset_identifier is None:
+            return False
+        self.asset_library_type = "ESSENTIALS"
+        self.asset_library_identifier = ""
+        self.relative_asset_identifier = f"brushes/essentials_brushes-{relative_asset_identifier}.blend/Brush/{brush_name}"
+        self.name = brush_name
+        self.mode = mode
+        self.activate() # we need to load the brush from the essentials library so we can get the preview
+        return self.ensure_preview()
+
+    def ensure_preview(self, brush: Brush | None = None) -> bool:
+        if brush is None:
+            brush = self.brush
+        if brush is None:
+            return False
         preview = brush.preview
         if not preview:
             preview = brush.preview_ensure()
@@ -127,6 +162,7 @@ class BrushMetadata(PropertyGroup):
         pixels = preview.image_pixels_float
         if len(pixels) == 0:
             return False
+        self.hash_id = generate_preview_hash(self.asset_library_type, self.relative_asset_identifier, self.name, is_essential=self.asset_library_type == "ESSENTIALS")
         self.preview_size = (x, y)
         write_preview(self.hash_id, x, y, pixels)
         return True

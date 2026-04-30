@@ -2,93 +2,21 @@ from os.path import dirname, join
 
 icons_dir = join(dirname(dirname(dirname(__file__))), 'images', "custom_buttons")
 
-_SCULPT_ASSET_BASE = "brushes/essentials_brushes-mesh_sculpt.blend/Brush"
-
 def_sculpt_tools = (
-    {
-        "asset_library_type": "ESSENTIALS",
-        "asset_library_identifier": "",
-        "relative_asset_identifier": f"{_SCULPT_ASSET_BASE}/Draw",
-        "display_name": "Sculpt Draw",
-    },
-    {
-        "asset_library_type": "ESSENTIALS",
-        "asset_library_identifier": "",
-        "relative_asset_identifier": f"{_SCULPT_ASSET_BASE}/Draw Sharp",
-        "display_name": "Draw Sharp",
-    },
-    {
-        "asset_library_type": "ESSENTIALS",
-        "asset_library_identifier": "",
-        "relative_asset_identifier": f"{_SCULPT_ASSET_BASE}/Clay Strips",
-        "display_name": "Clay Strips",
-    },
-    {
-        "asset_library_type": "ESSENTIALS",
-        "asset_library_identifier": "",
-        "relative_asset_identifier": f"{_SCULPT_ASSET_BASE}/Inflate/Deflate",
-        "display_name": "Inflate",
-    },
-    {
-        "asset_library_type": "ESSENTIALS",
-        "asset_library_identifier": "",
-        "relative_asset_identifier": f"{_SCULPT_ASSET_BASE}/Crease",
-        "display_name": "Crease",
-    },
-    {
-        "asset_library_type": "ESSENTIALS",
-        "asset_library_identifier": "",
-        "relative_asset_identifier": f"{_SCULPT_ASSET_BASE}/Scrape/Peaks",
-        "display_name": "Scrape",
-    },
-    {
-        "asset_library_type": "ESSENTIALS",
-        "asset_library_identifier": "",
-        "relative_asset_identifier": f"{_SCULPT_ASSET_BASE}/Scrape Multiplane",
-        "display_name": "MultiPlane Scrape",
-    },
-    {
-        "asset_library_type": "ESSENTIALS",
-        "asset_library_identifier": "",
-        "relative_asset_identifier": f"{_SCULPT_ASSET_BASE}/Pinch/Magnify",
-        "display_name": "Pinch",
-    },
-    {
-        "asset_library_type": "ESSENTIALS",
-        "asset_library_identifier": "",
-        "relative_asset_identifier": f"{_SCULPT_ASSET_BASE}/Grab",
-        "display_name": "Grab",
-    },
-    {
-        "asset_library_type": "ESSENTIALS",
-        "asset_library_identifier": "",
-        "relative_asset_identifier": f"{_SCULPT_ASSET_BASE}/Elastic Grab",
-        "display_name": "Elastic Deform",
-    },
-    {
-        "asset_library_type": "ESSENTIALS",
-        "asset_library_identifier": "",
-        "relative_asset_identifier": f"{_SCULPT_ASSET_BASE}/Pose",
-        "display_name": "Pose",
-    },
-    {
-        "asset_library_type": "ESSENTIALS",
-        "asset_library_identifier": "",
-        "relative_asset_identifier": f"{_SCULPT_ASSET_BASE}/Cloth",
-        "display_name": "Cloth",
-    },
-    {
-        "asset_library_type": "ESSENTIALS",
-        "asset_library_identifier": "",
-        "relative_asset_identifier": f"{_SCULPT_ASSET_BASE}/Mask",
-        "display_name": "Mask",
-    },
-    {
-        "asset_library_type": "ESSENTIALS",
-        "asset_library_identifier": "",
-        "relative_asset_identifier": f"{_SCULPT_ASSET_BASE}/Draw Face Sets",
-        "display_name": "Draw Face Sets",
-    },
+    "Draw",
+    "Draw Sharp",
+    "Clay Strips",
+    "Inflate/Deflate",
+    "Crease Polish",
+    "Crease Sharp",
+    "Plateau",
+    "Scrape Multiplane",
+    "Pinch/Magnify",
+    "Grab",
+    "Elastic Grab",
+    "Pose",
+    "Mask",
+    "Face Set Paint",
 )
 
 def_sculpt_buttons = (
