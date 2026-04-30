@@ -105,6 +105,10 @@ class BrushSetRing(WidgetRing):
             self._sync_picker_slots()
         self._rebuild_pickers()
 
+    def deactivate_all_pickers(self) -> None:
+        for pb in self._pickers:
+            pb.active = False
+
     def get_page_brushes_metadata(self) -> list[BrushMetadata]:
         active_brush_set: BrushSet = self.active_brush_set
         slot_count: int = self.slot_count

@@ -27,6 +27,8 @@ class PickerBrushButton(ButtonCircle):
 
     def on_left_press(self, context: Context, event: Event) -> bool:
         self._brush_metadata.activate()
+        self.parent.deactivate_all_pickers()
+        self.active = True
         return True
 
     def draw_icon(self, context: Context, button_theme: ButtonTheme) -> None:
