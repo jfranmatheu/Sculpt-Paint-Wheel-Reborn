@@ -43,6 +43,16 @@ def get_essential_preview_key(mode_id: str, brush_name: str) -> str:
     return f"{_safe_essential_mode_id(mode_id)}__{_safe_essential_brush_name(brush_name)}"
 
 
+def _essential_brush_name_variants(brush_name: str) -> list[str]:
+    """Match generator: optional strip of Blender-style '.001' suffix in blend data names."""
+    names: list[str] = [brush_name]
+    if "." in brush_name:
+        stem = brush_name.split(".", 1)[0]
+        if stem and stem not in names:
+            names.append(stem)
+    return names
+
+
 def get_essential_preview_path(mode_id: str, brush_name: str) -> Path:
     from ..core.globals import PATHS
     return PATHS.ASSETS / "previews_essentials" / f"{get_essential_preview_key(mode_id, brush_name)}.bin"
@@ -99,21 +109,53 @@ def read_preview(hash_id: str) -> tuple[int, int, bytes] | None:
         return None
 
 
-def read_essential_preview(mode_id: str, brush_name: str) -> tuple[int, int, bytes] | None:
-    full = get_essential_preview_path(mode_id, brush_name)
-    if not full.is_file():
-        return None
+def _log_essential_preview_miss(mode_id: str, brush_name: str, tried_paths: list[Path]) -> None:
     try:
-        with full.open("rb") as f:
-            w = int.from_bytes(f.read(4), "little")
-            h = int.from_bytes(f.read(4), "little")
-            compressed = f.read()
-        data = zlib.decompress(compressed)
-        if len(data) != w * h * 4:
-            return None
-        return w, h, data
+        from ..core.globals import GLOBALS
+        if not GLOBALS.IN_DEVELOPMENT:
+            return
     except Exception:
-        return None
+        return
+    print(
+        f"[Sculpt+] essentials preview not found: mode_id={mode_id!r} brush={brush_name!r} "
+        f"tried: {[p.as_posix() for p in tried_paths]}"
+    )
+
+
+def _log_essential_preview_size_mismatch(mode_id: str, brush_name: str, path: Path, w: int, h: int, size: int) -> None:
+    try:
+        from ..core.globals import GLOBALS
+        if not GLOBALS.IN_DEVELOPMENT:
+            return
+    except Exception:
+        return
+    print(
+        f"[Sculpt+] essentials preview size mismatch: mode_id={mode_id!r} brush={brush_name!r} "
+        f"path={path.as_posix()} header={w}x{h} expected={w*h*4} got={size}"
+    )
+
+
+def read_essential_preview(mode_id: str, brush_name: str) -> tuple[int, int, bytes] | None:
+    tried: list[Path] = []
+    for variant in _essential_brush_name_variants(brush_name):
+        full = get_essential_preview_path(mode_id, variant)
+        tried.append(full)
+        if not full.is_file():
+            continue
+        try:
+            with full.open("rb") as f:
+                w = int.from_bytes(f.read(4), "little")
+                h = int.from_bytes(f.read(4), "little")
+                compressed = f.read()
+            data = zlib.decompress(compressed)
+            if len(data) != w * h * 4:
+                _log_essential_preview_size_mismatch(mode_id, brush_name, full, w, h, len(data))
+                continue
+            return w, h, data
+        except Exception:
+            continue
+    _log_essential_preview_miss(mode_id, brush_name, tried)
+    return None
 
 
 def get_brush_gputex(brush_id_key: str) -> GPUTexture | None:
@@ -150,8 +192,8 @@ def get_brush_gputex(brush_id_key: str) -> GPUTexture | None:
 
 
 def get_essential_brush_gputex(mode_id: str, brush_name: str) -> GPUTexture | None:
-    preview_key = get_essential_preview_key(mode_id, brush_name)
-    cache_key = f"ESSENTIALS|{preview_key}"
+    # Cache by metadata keys (not file stem) so name variants hit the same texture.
+    cache_key = f"ESSENTIALS|{mode_id}|{brush_name}"
     if cache_key in _texture_cache:
         return _texture_cache[cache_key]
 

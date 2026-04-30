@@ -1,3 +1,4 @@
+import re
 import bpy
 from bpy.props import FloatVectorProperty, IntProperty, StringProperty
 from bpy.types import Brush, AssetWeakReference, Context
@@ -30,6 +31,11 @@ _MAP_MODE_TO_ESSENTIALS_ASSET_ID = {
 
 def get_essentials_asset_id(mode: str) -> str | None:
     return _MAP_MODE_TO_ESSENTIALS_ASSET_ID.get(mode,  None)
+
+
+def get_essentials_blend_id_from_relative_path(relative_asset_identifier: str) -> str | None:
+    m = re.search(r"essentials_brushes-([^.]+)\.blend", relative_asset_identifier)
+    return m.group(1) if m else None
 
 
 class BrushMetadata(PropertyGroup):
@@ -82,6 +88,15 @@ class BrushMetadata(PropertyGroup):
         default="",
     )
 
+    def get_essentials_blend_id(self) -> str | None:
+        """Blend library id (e.g. mesh_sculpt) for ESSENTIALS brushes."""
+        if self.asset_library_type != "ESSENTIALS":
+            return None
+        mid = get_essentials_asset_id(self.mode)
+        if mid:
+            return mid
+        return get_essentials_blend_id_from_relative_path(self.relative_asset_identifier)
+
     @property
     def brush(self) -> Brush:
         return bpy.data.brushes.get(self.name)
@@ -96,7 +111,7 @@ class BrushMetadata(PropertyGroup):
         Get the preview pixels from disk.
         """
         if self.asset_library_type == "ESSENTIALS":
-            essentials_mode_id = get_essentials_asset_id(self.mode)
+            essentials_mode_id = self.get_essentials_blend_id()
             if essentials_mode_id is None:
                 return None
             if data := read_essential_preview(essentials_mode_id, self.name):
@@ -115,7 +130,7 @@ class BrushMetadata(PropertyGroup):
         Get the GPU texture from the preview data.
         """
         if self.asset_library_type == "ESSENTIALS":
-            essentials_mode_id = get_essentials_asset_id(self.mode)
+            essentials_mode_id = self.get_essentials_blend_id()
             if self.name == "" or essentials_mode_id is None:
                 return None
             return get_essential_brush_gputex(essentials_mode_id, self.name)

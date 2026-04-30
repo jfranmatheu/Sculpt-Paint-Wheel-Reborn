@@ -71,7 +71,9 @@ def generate_all(asset_root: Path, output_dir: Path) -> int:
                 _log(f"SKIP no preview: {brush_name}")
                 continue
 
-            w, h = preview.icon_size
+            # image_pixels_float contains the full preview buffer.
+            # Use image_size so header and payload lengths match.
+            w, h = preview.image_size
             if w <= 0 or h <= 0:
                 _log(f"SKIP zero icon size: {brush_name} ({w}x{h})")
                 continue
