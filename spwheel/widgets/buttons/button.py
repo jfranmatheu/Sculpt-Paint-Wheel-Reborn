@@ -72,10 +72,14 @@ class ButtonBase:
         button_theme = self._get_button_theme(theme)
         self.draw_base(context, button_theme)
         self.draw_icon(context, button_theme)
+        self.draw_outline(context, button_theme)
         self.draw_label(context, button_theme)
 
     def draw_base(self, context: Context, button_theme: ButtonTheme) -> None:
         raise NotImplementedError("Button base drawing is not implemented yet")
+
+    def draw_outline(self, context: Context, button_theme: ButtonTheme) -> None:
+        raise NotImplementedError("Button outline drawing is not implemented yet")
 
     def draw_label(self, context: Context, button_theme: ButtonTheme) -> None:
         if not self.label:
@@ -105,9 +109,15 @@ class ButtonCircle(ButtonBase, WidgetCircle):
     def draw_base(self, context: Context, button_theme: ButtonTheme) -> None:
         base_color, outline_color = button_theme.get_color(self.hovered, self.active)
         draw_circle_fill(0.0, 0.0, self.radius, base_color, softness=0.015)
+
+    def draw_outline(self, context: Context, button_theme: ButtonTheme) -> None:
+        base_color, outline_color = button_theme.get_color(self.hovered, self.active)
         draw_ring(0.0, 0.0, self.radius, outline_color, thickness=2.0 if self.active else 1.5 if self.hovered else 1.0, softness=0.012)
 
 class ButtonRect(ButtonBase, WidgetRect):
     def draw_base(self, context: Context, button_theme: ButtonTheme) -> None:
         raise NotImplementedError("WidgetRect button drawing is not implemented yet")
         # draw_rect_fill(*self.offset, self.width, self.height, col, softness=0.015)
+
+    def draw_outline(self, context: Context, button_theme: ButtonTheme) -> None:
+        raise NotImplementedError("Button outline drawing is not implemented yet")
