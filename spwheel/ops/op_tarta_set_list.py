@@ -8,7 +8,7 @@ from ..pg.pg_wheel_storage import WheelStorage, WheelTartaSetStorage
 class OpPollActive:
     @classmethod
     def poll_operator(cls, context) -> bool | str:
-        if WheelStorage.get(context).active_tarta_set is None:
+        if WheelStorage.get_by_mode(context).active_tarta_set is None:
             return "No active Custom Buttons set"
         return True
 
@@ -16,12 +16,12 @@ class OpPollActive:
 class OpTartaSetListAdd(OperatorAction):
     """ Add a new Brush Set to the Brush Set List."""
     def action(self, context, event):
-        WheelStorage.get(context).add_tarta_set()
+        WheelStorage.get_by_mode(context).add_tarta_set()
 
 class OpTartaSetListRemove(OperatorAction, OpPollActive):
     """ Add a new Brush Set to the Brush Set List."""
     def action(self, context, event):
-        WheelStorage.get(context).remove_active_tarta_set()
+        WheelStorage.get_by_mode(context).remove_active_tarta_set()
 
 
 class OpTartaSetListMove(OperatorAction, OpPollActive):
@@ -36,4 +36,4 @@ class OpTartaSetListMove(OperatorAction, OpPollActive):
     )
 
     def action(self, context, event):
-        WheelStorage.get(context).move_active_tarta_set(self.direction)
+        WheelStorage.get_by_mode(context).move_active_tarta_set(self.direction)

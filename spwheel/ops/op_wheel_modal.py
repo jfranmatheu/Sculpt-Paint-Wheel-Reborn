@@ -37,7 +37,7 @@ class WheelModal(bl_types.OperatorModal):
                 ts.show_brush = False
         self.wheel = Wheel.get(context)
         self.prefs = WheelPrefs.get(context)
-        self.storage = WheelStorage.get(context)
+        self.storage = WheelStorage.get_by_mode(context)
         self.wheel._activate(context, self.prefs, self.storage, modal_mouse.init)
         self.wheel_is_hovered = True
         

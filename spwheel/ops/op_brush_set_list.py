@@ -8,7 +8,7 @@ from ..pg.pg_wheel_storage import WheelStorage, SculptPaintWheelStorage
 class OpPollActive:
     @classmethod
     def poll_operator(cls, context) -> bool | str:
-        if WheelStorage.get(context).active_brush_set is None:
+        if WheelStorage.get_by_mode(context).active_brush_set is None:
             return "No active brush set"
         return True
 
@@ -16,12 +16,12 @@ class OpPollActive:
 class OpBrushSetListAdd(OperatorAction):
     """ Add a new Brush Set to the Brush Set List."""
     def action(self, context, event):
-        WheelStorage.get(context).add_brush_set()
+        WheelStorage.get_by_mode(context).add_brush_set()
 
 class OpBrushSetListRemove(OperatorAction, OpPollActive):
     """ Add a new Brush Set to the Brush Set List."""
     def action(self, context, event):
-        WheelStorage.get(context).remove_active_brush_set()
+        WheelStorage.get_by_mode(context).remove_active_brush_set()
 
 
 class OpBrushSetListMove(OperatorAction, OpPollActive):
@@ -36,4 +36,4 @@ class OpBrushSetListMove(OperatorAction, OpPollActive):
     )
 
     def action(self, context, event):
-        WheelStorage.get(context).move_active_brush_set(self.direction)
+        WheelStorage.get_by_mode(context).move_active_brush_set(self.direction)

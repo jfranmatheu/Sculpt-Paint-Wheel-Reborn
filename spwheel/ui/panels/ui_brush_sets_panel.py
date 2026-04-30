@@ -14,8 +14,13 @@ class WheelBrushSetsPanel(PanelTypes.VIEW_3D_SIDEBAR):
     bl_label = 'Brush Sets'
     bl_order = 1
 
+    @classmethod
+    def poll(cls, context: Context) -> bool:
+        # Weight modes does not use brush sets (yet).
+        return 'WEIGHT' not in context.mode
+
     def draw_ui(self, context: Context, layout: UILayout):
-        wheel_storage: SculptPaintWheelStorage = WheelStorage.get(context)
+        wheel_storage: SculptPaintWheelStorage = WheelStorage.get_by_mode(context)
 
         row = layout.row()
         BrushSetsList.draw_list(row, wheel_storage, 'brush_sets', 'active_brush_set_index')
@@ -27,4 +32,4 @@ class WheelBrushSetsPanel(PanelTypes.VIEW_3D_SIDEBAR):
         col.operator(OpBrushSetListMove.bl_idname, text="", icon='TRIA_DOWN').direction = -1
         
         if active_brush_set := wheel_storage.active_brush_set:
-            pass
+            active_brush_set.draw_list(layout)

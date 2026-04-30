@@ -3,7 +3,7 @@ from os.path import dirname, join
 icons_dir = join(dirname(dirname(dirname(__file__))), 'images', "custom_buttons")
 
 
-def_buttons = (
+def_weight_buttons = (
     {
         'id': 'BRUSH SETTINGS',
         'name' : "Brush Settings",

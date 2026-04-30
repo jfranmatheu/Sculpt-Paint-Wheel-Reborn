@@ -1,9 +1,10 @@
-from bpy.props import CollectionProperty, IntProperty, PointerProperty
+from bpy.props import BoolProperty, CollectionProperty, IntProperty, PointerProperty
 from bpy.types import Context
 
 from ..core.bl_types import PropertyGroup
 from .pg_tarta_set import WheelTartaSet
 from .pg_brush_set import BrushSet
+from .default_sets import get_tarta_set, get_brush_set
 
 
 class WheelTartaSetStorage(PropertyGroup):
@@ -124,12 +125,22 @@ class WeightWheelStorage(WheelTartaSetStorage, PropertyGroup):
 
 
 class WheelStorage(PropertyGroup):
+    is_initialized: BoolProperty(
+        name="Initialized",
+        description="Whether the wheel storage is initialized",
+        default=False,
+    )
+
     sculpt: PointerProperty(type=SculptPaintWheelStorage)
     paint_texture: PointerProperty(type=SculptPaintWheelStorage)
     weight: PointerProperty(type=WeightWheelStorage)
 
     @classmethod
-    def get(cls, context: Context | str) -> SculptPaintWheelStorage | WeightWheelStorage:
+    def get(cls, context: Context) -> 'WheelStorage':
+        return super().get(context)
+
+    @classmethod
+    def get_by_mode(cls, context: Context | str) -> SculptPaintWheelStorage | WeightWheelStorage:
         if isinstance(context, Context):
             mode = context.mode
         else:
@@ -138,3 +149,21 @@ class WheelStorage(PropertyGroup):
         if data is None:
             return None
         return getattr(data, mode.lower(), None)
+
+    def initialize(self) -> None:
+        if self.is_initialized:
+            return
+        self.is_initialized = True
+
+        for key in ('sculpt', ): #, 'paint_texture', 'weight'):
+            '''if def_tarta_set := get_tarta_set(key):
+                tarta_storage: WheelTartaSetStorage = getattr(self, key)
+                def_tarta_set: WheelTartaSet = tarta_storage.active_tarta_set()
+                for tool_set in def_tarta_set:
+                    def_tarta_set.add_tarta_button_from_metadata(tool_set)'''
+            if defaults_metadata := get_brush_set(key.upper()):
+                brush_storage: WheelBrushSetStorage = getattr(self, key)
+                def_brush_set: BrushSet = brush_storage.add_brush_set()
+                def_brush_set.name = "Default Set"
+                for brush_metadata in defaults_metadata:
+                    def_brush_set.add_brush_from_metadata(brush_metadata)

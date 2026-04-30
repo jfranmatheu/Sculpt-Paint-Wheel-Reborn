@@ -29,7 +29,7 @@ class WheelTartaButtonsPanel(PanelTypes.VIEW_3D_SIDEBAR):
         TartaButtonList.draw_list(layout, active_tarta_set, 'buttons', 'active_button_index')
 
     def draw_ui(self, context: Context, layout: UILayout):
-        wheel_storage: WheelTartaSetStorage = WheelStorage.get(context)
+        wheel_storage: WheelTartaSetStorage = WheelStorage.get_by_mode(context)
         create: CreateTartaButton = CreateTartaButton.get(context)
 
         main = layout.column()

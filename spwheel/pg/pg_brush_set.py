@@ -78,6 +78,19 @@ class BrushSet(PropertyGroup):
         brush_metadata.wheel_order = len(self.items) - 1
         return brush_metadata
 
+    def add_brush_from_metadata(self, data: dict) -> BrushMetadata:
+        """
+        Add a brush to the brush set from a brush metadata.
+        :param brush_metadata: The brush metadata to add.
+        :return: None.
+        """
+        brush_metadata: BrushMetadata = self.items.add()
+        brush_metadata.asset_library_identifier = data['asset_library_identifier']
+        brush_metadata.asset_library_type = data['asset_library_type']
+        brush_metadata.relative_asset_identifier = data['relative_asset_identifier']
+        brush_metadata.name = data['display_name']
+        return brush_metadata
+
     def draw_list(self, layout: UILayout):
         """
         Draw the brush set list in the UI.
