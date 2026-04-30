@@ -96,7 +96,7 @@ class Widget:
         if not self.interactable:
             return None
         if self.test_hit(context, p):
-            if self.hovered:
+            if not self.hovered:
                 self.on_hover_enter(context, p)
                 self.hovered = True
                 context.region.tag_redraw()
