@@ -4,7 +4,14 @@ from bpy.types import Brush, AssetWeakReference, Context
 from gpu.types import GPUTexture
 
 from ..core.bl_types import PropertyGroup
-from ..data.brush_previews import write_preview, read_preview, generate_preview_hash, get_brush_gputex
+from ..data.brush_previews import (
+    write_preview,
+    read_preview,
+    read_essential_preview,
+    generate_preview_hash,
+    get_brush_gputex,
+    get_essential_brush_gputex,
+)
 from ..utils.ups import get_tool_settings, get_active_brush_mode
 
 
@@ -88,6 +95,14 @@ class BrushMetadata(PropertyGroup):
         """
         Get the preview pixels from disk.
         """
+        if self.asset_library_type == "ESSENTIALS":
+            essentials_mode_id = get_essentials_asset_id(self.mode)
+            if essentials_mode_id is None:
+                return None
+            if data := read_essential_preview(essentials_mode_id, self.name):
+                return data[2]
+            return None
+
         if self.hash_id == "" or self.preview_size == (0, 0):
             return None
         if data := read_preview(self.hash_id):
@@ -99,6 +114,12 @@ class BrushMetadata(PropertyGroup):
         """
         Get the GPU texture from the preview data.
         """
+        if self.asset_library_type == "ESSENTIALS":
+            essentials_mode_id = get_essentials_asset_id(self.mode)
+            if self.name == "" or essentials_mode_id is None:
+                return None
+            return get_essential_brush_gputex(essentials_mode_id, self.name)
+
         if self.hash_id == "" or self.preview_size == (0, 0):
             return None
         return get_brush_gputex(self.hash_id)
@@ -143,6 +164,7 @@ class BrushMetadata(PropertyGroup):
         self.relative_asset_identifier = f"brushes/essentials_brushes-{relative_asset_identifier}.blend/Brush/{brush_name}"
         self.name = brush_name
         self.mode = mode
+        return True
 
     def ensure_preview(self, brush: Brush | None = None) -> bool:
         if brush is None:
