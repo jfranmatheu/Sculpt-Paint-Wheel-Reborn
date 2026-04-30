@@ -26,10 +26,10 @@ class ButtonTheme(PropertyGroup):
         subtype='COLOR', name="Brush Outline Active Color", min=0, max=1, size=4, default=(.92, .64, .11, .92))
 
     def get_color(self, hovered: bool, active: bool) -> Tuple[Tuple[float, float, float, float], Tuple[float, float, float, float]]:
-        if hovered:
-            return self.hovered_color, self.hovered_outline_color
-        elif active:
+        if active:
             return self.active_color, self.active_outline_color
+        elif hovered:
+            return self.hovered_color, self.hovered_outline_color
         else:
             return self.color, self.outline_color
 
