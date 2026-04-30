@@ -143,8 +143,6 @@ class BrushMetadata(PropertyGroup):
         self.relative_asset_identifier = f"brushes/essentials_brushes-{relative_asset_identifier}.blend/Brush/{brush_name}"
         self.name = brush_name
         self.mode = mode
-        self.activate() # we need to load the brush from the essentials library so we can get the preview
-        return self.ensure_preview()
 
     def ensure_preview(self, brush: Brush | None = None) -> bool:
         if brush is None:

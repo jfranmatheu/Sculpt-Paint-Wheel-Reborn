@@ -10,4 +10,3 @@ def startup_timer() -> None:
 
 def register() -> None:
     bpy.app.timers.register(startup_timer, first_interval=1.0)
-2
