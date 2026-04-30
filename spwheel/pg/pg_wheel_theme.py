@@ -21,7 +21,7 @@ class ButtonTheme(PropertyGroup):
     outline_color: FloatVectorProperty(
         subtype='COLOR', name="Brush Outline Color", min=0, max=1, size=4, default=(.164, .164, .164, .9))
     hovered_outline_color: FloatVectorProperty(
-        subtype='COLOR', name="Brush Outline Hovered Color", min=0, max=1, size=4, default=(.02, .02, .02, .9))
+        subtype='COLOR', name="Brush Outline Hovered Color", min=0, max=1, size=4, default=(.32, .32, .32, 1.0))
     active_outline_color: FloatVectorProperty(
         subtype='COLOR', name="Brush Outline Active Color", min=0, max=1, size=4, default=(.92, .64, .11, .92))
 
