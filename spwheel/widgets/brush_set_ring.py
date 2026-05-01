@@ -76,7 +76,7 @@ class BrushSetRing(WidgetRing):
             if active_brush_set.page_index > max_page_index:
                 active_brush_set.page_index = max_page_index
             if last_page_index != active_brush_set.page_index:
-                self._rebuild_pickers()
+                self._rebuild_pickers(context)
 
     def on_scroll_down(self, context: Context, event: Event) -> None:
         if event.shift:
@@ -85,7 +85,7 @@ class BrushSetRing(WidgetRing):
             if self._storage.active_brush_set_index < 0:
                 self._storage.active_brush_set_index = len(self.brush_sets) - 1
             if self._last_active_index != self.active_brush_set_index:
-                self._rebuild_pickers()
+                self._rebuild_pickers(context)
         else:
             # Scroll down: change to previous page.
             active_brush_set: BrushSet = self.active_brush_set
@@ -94,7 +94,7 @@ class BrushSetRing(WidgetRing):
             if active_brush_set.page_index < 0:
                 active_brush_set.page_index = 0
             if last_page_index != active_brush_set.page_index:
-                self._rebuild_pickers()
+                self._rebuild_pickers(context)
 
     def activate(self, context: Context, prefs: WheelPrefs, storage: SculptPaintWheelStorage) -> None:
         self._storage = storage
@@ -103,7 +103,7 @@ class BrushSetRing(WidgetRing):
         if slot_count != self.slot_count:
             self.slot_count = slot_count
             self._sync_picker_slots()
-        self._rebuild_pickers()
+        self._rebuild_pickers(context)
 
     def deactivate_all_pickers(self) -> None:
         for pb in self._pickers:
@@ -148,7 +148,7 @@ class BrushSetRing(WidgetRing):
             if USE_DEBUG:
                 print(f"Added picker {i}: {pb.label}")
 
-    def _rebuild_pickers(self) -> None:
+    def _rebuild_pickers(self, context: Context) -> None:
         if USE_DEBUG:
             print(f"Rebuilding pickers: {self.active_brush_set_index}")
         self._last_active_index = self.active_brush_set_index
@@ -179,6 +179,8 @@ class BrushSetRing(WidgetRing):
 
         if USE_DEBUG:
             print(f"Rebuilt {len(self._pickers)} pickers")
+            
+        context.region.tag_redraw()
 
     def draw(self, context: Context, theme: WheelTheme) -> None:
         draw_ring(*self.offset, self.radius_outer, theme.base_outline_color, thickness=1.25)
