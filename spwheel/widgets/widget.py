@@ -173,6 +173,10 @@ class WidgetCircle(Widget):
     radius: float
     center: Vector
 
+    def init(self) -> None:
+        super().init()
+        self.radius = 0.0
+
     @property
     def center(self) -> Vector:
         return self.offset
@@ -193,6 +197,11 @@ class WidgetRect(Widget):
     width: float
     height: float
     pos: Vector
+    
+    def init(self) -> None:
+        super().init()
+        self.width = 0.0
+        self.height = 0.0
 
     @property
     def pos(self) -> Vector:
@@ -211,6 +220,12 @@ class WidgetRing(Widget):
     radius_inner: float
     radius_outer: float
     thickness: float
+    
+    def init(self) -> None:
+        super().init()
+        self.radius_inner = 0.0
+        self.radius_outer = 0.0
+        self.thickness = 0.0
 
     @property
     def center(self) -> Vector:
