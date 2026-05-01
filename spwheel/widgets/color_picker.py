@@ -104,6 +104,36 @@ class ColorPickerWidget(WidgetRing):
                 return labels[i]
         return None
 
+    def _pick_control_from_area(self, p_local: Vector) -> str | None:
+        cx, cy = self.center
+        dx = p_local.x - cx
+        dy = p_local.y - cy
+        dist = math.hypot(dx, dy)
+        angle = math.degrees(math.atan2(dy, dx))  # [-180, 180]
+        angle_360 = (angle + 360.0) % 360.0
+
+        margin = max(2.0, self._handle_radius() * 0.45)
+
+        # Hue uses the full hue ring.
+        if (self.hue_inner_r - margin) <= dist <= (self.hue_outer_r + margin):
+            return "h"
+
+        # S/V share the same radial band; choose by angular sectors.
+        if not ((self.sv_inner_r - margin) <= dist <= (self.sv_outer_r + margin)):
+            return None
+
+        in_sat = S_ANGLE_TOP <= angle_360 <= S_ANGLE_BOT
+        in_val = V_ANGLE_BOT <= angle <= V_ANGLE_TOP
+        if in_sat and not in_val:
+            return "s"
+        if in_val and not in_sat:
+            return "v"
+        if in_sat:
+            return "s"
+        if in_val:
+            return "v"
+        return None
+
     def _event_local_to_wheel(self, event: "Event") -> tuple[float, float]:
         return self.wheel.to_local(event.mouse_region_x, event.mouse_region_y)
 
@@ -178,6 +208,8 @@ class ColorPickerWidget(WidgetRing):
 
     def test_hit(self, context: "Context", p: Vector) -> bool:
         self._hover_handle = self._pick_hover_handle(context, p)
+        if self._hover_handle is None:
+            self._hover_handle = self._pick_control_from_area(p)
         return self._hover_handle is not None
 
     def on_left_press(self, context: "Context", event: "Event") -> bool:
