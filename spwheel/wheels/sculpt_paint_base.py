@@ -18,6 +18,11 @@ class SculptPaintWheel(Wheel):
         tarta_ring.set_parent(self)
         tarta_ring.set_transform(0, 0, .1, .4)
         self.tarta_ring = tarta_ring
+        
+        color_picker = ColorPickerWidget()
+        color_picker.set_parent(self)
+        color_picker.set_transform(0, 0, .4, .64)
+        self.color_picker = color_picker
 
         brush_set_ring = BrushSetRing()
         brush_set_ring.set_parent(self)
@@ -26,3 +31,4 @@ class SculptPaintWheel(Wheel):
 
     def activate(self, context: Context, prefs: WheelPrefs, storage: SculptPaintWheelStorage) -> None:
         self.brush_set_ring.set_transform_thickness(0.97, -1 * (prefs.brush_set_ring.slot_size + prefs.brush_set_ring.ring_padding * 2.0))
+        self.color_picker.set_transform(0, 0, self.tarta_ring.radius_outer, self.brush_set_ring.radius_inner)
