@@ -47,14 +47,14 @@ class Wheel:
 
     def get_all_widgets(self) -> list["Widget"]:
         all_widgets = []
-        def get_children(widget: "Widget") -> list["Widget"]:
+        def visit(widget: "Widget") -> None:
             nonlocal all_widgets
+            all_widgets.append(widget)
             if widget.children:
                 for child in widget.children:
-                    all_widgets.append(child)
-                    get_children(child)
+                    visit(child)
         for wg in self._widgets:
-            get_children(wg)
+            visit(wg)
         return all_widgets
 
     def _activate(self, context: Context, prefs: WheelPrefs, storage: SculptPaintWheelStorage, center: Vector) -> None:
