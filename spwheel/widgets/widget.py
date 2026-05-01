@@ -11,6 +11,7 @@ from ..pg.pg_wheel_storage import SculptPaintWheelStorage
 
 class Widget:
     use_modal = False
+    _wg_prefs = None
 
     # Parenting ------------
     parent: "Widget"
@@ -61,11 +62,12 @@ class Widget:
     def setup_event_subs(self) -> Tuple[Tuple[str, Callable[[Context], None]]] | None:
         return None
 
-    def _activate(self, context: Context, prefs: WheelPrefs, storage: SculptPaintWheelStorage) -> None:
+    def _on_wheel_activate(self, context: Context, wheel_prefs: WheelPrefs, storage: SculptPaintWheelStorage) -> None:
         self.enabled = True
-        self.activate(context, prefs, storage)
+        wg_prefs = self._wg_prefs.get(context) if self._wg_prefs is not None else None
+        self.on_wheel_activate(context, wheel_prefs, storage, wg_prefs)
         for child in self.children:
-            child._activate(context, prefs, storage)
+            child._on_wheel_activate(context, wheel_prefs, storage)
 
     def add_child(self, child: "Widget") -> None:
         if child.parent is not None:
@@ -140,7 +142,7 @@ class Widget:
     def set_transform(self, context: Context) -> None:
         raise NotImplementedError("Subclasses must implement transform")
 
-    def activate(self, context: Context, prefs: WheelPrefs, storage: SculptPaintWheelStorage) -> None:
+    def on_wheel_activate(self, context: Context, wheel_prefs: WheelPrefs, storage: SculptPaintWheelStorage, wg_prefs = None) -> None:
         """ We are goind to use this widget! Let's prepare it! """
         pass
 

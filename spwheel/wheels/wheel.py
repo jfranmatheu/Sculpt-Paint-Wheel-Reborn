@@ -61,7 +61,7 @@ class Wheel:
         self.center = center
         self.activate(context, prefs, storage)
         for widget in self._widgets:
-            widget._activate(context, prefs, storage)
+            widget._on_wheel_activate(context, prefs, storage)
 
     def to_region(self, lx: float, ly: float) -> tuple[float, float]:
         return (self.center.x + lx, self.center.y + ly)

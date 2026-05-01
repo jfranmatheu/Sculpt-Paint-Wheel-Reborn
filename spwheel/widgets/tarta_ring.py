@@ -39,8 +39,8 @@ class TartaRing(WidgetRing):
         self.custom_positions: list[tuple[float, float]] = []
         self.hover_layout_slot: int = -1
         self.hover_custom_bid: int = -1
-
-    def activate(self, context: Context, prefs: WheelPrefs, storage: WheelTartaSetStorage) -> None:
+        
+    def on_wheel_activate(self, context: Context, wheel_prefs: WheelPrefs, storage: WheelTartaSetStorage, wg_prefs = None) -> None:
         # storage.active_tarta_set.ensure()
         self._active_tarta_set = storage.active_tarta_set
         self._tarta_buttons = self._active_tarta_set.buttons if self._active_tarta_set else []

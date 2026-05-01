@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Callable, Optional, Sequence, Tuple
 
+from ..pg.pg_brush_set import BrushSetPreferences
 from ..pg.pg_wheel_storage import SculptPaintWheelStorage
 
 from ..gpu.utils import compute_slot_positions_in_double_ring, compute_slot_radius_in_double_ring
@@ -28,6 +29,8 @@ COL_TOOLSET_DOT = (0.32, 0.34, 0.38, 0.55)
 
 class BrushSetRing(WidgetRing):
     """Places ``PickerBrushButton`` children on a ring using ``gpu.utils`` layout."""
+    _wg_prefs = BrushSetPreferences
+
     _storage: SculptPaintWheelStorage
     _pickers: list[PickerBrushButton] = []
     _last_active_index: int = -1
@@ -96,10 +99,10 @@ class BrushSetRing(WidgetRing):
             if last_page_index != active_brush_set.page_index:
                 self._rebuild_pickers(context)
 
-    def activate(self, context: Context, prefs: WheelPrefs, storage: SculptPaintWheelStorage) -> None:
+    def on_wheel_activate(self, context: Context, wheel_prefs: WheelPrefs, storage: SculptPaintWheelStorage, wg_prefs: BrushSetPreferences) -> None:
         self._storage = storage
-        self.ring_padding = prefs.brush_set_ring.ring_padding
-        slot_count = prefs.brush_set_ring.slot_count
+        self.ring_padding = wg_prefs.ring_padding
+        slot_count = wg_prefs.slot_count
         if slot_count != self.slot_count:
             self.slot_count = slot_count
             self._sync_picker_slots()
