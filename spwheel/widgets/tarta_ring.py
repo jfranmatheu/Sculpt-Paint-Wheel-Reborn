@@ -8,7 +8,7 @@ from ..pg.pg_wheel_theme import WheelTheme
 from ..pg.pg_wheel_storage import WheelTartaSetStorage
 from ..gpu.button_texture import get_custom_button_texture
 from ..gpu.draw import COL_PIE_TARTA, COL_PIE_TARTA_OP, draw_pie_split_ring, draw_textured_quad, draw_text
-from ..gpu.utils import compute_custom_button_layout_count, compute_slot_positions_in_single_ring, compute_slot_radius_in_single_ring, map_custom_layout_indices
+from ..gpu.utils import compute_custom_button_layout_count, compute_slot_positions_in_single_ring, compute_slot_radius_in_single_ring, draw_circle_fill, map_custom_layout_indices
 from .widget import WidgetRing, WheelPrefs
 from ..pg.pg_tarta_button import WheelTartaButton
 
@@ -26,7 +26,6 @@ def layout_sector_from_pointer(mx: float, my: float, cx: float, cy: float, n: in
 
 class TartaRing(WidgetRing):
     """GPU pie ring + icons; hit-test prefers icon discs then sector wedge."""
-
     _tarta_buttons: list[WheelTartaButton] = []
 
     def init(self) -> None:
@@ -64,9 +63,15 @@ class TartaRing(WidgetRing):
         self.custom_positions = compute_slot_positions_in_single_ring(cx, cy, self.icon_ring_radius, self.layout_n)
 
     def draw(self, context: Context, theme: WheelTheme) -> None:
-        if self.layout_n <= 0 or self.tarta_outer_radius <= 0.0:
-            return
         cx, cy = self.center
+        if self.layout_n <= 0 or self.tarta_outer_radius <= 0.0:
+            draw_circle_fill(
+                cx,
+                cy,
+                self.radius_outer,
+                COL_PIE_TARTA,
+            )
+            return
         kinds2: list[int] = []
         for si in range(self.layout_n):
             bid = self.custom_layout_map[si]
