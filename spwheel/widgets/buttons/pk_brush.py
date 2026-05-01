@@ -16,11 +16,13 @@ class PickerBrushButton(ButtonCircle):
         self._brush_metadata = None
 
     def set_brush_metadata(self, brush_metadata: BrushMetadata, show_label: bool = True) -> None:
+        self.interactable = True
         self._brush_metadata = brush_metadata
         self.icon_gputex = brush_metadata.gputex
         self.label = brush_metadata.name if show_label else ''
 
     def clear_brush_metadata(self) -> None:
+        self.interactable = False
         self._brush_metadata = None
         self.icon_gputex = None
         self.label = ''
