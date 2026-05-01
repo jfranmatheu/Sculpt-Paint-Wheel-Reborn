@@ -11,7 +11,7 @@ class BrushSetPreferences(PropertyGroup):
     slot_count: IntProperty(
         name="Slot Count",
         description="Number of slots in the brush set",
-        default=12,
+        default=14,
         min=8,
         max=20,
     )
