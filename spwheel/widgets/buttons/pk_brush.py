@@ -26,6 +26,8 @@ class PickerBrushButton(ButtonCircle):
         self.label = ''
 
     def on_left_press(self, context: Context, event: Event) -> bool:
+        if self._brush_metadata is None:
+            return False
         self._brush_metadata.activate()
         self.parent.deactivate_all_pickers()
         self.active = True
