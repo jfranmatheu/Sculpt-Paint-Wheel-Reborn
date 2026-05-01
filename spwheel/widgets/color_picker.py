@@ -165,16 +165,38 @@ class ColorPickerWidget(WidgetRing):
         context.region.tag_redraw()
 
     def on_wheel_activate(self, context: "Context", wheel_prefs, storage, wg_prefs=None) -> None:
-        wr = self.radius_outer
-        base_outer = max(28.0, wr * 0.30)
-        gap = max(5.0, wr * 0.028)
-        hue_thick = max(14.0, wr * 0.062)
-        self.hue_inner_r = base_outer + gap
-        self.hue_outer_r = self.hue_inner_r + hue_thick
-        gap2 = max(4.0, wr * 0.022)
-        sv_thick = max(16.0, wr * 0.07)
-        self.sv_inner_r = self.hue_outer_r + gap2
-        self.sv_outer_r = self.sv_inner_r + sv_thick
+        ring_inner = min(self.radius_inner, self.radius_outer)
+        ring_outer = max(self.radius_inner, self.radius_outer)
+        band = max(0.0, ring_outer - ring_inner)
+        if band <= 0.0:
+            self.hue_inner_r = 0.0
+            self.hue_outer_r = 0.0
+            self.sv_inner_r = 0.0
+            self.sv_outer_r = 0.0
+            self._hover_handle = None
+            self._active_handle = None
+            return
+
+        # Build inside the provided annulus so it starts at ring_inner and grows outward.
+        edge_pad = max(2.0, band * 0.02)
+        usable = max(0.0, band - edge_pad * 2.0)
+        if usable <= 0.0:
+            self.hue_inner_r = ring_inner
+            self.hue_outer_r = ring_inner
+            self.sv_inner_r = ring_inner
+            self.sv_outer_r = ring_inner
+            self._hover_handle = None
+            self._active_handle = None
+            return
+
+        gap = max(2.0, min(6.0, usable * 0.06))
+        hue_thick = max(8.0, (usable - gap) * 0.42)
+        sv_thick = max(8.0, usable - gap - hue_thick)
+
+        self.hue_inner_r = ring_inner + edge_pad
+        self.hue_outer_r = min(ring_outer - edge_pad, self.hue_inner_r + hue_thick)
+        self.sv_inner_r = min(ring_outer - edge_pad, self.hue_outer_r + gap)
+        self.sv_outer_r = min(ring_outer - edge_pad, self.sv_inner_r + sv_thick)
         self._hover_handle = None
         self._active_handle = None
 
