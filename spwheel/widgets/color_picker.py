@@ -14,7 +14,7 @@ from ..gpu.colpk_helpers import (
     colpk_linked_preview_enabled,
 )
 from ..gpu.utils import draw_circle_fill, draw_ring
-from .core import Widget
+from .widget import Widget
 
 if TYPE_CHECKING:
     from bpy.types import Context
