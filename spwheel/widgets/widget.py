@@ -231,18 +231,30 @@ class WidgetRing(Widget):
     def center(self) -> Vector:
         return self.offset
 
-    def set_transform(self, offset_x: float, offset_y: float, radius: float, thickness: float) -> None:
+    def set_transform(self, offset_x: float, offset_y: float, inner_radius: float, outer_radius: float) -> None:
+        # negative thickness means radius is radius_outer, positive thickness means radius is radius_inner.
         self.offset = Vector((offset_x, offset_y))
-        if radius > 1.0:
-            self.radius_outer = radius
+        if inner_radius > 1.0:
+            self.radius_inner = inner_radius
         else:
             wheel = self.wheel
-            self.radius_outer = wheel.radius * radius
-        if thickness > 1.0:
-            self.thickness = thickness
+            self.radius_inner = wheel.radius * inner_radius
+        if outer_radius > 1.0:
+            self.radius_outer = outer_radius
         else:
-            self.thickness = self.radius_outer * thickness
-        self.radius_inner = self.radius_outer - self.thickness
+            wheel = self.wheel
+            self.radius_outer = wheel.radius * outer_radius
+        self.thickness = self.radius_outer - self.radius_inner
+
+    def set_transform_thickness(self, radius: float, thickness: float) -> None:
+        # ONLY absolute (non-relative to the wheel radius) thickness is used.
+        if radius <= 1.0:
+            wheel = self.wheel
+            radius = wheel.radius * radius
+        other_radius = radius + thickness
+        self.radius_inner = min(radius, other_radius)
+        self.radius_outer = max(radius, other_radius)
+        self.thickness = self.radius_outer - self.radius_inner
 
     def test_hit(self, context: Context, p: Vector) -> bool:
         if not (p.x - self.center.x) ** 2 + (p.y - self.center.y) ** 2 <= self.radius_outer ** 2:

@@ -20,7 +20,7 @@ class BrushSetPreferences(PropertyGroup):
     slot_padding: FloatProperty(
         name="Slot Padding",
         description="Padding between neighbor brush slots",
-        default=8.0,
+        default=11.0,
         min=0.0,
         max=20.0,
     )
