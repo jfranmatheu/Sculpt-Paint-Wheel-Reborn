@@ -211,8 +211,10 @@ class BrushSetRing(WidgetRing):
         active_brush_set: BrushSet = self.active_brush_set
         if not active_brush_set:
             return
+        if self.slot_count <= 0:
+            return
         page_index = active_brush_set.page_index
-        page_count = (len(active_brush_set.items) + self.slot_count - 1) // self.slot_count - 1
+        page_count = (len(active_brush_set.items) + self.slot_count - 1) // self.slot_count
         if page_count <= 1:
             return
         wheel = self.wheel
