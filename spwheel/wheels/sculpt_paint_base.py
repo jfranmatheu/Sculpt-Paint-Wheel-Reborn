@@ -4,10 +4,14 @@ from .wheel import Wheel
 from ..widgets.brush_set_ring import BrushSetRing
 from ..widgets.tarta_ring import TartaRing
 from ..pg.pg_wheel_storage import SculptPaintWheelStorage
+from ..widgets.color_picker import ColorPickerWidget
+
 
 
 class SculptPaintWheel(Wheel):
     brush_set_ring: BrushSetRing
+    tarta_ring: TartaRing
+    color_picker: ColorPickerWidget
 
     def setup(self, context: Context) -> None:
         brush_set_ring = BrushSetRing()
