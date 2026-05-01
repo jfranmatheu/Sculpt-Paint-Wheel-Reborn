@@ -30,9 +30,13 @@ class Widget:
     def wheel(self) -> "Wheel":
         if self.parent is None:
             raise ValueError("Widget must have a parent to get the wheel")
-        if isinstance(self.parent, Wheel):
+        if self.is_wheel_child:
             return self.parent
         return self.parent.wheel
+
+    @property
+    def is_wheel_child(self) -> bool:
+        return isinstance(self.parent, Wheel)
 
     def __init__(self):
         self.children = []
