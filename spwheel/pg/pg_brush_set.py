@@ -8,12 +8,21 @@ from ..ui.lists.ul_brush_metadata_list import BrushMetadataList
 
 
 class BrushSetPreferences(PropertyGroup):
-    slot_count: IntProperty(
-        name="Slot Count",
-        description="Number of slots in the brush set",
-        default=14,
-        min=8,
-        max=20,
+
+    slot_size: FloatProperty(
+        name="Slot Size",
+        description="Size of each brush slot",
+        default=48.0,
+        min=24.0,
+        max=92.0,
+    )
+
+    slot_padding: FloatProperty(
+        name="Slot Padding",
+        description="Padding between neighbor brush slots",
+        default=8.0,
+        min=0.0,
+        max=20.0,
     )
 
     ring_padding: IntProperty(

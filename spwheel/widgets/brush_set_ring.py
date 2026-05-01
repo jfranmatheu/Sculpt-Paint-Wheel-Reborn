@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
+from math import asin, pi
 from typing import TYPE_CHECKING, Callable, Optional, Sequence, Tuple
 
 from ..pg.pg_brush_set import BrushSetPreferences
 from ..pg.pg_wheel_storage import SculptPaintWheelStorage
 
-from ..gpu.utils import compute_slot_positions_in_double_ring, compute_slot_radius_in_double_ring
+from ..gpu.utils import compute_slot_positions_in_double_ring
 
 from .buttons.pk_brush import PickerBrushButton
 from .widget import WidgetRing
@@ -36,6 +37,24 @@ class BrushSetRing(WidgetRing):
     _last_active_index: int = -1
 
     interactable = False
+
+    @staticmethod
+    def _compute_layout_count_from_slot_radius(
+        center_radius: float,
+        slot_radius: float,
+        slot_padding: float = 0.0,
+    ) -> int:
+        """Compute how many slots can fit around *center_radius* with tangential padding."""
+        if center_radius <= 0.0 or slot_radius <= 0.0:
+            return 0
+        effective_radius = slot_radius + max(0.0, slot_padding) * 0.5
+        if effective_radius >= center_radius:
+            return 1
+        ratio = max(0.0, min(1.0, effective_radius / center_radius))
+        angle = asin(ratio)
+        if angle <= 0.0:
+            return 0
+        return max(1, int(pi / angle))
 
     def init(self) -> None:
         super().init()
@@ -68,11 +87,13 @@ class BrushSetRing(WidgetRing):
             if self._storage.active_brush_set_index >= len(self.brush_sets):
                 self._storage.active_brush_set_index = 0
             if self._last_active_index != self.active_brush_set_index:
-                self._rebuild_pickers()
+                self._rebuild_pickers(context)
         else:
             # Scroll up: change to next page.
             active_brush_set: BrushSet = self.active_brush_set
             slot_count: int = self.slot_count
+            if slot_count <= 0:
+                return
             max_page_index = (len(active_brush_set.items) + slot_count - 1) // slot_count - 1
             last_page_index = active_brush_set.page_index
             active_brush_set.page_index += 1
@@ -92,6 +113,8 @@ class BrushSetRing(WidgetRing):
         else:
             # Scroll down: change to previous page.
             active_brush_set: BrushSet = self.active_brush_set
+            if self.slot_count <= 0:
+                return
             last_page_index = active_brush_set.page_index
             active_brush_set.page_index -= 1
             if active_brush_set.page_index < 0:
@@ -101,11 +124,9 @@ class BrushSetRing(WidgetRing):
 
     def on_wheel_activate(self, context: Context, wheel_prefs: WheelPrefs, storage: SculptPaintWheelStorage, wg_prefs: BrushSetPreferences) -> None:
         self._storage = storage
+        self.wg_prefs = wg_prefs
         self.ring_padding = wg_prefs.ring_padding
-        slot_count = wg_prefs.slot_count
-        if slot_count != self.slot_count:
-            self.slot_count = slot_count
-            self._sync_picker_slots()
+        self._sync_picker_slots()
         self._rebuild_pickers(context)
 
     def deactivate_all_pickers(self) -> None:
@@ -115,6 +136,8 @@ class BrushSetRing(WidgetRing):
     def get_page_brushes_metadata(self) -> list[BrushMetadata]:
         active_brush_set: BrushSet = self.active_brush_set
         slot_count: int = self.slot_count
+        if slot_count <= 0:
+            return []
         start_index = active_brush_set.page_index * slot_count
         end_index = start_index + slot_count
         if end_index > len(active_brush_set.items):
@@ -129,7 +152,15 @@ class BrushSetRing(WidgetRing):
             self.remove_child(p, free=True)
         self._pickers.clear()
 
-        count = self.slot_count
+        inner = min(self.radius_inner, self.radius_outer) + self.ring_padding
+        outer = max(self.radius_inner, self.radius_outer) - self.ring_padding
+        radial_space = max(0.0, outer - inner)
+        center_radius = 0.5 * (inner + outer)
+        preferred_slot_radius = max(0.0, self.wg_prefs.slot_size * 0.5)
+        slot_r = min(preferred_slot_radius, radial_space * 0.5)
+        slot_padding = max(0.0, self.wg_prefs.slot_padding)
+        count = self._compute_layout_count_from_slot_radius(center_radius, slot_r, slot_padding)
+        self.slot_count = count
         if count == 0:
             if USE_DEBUG:
                 print("No pickers to sync")
@@ -137,7 +168,6 @@ class BrushSetRing(WidgetRing):
 
         # Compute slot positions and radius.
         cx, cy = self.center
-        slot_r = compute_slot_radius_in_double_ring(self.radius_inner, self.radius_outer, count, ring_padding=self.ring_padding)
         positions = compute_slot_positions_in_double_ring(cx, cy, self.radius_inner, self.radius_outer, count)
 
         # Create and position pickers.
@@ -167,6 +197,12 @@ class BrushSetRing(WidgetRing):
             return
 
         # Get brushes metadata for the current page.
+        slot_count = self.slot_count
+        if slot_count <= 0:
+            return
+        max_page_index = max(0, (len(self.active_brush_set.items) + slot_count - 1) // slot_count - 1)
+        if self.active_brush_set.page_index > max_page_index:
+            self.active_brush_set.page_index = max_page_index
         brushes_metadata = self.get_page_brushes_metadata()
         # Set brush metadata for each picker.
         for i, pb in enumerate(self._pickers):

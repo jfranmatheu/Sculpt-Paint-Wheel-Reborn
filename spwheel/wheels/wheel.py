@@ -35,7 +35,7 @@ class Wheel:
 
     def __init__(self, context: Context) -> None:
         self.center = Vector((0.0, 0.0))
-        self.radius = 200
+        self.radius = 210
         self._widgets: list["Widget"] = []
         self.hovered_widget: "Widget" | None = None
         self._event_subscriptions: CallbackDict = CallbackDict()
