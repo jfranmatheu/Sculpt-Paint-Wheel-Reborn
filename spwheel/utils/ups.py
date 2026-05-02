@@ -50,7 +50,11 @@ def get_ups_strength(context: Optional[Context] = None) -> float | None: return 
 def set_ups_strength(context: Context, strength: float = 0.5): _set_ups_attr(context, "strength", strength)
 
 def get_ups_color(context: Optional[Context] = None) -> float | None: return _get_ups_attr(context, "color")
+def get_ups_color_hsv(context: Optional[Context] = None) -> float | None: return _get_ups_attr(context, "color").hsv
 def set_ups_color(context: Context, color: tuple[float, float, float, float] = (0.0, 0.0, 0.0)): _set_ups_attr(context, "color", color)
+def set_ups_color_hsv(context: Context, h: float, s: float, v: float):
+    color_attr = _get_ups_attr(context, "color")
+    color_attr.hsv = (h, s, v)
 
 def get_ups_weight(context: Optional[Context] = None) -> float | None: return _get_ups_attr(context, "weight")
 def set_ups_weight(context: Context, weight: float = 0.5): _set_ups_attr(context, "weight", weight)

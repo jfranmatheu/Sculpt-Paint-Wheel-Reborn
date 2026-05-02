@@ -1,12 +1,11 @@
 """HSV ring + arcs + handles; samples color via host ``HsvSampleProvider`` (mode-agnostic)."""
-from colorsys import hsv_to_rgb, rgb_to_hsv
 import math
 from typing import TYPE_CHECKING
 
 from mathutils import Vector
 
 from ..pg.pg_wheel_theme import WheelTheme
-from ..utils.ups import get_ups_color, set_ups_color
+from ..utils.ups import get_ups_color_hsv, set_ups_color_hsv
 from ..gpu.colpk import draw_colpk_hue_ring, draw_colpk_sat_arc, draw_colpk_val_arc
 from ..gpu.colpk_helpers import (
     S_ANGLE_BOT,
@@ -67,10 +66,10 @@ class ColorPickerWidget(WidgetRing):
 
     @staticmethod
     def _normalized_hsv(context: "Context") -> tuple[float, float, float]:
-        rgba_color = get_ups_color(context)
-        if rgba_color is None:
+        hsv_color = get_ups_color_hsv(context)
+        if hsv_color is None:
             return (0.0, 0.0, 0.0)
-        h, s, v = rgb_to_hsv(*rgba_color[:3])
+        h, s, v = hsv_color
         return (
             ColorPickerWidget._clamp01(h),
             ColorPickerWidget._clamp01(s),
@@ -160,8 +159,7 @@ class ColorPickerWidget(WidgetRing):
             ang = max(V_ANGLE_BOT, min(V_ANGLE_TOP, ang))
             v = self._clamp01((V_ANGLE_TOP - ang) / max(1e-8, (V_ANGLE_TOP - V_ANGLE_BOT)))
 
-        r, g, b = hsv_to_rgb(self._clamp01(h), self._clamp01(s), self._clamp01(v))
-        set_ups_color(context, (r, g, b))
+        set_ups_color_hsv(context, self._clamp01(h), self._clamp01(s), self._clamp01(v))
         context.region.tag_redraw()
 
     def on_wheel_activate(self, context: "Context", wheel_prefs, storage, wg_prefs=None) -> None:
@@ -202,9 +200,6 @@ class ColorPickerWidget(WidgetRing):
 
     def draw(self, context: "Context", theme: WheelTheme) -> None:
         if self.hue_outer_r <= 0.0:
-            return
-        rgba_color = get_ups_color(context)
-        if rgba_color is None:
             return
         cx, cy = self.center
         h, s, v = self._normalized_hsv(context)
