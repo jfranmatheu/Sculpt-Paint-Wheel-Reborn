@@ -156,12 +156,14 @@ class WheelStorage(PropertyGroup):
         self.is_initialized = True
 
         for key in ('sculpt', ): #, 'paint_texture', 'weight'):
-            '''if def_tarta_set := get_tarta_set(key):
-                tarta_storage: WheelTartaSetStorage = getattr(self, key)
-                def_tarta_set: WheelTartaSet = tarta_storage.active_tarta_set()
-                for tool_set in def_tarta_set:
-                    def_tarta_set.add_tarta_button_from_metadata(tool_set)'''
             mode = key.upper()
+            if default_tarta_buttons := get_tarta_set(mode):
+                tarta_storage: WheelTartaSetStorage = getattr(self, key)
+                def_tarta_set: WheelTartaSet = tarta_storage.add_tarta_set()
+                def_tarta_set.name = "Default Set"
+                for button_meta in default_tarta_buttons:
+                    def_tarta_set.add_tarta_button_from_metadata(button_meta)
+
             if default_brush_names := get_brush_set(mode):
                 brush_storage: WheelBrushSetStorage = getattr(self, key)
                 def_brush_set: BrushSet = brush_storage.add_brush_set()

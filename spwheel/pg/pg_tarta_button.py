@@ -1,4 +1,5 @@
 import datetime
+import ast
 import bpy
 from bpy.props import EnumProperty, StringProperty
 from bpy.types import Context
@@ -82,9 +83,46 @@ class WheelTartaButton(PropertyGroup):
             with open(_cache_root, "w") as f:
                 f.write(script_text)
 
+    @staticmethod
+    def _resolve_op_call(operator_id: str):
+        if not operator_id:
+            return None
+        op_ref = bpy.ops
+        for part in operator_id.split('.'):
+            op_ref = getattr(op_ref, part, None)
+            if op_ref is None:
+                return None
+        return op_ref
+
+    @staticmethod
+    def _parse_operator_kwargs(payload: str) -> dict:
+        if not payload:
+            return {}
+        kwargs = {}
+        for part in payload.split(','):
+            chunk = part.strip()
+            if not chunk or '=' not in chunk:
+                continue
+            key, value = chunk.split('=', 1)
+            key = key.strip()
+            value = value.strip()
+            if not key:
+                continue
+            try:
+                kwargs[key] = ast.literal_eval(value)
+            except (ValueError, SyntaxError):
+                kwargs[key] = value
+        return kwargs
+
     def __call__(self, context: Context) -> None:
         if self.is_operator:
-            if op_call := getattr(bpy.ops, self.operator_id):
+            op_call = self._resolve_op_call(self.operator_id)
+            if op_call is None:
+                return
+            kwargs = self._parse_operator_kwargs(self.attr)
+            if kwargs:
+                op_call(**kwargs)
+            else:
                 op_call()
         elif self.is_script:
             if self.script_sorce == "INLINE":
@@ -95,12 +133,8 @@ class WheelTartaButton(PropertyGroup):
                     script_text = f.read()
                 exec(script_text, {"bpy": bpy})
         elif self.is_popup_menu:
-            if self.is_custom_popup:
-                context.window_manager.popup_menu(self.operator_id)
-            else:
-                bpy.ops.wm.call_menu(name=self.popup_type)
+            if self.operator_id:
+                bpy.ops.wm.call_menu(name=self.operator_id)
         elif self.is_popup_panel:
-            if self.is_custom_popup:
-                context.window_manager.popover(self.operator_id)
-            else:
-                bpy.ops.wm.call_panel(name=self.popup_type)
+            if self.operator_id:
+                bpy.ops.wm.call_panel(name=self.operator_id)
