@@ -1,6 +1,6 @@
 from os.path import dirname, join
 
-icons_dir = join(dirname(dirname(dirname(__file__))), 'images', "custom_buttons")
+icons_dir = join(dirname(dirname(dirname(__file__))), "assets", 'images', "custom_buttons")
 
 def_sculpt_tools = (
     "Draw",
@@ -9,14 +9,20 @@ def_sculpt_tools = (
     "Inflate/Deflate",
     "Crease Polish",
     "Crease Sharp",
+    "Blob",
+    "Inflate/Deflate",
+    "Layer",
+    "Fill/Deepen",
+    "Flatten/Contrast",
     "Plateau",
     "Scrape Multiplane",
+    "Scrape/Fill",
     "Pinch/Magnify",
     "Grab",
     "Elastic Grab",
     "Pose",
-    "Mask",
-    "Face Set Paint",
+    # "Mask",
+    # "Face Set Paint",
 )
 
 def_sculpt_buttons = (
