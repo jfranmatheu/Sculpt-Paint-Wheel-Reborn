@@ -54,8 +54,10 @@ class WheelModal(bl_types.OperatorModal):
         if event.type in {'ESC', 'RIGHTMOUSE'}:
             return OpReturn.CANCEL
 
-        if event.type == 'SPACE' and event.value == 'RELEASE':
-            return OpReturn.FINISH
+        if event.type == 'SPACE':
+            if event.value == 'RELEASE':
+                return OpReturn.FINISH
+            return OpReturn.RUN
 
         if event.type == 'LEFTMOUSE' and event.value == 'PRESS':
             if not self.wheel_is_hovered:
