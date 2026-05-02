@@ -116,7 +116,7 @@ class TartaRing(WidgetRing):
         hovered_button(context)
         return True
 
-    def sync_hover(self, mx: float, my: float) -> None:
+    def sync_hover(self, context: Context, mx: float, my: float) -> None:
         self.hover_layout_slot = -1
         self.hover_custom_bid = -1
         if self.layout_n <= 0:
@@ -133,6 +133,7 @@ class TartaRing(WidgetRing):
             if math.hypot(mx - sx, my - sy) <= self.custom_radius:
                 self.hover_custom_bid = bid
                 self.hover_layout_slot = i
+                context.region.tag_redraw()
                 return
 
         r_pt = math.hypot(mx - cx, my - cy)
@@ -143,9 +144,10 @@ class TartaRing(WidgetRing):
                 if bid >= 0:
                     self.hover_custom_bid = bid
                     self.hover_layout_slot = si
+                    context.region.tag_redraw()
 
     def test_hit(self, context: Context, p: Vector) -> bool:
-        self.sync_hover(p.x, p.y)
+        self.sync_hover(context, p.x, p.y)
         if self.hover_custom_bid >= 0:
             return True
         return False
