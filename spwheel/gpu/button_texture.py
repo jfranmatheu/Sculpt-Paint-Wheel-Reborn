@@ -21,10 +21,12 @@ def get_custom_button_texture(path: str) -> Optional[gpu.types.GPUTexture]:
     try:
         img = bpy.data.images.load(norm, check_existing=True)
     except Exception:
+        print(f"WARN! Failed to load custom-button image: {norm}")
         return None
     try:
         tex = gpu.texture.from_image(img)
     except Exception:
+        print(f"WARN! Failed to create custom-button texture: {norm}")
         return None
     _texture_cache[norm] = tex
     return tex
