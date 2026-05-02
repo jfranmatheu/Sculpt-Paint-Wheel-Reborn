@@ -60,7 +60,7 @@ class TartaRing(WidgetRing):
         self.tarta_inner_ratio = min(0.92, 42.0 / max(self.tarta_outer_radius, 1.0))
         self.icon_ring_radius = self.tarta_outer_radius * 0.72
         self.custom_radius = compute_slot_radius_in_single_ring(self.icon_ring_radius, self.layout_n) * 0.88
-        self.custom_positions = compute_slot_positions_in_single_ring(cx, cy, self.icon_ring_radius, self.layout_n)
+        self.custom_positions = compute_slot_positions_in_single_ring(cx, cy, self.icon_ring_radius, self.layout_n, self.custom_radius)
 
     def draw(self, context: Context, theme: WheelTheme) -> None:
         cx, cy = self.center
