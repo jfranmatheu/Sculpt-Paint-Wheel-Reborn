@@ -62,7 +62,7 @@ class ColorPickerWidget(WidgetRing):
 
     @staticmethod
     def _clamp01(v: float) -> float:
-        return max(0.0, min(1.0, v))
+        return max(0.0001, min(1.0, v))
 
     @staticmethod
     def _normalized_hsv(context: "Context") -> tuple[float, float, float]:
