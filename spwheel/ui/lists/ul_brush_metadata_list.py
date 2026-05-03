@@ -51,7 +51,12 @@ class BrushMetadataList(UIList):
         # this will also make the row easily selectable in the list! The later also enables ctrl-click rename.
         # We use icon_value of label, as our given icon is an integer value, not an enum ID.
         # Note "data" names should never be translated!
-        if brush := item.brush:
-            layout.label(text=brush.name, icon_value=UILayout.icon(brush))
+        brush = item.brush
+        label = brush.name if brush else item.name
+        icon_id = item.icon_id
+        if icon_id:
+            layout.label(text=label, icon_value=icon_id)
+        elif brush:
+            layout.label(text=label, icon_value=UILayout.icon(brush))
         else:
-            layout.label(text=item.name, icon='BRUSH_DATA')
+            layout.label(text=label, icon='BRUSH_DATA')

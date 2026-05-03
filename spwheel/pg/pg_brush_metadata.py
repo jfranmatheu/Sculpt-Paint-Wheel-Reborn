@@ -1,4 +1,5 @@
 import re
+import os
 import bpy
 from bpy.props import FloatVectorProperty, IntProperty, StringProperty
 from bpy.types import Brush, AssetWeakReference, Context
@@ -100,6 +101,68 @@ class BrushMetadata(PropertyGroup):
     @property
     def brush(self) -> Brush:
         return bpy.data.brushes.get(self.name)
+
+    def _resolve_asset_library_root(self) -> str | None:
+        if self.asset_library_type == "ESSENTIALS":
+            datafiles = bpy.utils.system_resource("DATAFILES")
+            if not datafiles:
+                return None
+            return os.path.join(datafiles, "assets")
+
+        lib_id = self.asset_library_identifier
+        if not lib_id:
+            return None
+        prefs = bpy.context.preferences
+        asset_libraries = getattr(prefs.filepaths, "asset_libraries", None)
+        if not asset_libraries:
+            return None
+        for lib in asset_libraries:
+            if lib.name == lib_id:
+                return lib.path
+        return None
+
+    def get_asset_blend_file_abs_path(self) -> str | None:
+        rel = (self.relative_asset_identifier or "").replace("\\", "/")
+        blend_marker = ".blend/"
+        marker_idx = rel.lower().find(blend_marker)
+        if marker_idx == -1:
+            return None
+        blend_rel = rel[: marker_idx + len(".blend")]
+        root = self._resolve_asset_library_root()
+        if root is None:
+            return None
+        blend_abs = os.path.normpath(os.path.join(root, blend_rel.replace("/", os.sep)))
+        if os.path.isfile(blend_abs):
+            return blend_abs
+        return None
+
+    def get_any_brush(self) -> Brush | None:
+        if brush := self.brush:
+            return brush
+        blend_abs = self.get_asset_blend_file_abs_path()
+        if not blend_abs:
+            return None
+        brushes = bpy.data.brushes
+        try:
+            brush = brushes.get((self.name, blend_abs))
+            if brush is not None:
+                return brush
+        except Exception:
+            pass
+        try:
+            return brushes[(self.name, blend_abs)]
+        except Exception:
+            return None
+
+    @property
+    def icon_id(self) -> int:
+        brush = self.get_any_brush()
+        if brush is None:
+            return 0
+        preview = brush.preview or brush.preview_ensure()
+        if preview is None:
+            return 0
+        return int(getattr(preview, "icon_id", 0) or 0)
 
     @property
     def is_brush_loaded(self) -> bool:
