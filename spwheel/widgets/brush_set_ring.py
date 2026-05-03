@@ -36,7 +36,8 @@ class BrushSetRing(WidgetRing):
     _pickers: list[PickerBrushButton] = []
     _last_active_index: int = -1
 
-    interactable = False
+    interactable = True
+    use_modal = True
 
     @staticmethod
     def _compute_layout_count_from_slot_radius(
@@ -61,6 +62,10 @@ class BrushSetRing(WidgetRing):
         self._pickers = []
         self.slot_count = 0
         self._last_active_index = -1
+        self._is_page_dragging = False
+        self._page_drag_start_x = 0.0
+        self._page_drag_steps_applied = 0
+        self._page_drag_step_px = 14.0
 
     @property
     def active_brush_set(self) -> Optional[BrushSet]:
@@ -221,6 +226,83 @@ class BrushSetRing(WidgetRing):
             
         context.region.tag_redraw()
 
+    def _get_page_indicator_layout(self) -> tuple[int, int, float, float, float, float, float] | None:
+        active_brush_set: BrushSet = self.active_brush_set
+        if not active_brush_set:
+            return None
+        if self.slot_count <= 0:
+            return None
+        page_count = (len(active_brush_set.items) + self.slot_count - 1) // self.slot_count
+        if page_count <= 1:
+            return None
+        page_index = max(0, min(active_brush_set.page_index, page_count - 1))
+        wheel = self.wheel
+        dot_radius = 3.0
+        spacing = min(10.0, max(5.0, 180.0 / max(page_count, 1)))
+        total_w = (page_count - 1) * spacing
+        start_x = -total_w * 0.5
+        dot_y = -wheel.radius - 14.0
+        return (page_index, page_count, dot_radius, spacing, start_x, dot_y, total_w)
+
+    def _step_page(self, context: Context, delta: int) -> bool:
+        if delta == 0:
+            return False
+        active_brush_set: BrushSet = self.active_brush_set
+        if not active_brush_set:
+            return False
+        slot_count = self.slot_count
+        if slot_count <= 0:
+            return False
+        max_page_index = max(0, (len(active_brush_set.items) + slot_count - 1) // slot_count - 1)
+        last_page_index = active_brush_set.page_index
+        active_brush_set.page_index = max(0, min(max_page_index, active_brush_set.page_index + delta))
+        if active_brush_set.page_index != last_page_index:
+            self._rebuild_pickers(context)
+            return True
+        return False
+
+    def test_hit(self, context: Context, p) -> bool:
+        layout = self._get_page_indicator_layout()
+        if layout is None:
+            return False
+        _page_index, _page_count, dot_radius, _spacing, _start_x, dot_y, total_w = layout
+        # Thin horizontal target around page dots; low-risk and tablet friendly.
+        half_w = total_w * 0.5 + 16.0
+        if abs(p.y - dot_y) > max(14.0, dot_radius * 4.0):
+            return False
+        return -half_w <= p.x <= half_w
+
+    def on_left_press(self, context: Context, event: Event) -> bool:
+        mx, _my = self.wheel.to_local(event.mouse_region_x, event.mouse_region_y)
+        self._is_page_dragging = True
+        self._page_drag_start_x = mx
+        self._page_drag_steps_applied = 0
+        layout = self._get_page_indicator_layout()
+        if layout is not None:
+            _page_index, _page_count, dot_radius, spacing, _start_x, _dot_y, _total_w = layout
+            self._page_drag_step_px = max(12.0, spacing + dot_radius * 1.2)
+        return True
+
+    def modal(self, context: Context, event: Event) -> bool:
+        if not self._is_page_dragging:
+            return False
+        if event.type in {'MOUSEMOVE', 'INBETWEEN_MOUSEMOVE'}:
+            mx, _my = self.wheel.to_local(event.mouse_region_x, event.mouse_region_y)
+            dx = mx - self._page_drag_start_x
+            target_steps = int(dx / max(1.0, self._page_drag_step_px))
+            delta_steps = target_steps - self._page_drag_steps_applied
+            if delta_steps != 0:
+                self._page_drag_steps_applied = target_steps
+                self._step_page(context, delta_steps)
+            return True
+        if event.type == 'LEFTMOUSE' and event.value == 'RELEASE':
+            self._is_page_dragging = False
+            return False
+        if event.type in {'RIGHTMOUSE', 'ESC'} and event.value == 'PRESS':
+            self._is_page_dragging = False
+            return False
+        return True
+
     def draw(self, context: Context, theme: WheelTheme) -> None:
         draw_ring(*self.offset, self.radius_outer, theme.base_outline_color, thickness=1.25)
         draw_ring(*self.offset, self.radius_inner, theme.base_outline_color, thickness=1.25)
@@ -247,21 +329,10 @@ class BrushSetRing(WidgetRing):
         )
 
     def draw_page_indicator(self, context: Context, theme: WheelTheme) -> None:
-        active_brush_set: BrushSet = self.active_brush_set
-        if not active_brush_set:
+        layout = self._get_page_indicator_layout()
+        if layout is None:
             return
-        if self.slot_count <= 0:
-            return
-        page_index = active_brush_set.page_index
-        page_count = (len(active_brush_set.items) + self.slot_count - 1) // self.slot_count
-        if page_count <= 1:
-            return
-        wheel = self.wheel
-        dot_radius = 3.0
-        spacing = min(10.0, max(5.0, 180.0 / max(page_count, 1)))
-        total_w = (page_count - 1) * spacing
-        start_x = -total_w * 0.5
-        dot_y = -wheel.radius - 14.0
+        page_index, page_count, dot_radius, spacing, start_x, dot_y, _total_w = layout
         for i in range(page_count):
             dx = start_x + i * spacing
             col = COL_TOOLSET_DOT_ACTIVE if i == page_index else COL_TOOLSET_DOT
