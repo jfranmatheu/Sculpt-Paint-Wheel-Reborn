@@ -418,18 +418,21 @@ def draw_colpk_sv_swatches(
     draw_circle_fill(center[0], center[1], swap_r, fill, softness=0.12)
     # draw_ring(center[0], center[1], swap_r, out, thickness=1.0, softness=0.06)
 
-    # White arrows icon (no text): top arrow points right, bottom arrow points left.
+    # White swap arrows icon (no text), sized for legibility at small radii.
     x, y = center
-    arm = swap_r * 0.60
-    ah = swap_r * 0.24
-    dy = swap_r * 0.22
+    shaft = swap_r * 0.8
+    head = swap_r * 0.5
+    dy = swap_r * 0.4
+    tip_inset = swap_r * 0.05
     lines = [
-        (x - arm, y + dy), (x + arm, y + dy),
-        (x + arm, y + dy), (x + arm - ah, y + dy + ah),
-        (x + arm, y + dy), (x + arm - ah, y + dy - ah),
-        (x + arm, y - dy), (x - arm, y - dy),
-        (x - arm, y - dy), (x - arm + ah, y - dy + ah),
-        (x - arm, y - dy), (x - arm + ah, y - dy - ah),
+        # Top arrow (->)
+        (x - shaft, y + dy), (x + shaft - tip_inset, y + dy),
+        (x + shaft, y + dy), (x + shaft - head, y + dy + head * 0.62),
+        (x + shaft, y + dy), (x + shaft - head, y + dy - head * 0.62),
+        # Bottom arrow (<-)
+        (x + shaft, y - dy), (x - shaft + tip_inset, y - dy),
+        (x - shaft, y - dy), (x - shaft + head, y - dy + head * 0.62),
+        (x - shaft, y - dy), (x - shaft + head, y - dy - head * 0.62),
     ]
-    draw_lines(lines, (1.0, 1.0, 1.0, 0.95), line_width=1.3, strip=False)
+    draw_lines(lines, (1.0, 1.0, 1.0, 0.98), line_width=max(1.6, swap_r * 0.20), strip=False)
     return center, swap_r
