@@ -4,6 +4,7 @@ from ...core.bl_types import PanelTypes
 from ...pg.pg_wheel_storage import WheelStorage, WheelTartaSetStorage
 from ...pg.pg_tarta_set import WheelTartaSet
 from ...pg.pg_create_tarta_button import CreateTartaButton
+from ...pg.pg_wm import PG_WM
 from ...ui.lists.ul_tarta_button_list import TartaButtonList
 from ...ops.op_tarta_set_list import OpTartaSetListAdd, OpTartaSetListRemove
 from ...ops.op_tarta_button import OpTartaButtonAdd, OpTartaButtonMove, OpTartaButtonRemove
@@ -34,12 +35,17 @@ class WheelTartaButtonsPanel(PanelTypes.VIEW_3D_SIDEBAR):
         row = layout.row(align=True)
         row.prop(wheel_storage, "tarta_sets_enum", text="")
         row.popover(WheelTartaSetOptionsPopover.bl_idname, text="", icon='PROPERTIES')
-        row.operator(OpTartaSetListAdd.bl_idname, text="", icon='ADD')
+        row.separator()
+        row.operator(OpTartaSetListAdd.bl_idname, text="", icon='COLLECTION_NEW')
 
     def draw_button_list(self, active_tarta_set: WheelTartaSet, layout: UILayout):
         row = layout.row(align=True)
         TartaButtonList.draw_list(row, active_tarta_set, 'buttons', 'active_button_index')
         col = row.column(align=True)
+        col.ui_units_x = 1
+        sep_box = col.box()
+        sep_box.scale_y = 0.5
+        sep_box.label(text='', icon='BLANK1')
         col.operator(OpTartaButtonMove.bl_idname, text="", icon='TRIA_UP').direction = 1
         col.operator(OpTartaButtonMove.bl_idname, text="", icon='TRIA_DOWN').direction = -1
         col.separator()
@@ -93,6 +99,12 @@ class WheelTartaButtonsPanel(PanelTypes.VIEW_3D_SIDEBAR):
         main = layout.column()
         lists_col = main.column(align=True)
         self.draw_set_selector_row(wheel_storage, lists_col)
+        
+        wm_props = PG_WM.get(context)
+        print("wm_props:", wm_props)
+        sep_row = lists_col.row(align=True)
+        sep_row.scale_y = 0.1
+        sep_row.prop(wm_props, "sep_color_custom_buttons_set", text="")
 
         if active_tarta_set := wheel_storage.active_tarta_set:
             self.draw_button_list(active_tarta_set, lists_col)
