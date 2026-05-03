@@ -1,9 +1,8 @@
 """Operators for tarta button CRUD actions."""
 
-from bpy.props import IntProperty
+from bpy.props import EnumProperty, IntProperty, StringProperty
 
 from ..core.bl_types import OperatorAction
-from ..pg.pg_create_tarta_button import CreateTartaButton
 from ..pg.pg_wheel_storage import WheelStorage, WheelTartaSetStorage
 from ..wheels.presets import preset_type_per_mode
 
@@ -72,35 +71,152 @@ class OpTartaButtonAdd(OperatorAction, OpPollActiveSet):
     """Create a new button in the active custom-button set."""
     bl_label = "Add Button"
 
-    def action(self, context, event):
+    def enum_preset_menus(self, context):
+        if context is not None and (presets := preset_type_per_mode.get(context.mode, None)):
+            return [(a, b, c or "") for a, b, c in presets[0]]
+        return [("VIEW3D_MT_sculpt", "Sculpt Menu", "")]
+
+    def enum_preset_panels(self, context):
+        if context is not None and (presets := preset_type_per_mode.get(context.mode, None)):
+            return [(a, b, c or "") for a, b, c in presets[1]]
+        return [("VIEW3D_PT_tools_brush_settings_advanced", "Advanced Settings", "")]
+
+    def enum_preset_operators(self, context):
+        if context is not None and (presets := preset_type_per_mode.get(context.mode, None)):
+            return [(a, b, c or "") for a, b, c in presets[2]]
+        return [("_MASK_INVERT", "Invert Mask", "")]
+
+    name: StringProperty(name="Name", default="Button")
+    image_path: StringProperty(name="Icon Image", default="", subtype="FILE_PATH")
+
+    type: EnumProperty(
+        name="Type",
+        items=(
+            ("OPERATOR", "Operator", ""),
+            ("POPUP", "Popup", ""),
+        ),
+        default="OPERATOR",
+    )
+
+    operator_type: EnumProperty(
+        name="Operator",
+        items=(
+            ("PRESET", "Preset", ""),
+            ("CUSTOM", "Custom", ""),
+        ),
+        default="PRESET",
+    )
+    preset_operator: EnumProperty(name="Preset Operator", items=enum_preset_operators)
+    custom_operator: StringProperty(
+        name="Custom Operator",
+        default="bpy.ops.sculpt.brush_stroke()",
+        maxlen=2048,
+    )
+
+    popup_type: EnumProperty(
+        name="Popup",
+        items=(
+            ("MENU", "Menu", ""),
+            ("PANEL", "Panel", ""),
+        ),
+        default="MENU",
+    )
+    menu_source: EnumProperty(
+        name="Menu Source",
+        items=(
+            ("PRESET", "Preset", ""),
+            ("CUSTOM", "Custom", ""),
+        ),
+        default="PRESET",
+    )
+    preset_menu: EnumProperty(name="Preset Menu", items=enum_preset_menus)
+    custom_menu: StringProperty(name="Menu ID", default="VIEW3D_MT_sculpt", maxlen=256)
+
+    panel_source: EnumProperty(
+        name="Panel Source",
+        items=(
+            ("PRESET", "Preset", ""),
+            ("CUSTOM", "Custom", ""),
+        ),
+        default="PRESET",
+    )
+    preset_panel: EnumProperty(name="Preset Panel", items=enum_preset_panels)
+    custom_panel: StringProperty(
+        name="Panel ID",
+        default="VIEW3D_PT_tools_brush_settings_advanced",
+        maxlen=256,
+    )
+
+    def draw(self, context):
+        layout = self.layout
+        layout.prop(self, "name")
+        layout.prop(self, "image_path")
+        layout.prop(self, "type")
+
+        if self.type == "POPUP":
+            layout.prop(self, "popup_type")
+            if self.popup_type == "MENU":
+                layout.prop(self, "menu_source", text="Use")
+                if self.menu_source == "PRESET":
+                    layout.prop(self, "preset_menu")
+                else:
+                    layout.prop(self, "custom_menu")
+            else:
+                layout.prop(self, "panel_source", text="Use")
+                if self.panel_source == "PRESET":
+                    layout.prop(self, "preset_panel")
+                else:
+                    layout.prop(self, "custom_panel")
+        else:
+            layout.prop(self, "operator_type", text="Use")
+            if self.operator_type == "PRESET":
+                layout.prop(self, "preset_operator")
+            else:
+                layout.prop(self, "custom_operator")
+
+    def invoke(self, context, event):
+        return context.window_manager.invoke_props_dialog(self)
+
+    def execute(self, context):
         wheel_storage: WheelTartaSetStorage = WheelStorage.get_by_mode(context)
         active_set = wheel_storage.active_tarta_set
-        create = CreateTartaButton.get(context)
+        if active_set is None:
+            self.report({"ERROR"}, "No active Custom Buttons set")
+            return self.OpReturn.CANCEL
 
         button = active_set.buttons.add()
-        button.name = create.name
-        button.image_path = create.image_path
-        button.type = create.type
+        button.name = self.name.strip() or "Button"
+        button.image_path = self.image_path
+        button.type = self.type
 
-        if create.type == "OPERATOR":
+        if self.type == "OPERATOR":
             button.popup_type = "NONE"
-            if create.operator_type == "PRESET":
-                expr = _resolve_preset_operator_expr(context, create.preset_operator)
+            if self.operator_type == "PRESET":
+                expr = _resolve_preset_operator_expr(context, self.preset_operator)
             else:
-                expr = create.custom_operator
+                expr = self.custom_operator
             expr = _normalize_operator_expr(expr)
             op_id, payload = _split_operator_expr(expr)
+            if not op_id:
+                active_set.buttons.remove(len(active_set.buttons) - 1)
+                self.report({"ERROR"}, "Invalid operator id")
+                return self.OpReturn.CANCEL
             button.operator_id = op_id
             button.attr = payload
-        elif create.type == "POPUP":
+        elif self.type == "POPUP":
             button.attr = ""
-            button.popup_type = create.popup_type
-            if create.popup_type == "MENU":
-                button.operator_id = create.preset_menu if create.menu_source == "PRESET" else create.custom_menu
+            button.popup_type = self.popup_type
+            if self.popup_type == "MENU":
+                button.operator_id = self.preset_menu if self.menu_source == "PRESET" else self.custom_menu
             else:
-                button.operator_id = create.preset_panel if create.panel_source == "PRESET" else create.custom_panel
+                button.operator_id = self.preset_panel if self.panel_source == "PRESET" else self.custom_panel
+            if not button.operator_id:
+                active_set.buttons.remove(len(active_set.buttons) - 1)
+                self.report({"ERROR"}, "Popup target id cannot be empty")
+                return self.OpReturn.CANCEL
 
         active_set.active_button_index = len(active_set.buttons) - 1
+        return self.OpReturn.FINISH
 
 
 class OpTartaButtonRemove(OperatorAction, OpPollActiveButton):
