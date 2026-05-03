@@ -57,7 +57,7 @@ class TartaButtonList(UIList):
         # else:
         #     sub = layout.row(align=True)
         row = layout.row(align=True)
-        row.prop(item, 'name', icon='FILE_SCRIPT' if item.type == 'OPERATOR' else 'TOPBAR')
+        row.prop(item, 'name', text="", icon='FILE_SCRIPT' if item.type == 'OPERATOR' else 'TOPBAR', emboss=False)
         # sub = row.row(align=True)
         # sub.operator() # move up/down
         # sub.operator() # delete
