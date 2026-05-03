@@ -2,6 +2,7 @@ from bpy.props import BoolProperty
 from bpy.types import UILayout
 
 from ...core.bl_types import UIList
+from ...core.utils.image_previews import get_image_icon_id
 
 
 class TartaButtonList(UIList):
@@ -57,7 +58,12 @@ class TartaButtonList(UIList):
         # else:
         #     sub = layout.row(align=True)
         row = layout.row(align=True)
-        row.prop(item, 'name', text="", icon='FILE_SCRIPT' if item.type == 'OPERATOR' else 'TOPBAR', emboss=False)
+        icon_id = get_image_icon_id(item.image_path)
+        row.prop(item, "name", text="", icon_value=icon_id if icon_id else None, emboss=False)
+        _row = row.row(align=False)
+        _row.alignment = 'RIGHT'
+        _row.active = False
+        _row.label(text="", icon='FILE_SCRIPT' if item.type == 'OPERATOR' else 'TOPBAR')
         # sub = row.row(align=True)
         # sub.operator() # move up/down
         # sub.operator() # delete
