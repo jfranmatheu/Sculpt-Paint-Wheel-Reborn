@@ -69,7 +69,7 @@ class WheelBrushSetsPanel(PanelTypes.VIEW_3D_SIDEBAR):
         
         wm_props = PG_WM.get(context)
         sep_row = lists_col.row(align=True)
-        sep_row.scale_y = 0.1
+        sep_row.scale_y = 0.15
         sep_row.prop(wm_props, "sep_color_brush_set", text="")
 
         if active_brush_set := wheel_storage.active_brush_set:

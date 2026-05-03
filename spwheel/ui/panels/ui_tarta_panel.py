@@ -65,7 +65,7 @@ class WheelTartaButtonsPanel(PanelTypes.VIEW_3D_SIDEBAR):
         
         wm_props = PG_WM.get(context)
         sep_row = lists_col.row(align=True)
-        sep_row.scale_y = 0.1
+        sep_row.scale_y = 0.15
         sep_row.prop(wm_props, "sep_color_custom_buttons_set", text="")
 
         if active_tarta_set := wheel_storage.active_tarta_set:
