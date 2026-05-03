@@ -61,6 +61,7 @@ class BrushSetRing(WidgetRing):
         super().init()
         self._pickers = []
         self.slot_count = 0
+        self._slot_radius = 0.0
         self._last_active_index = -1
         self._is_page_dragging = False
         self._page_drag_start_x = 0.0
@@ -134,6 +135,12 @@ class BrushSetRing(WidgetRing):
         self._sync_picker_slots()
         self._rebuild_pickers(context)
 
+    def _on_wheel_activate(self, context: Context, wheel_prefs: WheelPrefs, storage: SculptPaintWheelStorage) -> None:
+        # Widget._on_wheel_activate enables children before/while activating them.
+        # Re-apply picker visibility afterwards so unused slots remain disabled.
+        super()._on_wheel_activate(context, wheel_prefs, storage)
+        self._rebuild_pickers(context)
+
     def deactivate_all_pickers(self) -> None:
         for pb in self._pickers:
             pb.active = False
@@ -165,6 +172,7 @@ class BrushSetRing(WidgetRing):
         slot_r = min(preferred_slot_radius, radial_space * 0.5)
         slot_padding = max(0.0, self.wg_prefs.slot_padding)
         count = self._compute_layout_count_from_slot_radius(center_radius, slot_r, slot_padding)
+        self._slot_radius = slot_r
         self.slot_count = count
         if count == 0:
             if USE_DEBUG:
@@ -186,6 +194,26 @@ class BrushSetRing(WidgetRing):
             if USE_DEBUG:
                 print(f"Added picker {i}: {pb.label}")
 
+    def _layout_visible_pickers(self, visible_count: int) -> None:
+        visible_count = max(0, min(visible_count, len(self._pickers)))
+        cx, cy = self.center
+        positions = []
+        if visible_count > 0:
+            positions = compute_slot_positions_in_double_ring(
+                cx,
+                cy,
+                self.radius_inner,
+                self.radius_outer,
+                visible_count,
+            )
+        for i, pb in enumerate(self._pickers):
+            if i < visible_count:
+                px, py = positions[i]
+                pb.enabled = True
+                pb.set_transform(px - cx, py - cy, self._slot_radius)
+            else:
+                pb.enabled = False
+
     def _rebuild_pickers(self, context: Context) -> None:
         if USE_DEBUG:
             print(f"Rebuilding pickers: {self.active_brush_set_index}")
@@ -199,6 +227,7 @@ class BrushSetRing(WidgetRing):
         if self.active_brush_set_index == -1:
             for pb in self._pickers:
                 pb.clear_brush_metadata()
+                pb.enabled = False
             return
 
         # Get brushes metadata for the current page.
@@ -209,17 +238,20 @@ class BrushSetRing(WidgetRing):
         if self.active_brush_set.page_index > max_page_index:
             self.active_brush_set.page_index = max_page_index
         brushes_metadata = self.get_page_brushes_metadata()
+        self._layout_visible_pickers(len(brushes_metadata))
         # Set brush metadata for each picker.
         for i, pb in enumerate(self._pickers):
             if i < len(brushes_metadata):
                 if USE_DEBUG:
                     print(f"Setting brush metadata for picker {i}: {brushes_metadata[i].name}")
+                pb.enabled = True
                 pb.set_brush_metadata(brushes_metadata[i], show_label=False)
             else:
                 # If no brush metadata, clear the picker data.
                 if USE_DEBUG:
                     print(f"Clearing brush metadata for picker {i}")
                 pb.clear_brush_metadata()
+                pb.enabled = False
 
         if USE_DEBUG:
             print(f"Rebuilt {len(self._pickers)} pickers")
