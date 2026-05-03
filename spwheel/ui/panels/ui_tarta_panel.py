@@ -33,10 +33,15 @@ class WheelTartaButtonsPanel(PanelTypes.VIEW_3D_SIDEBAR):
     
     def draw_set_selector_row(self, wheel_storage: WheelTartaSetStorage, layout: UILayout):
         row = layout.row(align=True)
+        row.scale_y = 1.5
         row.prop(wheel_storage, "tarta_sets_enum", text="")
-        row.popover(WheelTartaSetOptionsPopover.bl_idname, text="", icon='PROPERTIES')
+        _row = row.row(align=True)
+        _row.scale_x = 1.25
+        _row.popover(WheelTartaSetOptionsPopover.bl_idname, text="", icon='PROPERTIES')
         row.separator()
-        row.operator(OpTartaSetListAdd.bl_idname, text="", icon='COLLECTION_NEW')
+        _row = row.row(align=True)
+        _row.scale_x = 1.25
+        _row.operator(OpTartaSetListAdd.bl_idname, text="", icon='COLLECTION_NEW')
 
     def draw_button_list(self, active_tarta_set: WheelTartaSet, layout: UILayout):
         row = layout.row(align=True)
@@ -46,10 +51,11 @@ class WheelTartaButtonsPanel(PanelTypes.VIEW_3D_SIDEBAR):
         sep_box = col.box()
         sep_box.scale_y = 0.5
         sep_box.label(text='', icon='BLANK1')
+        col.operator(OpTartaButtonAdd.bl_idname, text="", icon='ADD')
+        col.operator(OpTartaButtonRemove.bl_idname, text="", icon='REMOVE')
+        col.separator()
         col.operator(OpTartaButtonMove.bl_idname, text="", icon='TRIA_UP').direction = 1
         col.operator(OpTartaButtonMove.bl_idname, text="", icon='TRIA_DOWN').direction = -1
-        col.separator()
-        col.operator(OpTartaButtonRemove.bl_idname, text="", icon='REMOVE')
 
     def draw_create_button_section(self, create: CreateTartaButton, layout: UILayout):
         header, content = layout.panel('TEMP_PT_create_custom_button')
@@ -101,7 +107,6 @@ class WheelTartaButtonsPanel(PanelTypes.VIEW_3D_SIDEBAR):
         self.draw_set_selector_row(wheel_storage, lists_col)
         
         wm_props = PG_WM.get(context)
-        print("wm_props:", wm_props)
         sep_row = lists_col.row(align=True)
         sep_row.scale_y = 0.1
         sep_row.prop(wm_props, "sep_color_custom_buttons_set", text="")

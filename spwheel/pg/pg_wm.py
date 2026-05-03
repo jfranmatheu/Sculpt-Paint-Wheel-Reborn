@@ -2,10 +2,6 @@ from bpy.props import FloatVectorProperty
 from ..core.bl_types import PropertyGroupRoot
 
 
-def _set_sep_color(self, value):
-    return
-
-
 class PG_WM(PropertyGroupRoot.WINDOW_MANAGER):
     """Window Manager Properties"""
     
@@ -17,7 +13,7 @@ class PG_WM(PropertyGroupRoot.WINDOW_MANAGER):
         min=0.0,
         max=1.0,
         size=3,
-        set=_set_sep_color,
+        options={'READ_ONLY'}
     )
 
     sep_color_brush_set: FloatVectorProperty(
@@ -28,5 +24,5 @@ class PG_WM(PropertyGroupRoot.WINDOW_MANAGER):
         min=0.0,
         max=1.0,
         size=3,
-        set=_set_sep_color,
+        options={'READ_ONLY'}
     )

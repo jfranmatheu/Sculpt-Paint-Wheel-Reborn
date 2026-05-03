@@ -8,6 +8,7 @@ from .pg_brush_set import BrushSet
 from .default_sets import get_tarta_set, get_brush_set
 
 TARTA_SET_ENUM_ITEMS: list[tuple[str, str, str]] = [("__none__", "No sets", "No custom button sets available")]
+BRUSH_SET_ENUM_ITEMS: list[tuple[str, str, str]] = [("__none__", "No sets", "No brush sets available")]
 
 def _sorted_tarta_set_entries(storage: "WheelTartaSetStorage") -> list[tuple[int, str]]:
     entries: list[tuple[int, str]] = []
@@ -51,6 +52,50 @@ def _sync_tarta_sets_enum(storage: "WheelTartaSetStorage") -> None:
         active_idx = 0
         storage.active_tarta_set_index = active_idx
     storage.tarta_sets_enum = str(active_idx)
+
+
+def _sorted_brush_set_entries(storage: "WheelBrushSetStorage") -> list[tuple[int, str]]:
+    entries: list[tuple[int, str]] = []
+    for idx, brush_set in enumerate(storage.brush_sets):
+        name = (brush_set.name or "").strip() or f"Set {idx + 1}"
+        entries.append((idx, name))
+    entries.sort(key=lambda item: (item[1].lower(), item[0]))
+    return entries
+
+
+def enum_brush_set_items(self: "WheelBrushSetStorage", context):
+    global BRUSH_SET_ENUM_ITEMS
+    entries = _sorted_brush_set_entries(self)
+    if not entries:
+        BRUSH_SET_ENUM_ITEMS = [("__none__", "No sets", "No brush sets available")]
+    else:
+        BRUSH_SET_ENUM_ITEMS = [(str(idx), name, "") for idx, name in entries]
+    return BRUSH_SET_ENUM_ITEMS
+
+
+def update_brush_sets_enum(self: "WheelBrushSetStorage", context) -> None:
+    value = self.brush_sets_enum
+    if value == "__none__":
+        self.active_brush_set_index = -1
+        return
+    try:
+        idx = int(value)
+    except (TypeError, ValueError):
+        return
+    if 0 <= idx < len(self.brush_sets):
+        self.active_brush_set_index = idx
+
+
+def _sync_brush_sets_enum(storage: "WheelBrushSetStorage") -> None:
+    if not storage.brush_sets:
+        storage.brush_sets_enum = "__none__"
+        storage.active_brush_set_index = -1
+        return
+    active_idx = storage.active_brush_set_index
+    if not (0 <= active_idx < len(storage.brush_sets)):
+        active_idx = 0
+        storage.active_brush_set_index = active_idx
+    storage.brush_sets_enum = str(active_idx)
 
 
 class WheelTartaSetStorage(PropertyGroup):
@@ -133,6 +178,12 @@ class WheelBrushSetStorage(PropertyGroup):
         description="Index of the active brush set",
         default=-1,
     )
+    brush_sets_enum: EnumProperty(
+        name="Brush Set",
+        description="Select active brush set",
+        items=enum_brush_set_items,
+        update=update_brush_sets_enum,
+    )
 
     @property
     def active_brush_set(self) -> BrushSet:
@@ -156,11 +207,13 @@ class WheelBrushSetStorage(PropertyGroup):
                 if name not in picked_names:
                     break
         new_brush_set.name = name
+        _sync_brush_sets_enum(self)
         return new_brush_set
 
     def remove_active_brush_set(self) -> None:
         self.brush_sets.remove(self.active_brush_set_index)
         self.active_brush_set_index = -1 if not self.brush_sets else self.active_brush_set_index - 1
+        _sync_brush_sets_enum(self)
 
     def move_active_brush_set(self, direction: int) -> None:
         if direction == 1:
@@ -171,6 +224,7 @@ class WheelBrushSetStorage(PropertyGroup):
             raise ValueError(f"Invalid direction: {direction}")
         self.brush_sets.move(self.active_brush_set_index, target_index)
         self.active_brush_set_index = target_index
+        _sync_brush_sets_enum(self)
 
 
 class SculptPaintWheelStorage(WheelTartaSetStorage, WheelBrushSetStorage, PropertyGroup):
