@@ -458,7 +458,9 @@ def _draw_color_pickers(context: Context, op: Any) -> None:
         return
     cx = op.wheel_center_x
     cy = op.wheel_center_y
+    hi = float(getattr(op, "colpk_hue_inner_r", 0.0))
     ho = float(getattr(op, "colpk_hue_outer_r", 0.0))
+    si = float(getattr(op, "colpk_sv_inner_r", 0.0))
     so = float(getattr(op, "colpk_sv_outer_r", 0.0))
     if ho <= 0.0 or so <= 0.0:
         return
@@ -471,13 +473,13 @@ def _draw_color_pickers(context: Context, op: Any) -> None:
     h, s, v = float(c.h), float(c.s), float(c.v)
 
     if colpk_linked_preview_enabled(context):
-        draw_colpk_hue_ring(cx, cy, ho, s, v)
-        draw_colpk_sat_arc(cx, cy, so, S_ANGLE_TOP, S_ANGLE_BOT, h, v)
-        draw_colpk_val_arc(cx, cy, so, V_ANGLE_TOP, V_ANGLE_BOT, h, s)
+        draw_colpk_hue_ring(cx, cy, ho, hi, s, v)
+        draw_colpk_sat_arc(cx, cy, so, si, S_ANGLE_TOP, S_ANGLE_BOT, h, v)
+        draw_colpk_val_arc(cx, cy, so, si, V_ANGLE_TOP, V_ANGLE_BOT, h, s)
     else:
-        draw_colpk_hue_ring(cx, cy, ho, 1.0, 1.0)
-        draw_colpk_sat_arc(cx, cy, so, S_ANGLE_TOP, S_ANGLE_BOT, h, 1.0)
-        draw_colpk_val_arc(cx, cy, so, V_ANGLE_TOP, V_ANGLE_BOT, h, 1.0)
+        draw_colpk_hue_ring(cx, cy, ho, hi, 1.0, 1.0)
+        draw_colpk_sat_arc(cx, cy, so, si, S_ANGLE_TOP, S_ANGLE_BOT, h, 1.0)
+        draw_colpk_val_arc(cx, cy, so, si, V_ANGLE_TOP, V_ANGLE_BOT, h, 1.0)
 
     hr = max(3.0, op.wheel_radius * 0.018)
     col_outline = (0.82, 0.84, 0.88, 0.92)

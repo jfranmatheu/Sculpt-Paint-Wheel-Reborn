@@ -31,4 +31,4 @@ class SculptPaintWheel(Wheel):
 
     def activate(self, context: Context, prefs: WheelPrefs, storage: SculptPaintWheelStorage) -> None:
         self.brush_set_ring.set_transform_thickness(0.97, -1 * (prefs.brush_set_ring.slot_size + prefs.brush_set_ring.ring_padding * 2.0))
-        self.color_picker.set_transform(0, 0, self.tarta_ring.radius_outer, self.brush_set_ring.radius_inner)
+        self.color_picker.set_transform(0, 0, self.tarta_ring.radius_outer+4, self.brush_set_ring.radius_inner-4)

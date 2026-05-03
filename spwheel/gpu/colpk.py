@@ -30,12 +30,7 @@ void main() {
 # Full hue ring — uniforms s, v (saturation / value driving the wheel colors)
 _COLPK_H_FRAG = """
 #define TWO_PI 6.28318530718
-#define SCALE 1.00
 #define RAD_THRES 0.03
-#define MIN_RAD 0.8 * (1.0 / SCALE)
-#define MIN_RAD_2 MIN_RAD + RAD_THRES
-#define MAX_RAD 1.0
-#define MAX_RAD_2 MAX_RAD - RAD_THRES
 
 vec3 hsb2rgb(in vec3 c) {
     vec3 rgb = clamp(abs(mod(c.x * 6.0 + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0, 0.0, 1.0);
@@ -58,15 +53,19 @@ void main() {
     vec2 toCenter = vec2(0.5) - v_uv.xy;
     float angle = atan(toCenter.y, toCenter.x);
     float radius = length(toCenter) * 2.0;
+    float minRad = clamp(ring_inner_ratio, 0.0, 0.999);
+    float maxRad = 1.0;
+    float minRad2 = minRad + RAD_THRES;
+    float maxRad2 = maxRad - RAD_THRES;
 
-    if (radius < MIN_RAD || radius > MAX_RAD) {
+    if (radius < minRad || radius > maxRad) {
         discard;
     }
 
-    if (radius < MIN_RAD_2) {
-        alpha = smoothstep(MIN_RAD, MIN_RAD_2, radius);
-    } else if (radius > MAX_RAD_2) {
-        alpha = smoothstep(MAX_RAD, MAX_RAD_2, radius);
+    if (radius < minRad2) {
+        alpha = smoothstep(minRad, minRad2, radius);
+    } else if (radius > maxRad2) {
+        alpha = smoothstep(maxRad, maxRad2, radius);
     }
 
     vec3 co = hsb2rgb(vec3((angle / TWO_PI) + 0.5, s, v));
@@ -78,12 +77,7 @@ void main() {
 # Saturation arc (left half of quad), angles in degrees
 _COLPK_S_FRAG = """
 #define ALPHA_THRES 0.01
-#define SCALE 1.0
 #define RAD_THRES 0.03
-#define MIN_RAD 0.8 * (1.0 / SCALE)
-#define MIN_RAD_2 MIN_RAD + RAD_THRES
-#define MAX_RAD 1.0
-#define MAX_RAD_2 MAX_RAD - RAD_THRES
 
 vec3 hsv2rgb(vec3 c) {
     vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
@@ -106,7 +100,11 @@ void main() {
 
     vec2 toCenter = vec2(0.5) - v_uv.xy;
     float radius = length(toCenter) * 2.0;
-    if (radius < MIN_RAD || radius > MAX_RAD) {
+    float minRad = clamp(ring_inner_ratio, 0.0, 0.999);
+    float maxRad = 1.0;
+    float minRad2 = minRad + RAD_THRES;
+    float maxRad2 = maxRad - RAD_THRES;
+    if (radius < minRad || radius > maxRad) {
         discard;
     }
 
@@ -118,10 +116,10 @@ void main() {
         discard;
     }
 
-    if (radius < MIN_RAD_2) {
-        alpha = smoothstep(MIN_RAD, MIN_RAD_2, radius);
-    } else if (radius > MAX_RAD_2) {
-        alpha = smoothstep(MAX_RAD, MAX_RAD_2, radius);
+    if (radius < minRad2) {
+        alpha = smoothstep(minRad, minRad2, radius);
+    } else if (radius > maxRad2) {
+        alpha = smoothstep(maxRad, maxRad2, radius);
     }
     fragColor.a = alpha;
 
@@ -134,12 +132,7 @@ void main() {
 # Value arc (right half of quad)
 _COLPK_V_FRAG = """
 #define ALPHA_THRES 0.01
-#define SCALE 1.0
 #define RAD_THRES 0.03
-#define MIN_RAD 0.8 * (1.0 / SCALE)
-#define MIN_RAD_2 MIN_RAD + RAD_THRES
-#define MAX_RAD 1.0
-#define MAX_RAD_2 MAX_RAD - RAD_THRES
 
 vec3 hsv2rgb(vec3 c) {
     vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
@@ -162,7 +155,11 @@ void main() {
 
     vec2 toCenter = vec2(0.5) - v_uv.xy;
     float radius = length(toCenter) * 2.0;
-    if (radius < MIN_RAD || radius > MAX_RAD) {
+    float minRad = clamp(ring_inner_ratio, 0.0, 0.999);
+    float maxRad = 1.0;
+    float minRad2 = minRad + RAD_THRES;
+    float maxRad2 = maxRad - RAD_THRES;
+    if (radius < minRad || radius > maxRad) {
         discard;
     }
 
@@ -171,10 +168,10 @@ void main() {
         discard;
     }
 
-    if (radius < MIN_RAD_2) {
-        alpha = smoothstep(MIN_RAD, MIN_RAD_2, radius);
-    } else if (radius > MAX_RAD_2) {
-        alpha = smoothstep(MAX_RAD, MAX_RAD_2, radius);
+    if (radius < minRad2) {
+        alpha = smoothstep(minRad, minRad2, radius);
+    } else if (radius > maxRad2) {
+        alpha = smoothstep(maxRad, maxRad2, radius);
     }
     fragColor.a = alpha;
 
@@ -196,6 +193,7 @@ def _build_h() -> GPUShader:
     info.push_constant("MAT4", "ModelViewProjectionMatrix")
     info.push_constant("FLOAT", "s")
     info.push_constant("FLOAT", "v")
+    info.push_constant("FLOAT", "ring_inner_ratio")
     info.vertex_in(0, "VEC2", "pos")
     info.vertex_in(1, "VEC2", "uv")
     info.vertex_out(iface)
@@ -214,6 +212,7 @@ def _build_s() -> GPUShader:
     info.push_constant("FLOAT", "v")
     info.push_constant("FLOAT", "angtop")
     info.push_constant("FLOAT", "angbot")
+    info.push_constant("FLOAT", "ring_inner_ratio")
     info.vertex_in(0, "VEC2", "pos")
     info.vertex_in(1, "VEC2", "uv")
     info.vertex_out(iface)
@@ -232,6 +231,7 @@ def _build_v() -> GPUShader:
     info.push_constant("FLOAT", "s")
     info.push_constant("FLOAT", "angtop")
     info.push_constant("FLOAT", "angbot")
+    info.push_constant("FLOAT", "ring_inner_ratio")
     info.vertex_in(0, "VEC2", "pos")
     info.vertex_in(1, "VEC2", "uv")
     info.vertex_out(iface)
@@ -266,6 +266,7 @@ def draw_colpk_hue_ring(
     cx: float,
     cy: float,
     outer_radius_px: float,
+    inner_radius_px: float,
     sat: float,
     val: float,
 ) -> None:
@@ -278,6 +279,8 @@ def draw_colpk_hue_ring(
         shader.bind()
         shader.uniform_float("s", float(max(0.0, min(1.0, sat))))
         shader.uniform_float("v", float(max(0.0, min(1.0, val))))
+        ratio = 0.8 if outer_radius_px <= 0.0 else max(0.0, min(0.999, inner_radius_px / outer_radius_px))
+        shader.uniform_float("ring_inner_ratio", float(ratio))
         batch.draw(shader)
 
 
@@ -285,6 +288,7 @@ def draw_colpk_sat_arc(
     cx: float,
     cy: float,
     outer_radius_px: float,
+    inner_radius_px: float,
     ang_top_deg: float,
     ang_bot_deg: float,
     hue: float,
@@ -302,6 +306,8 @@ def draw_colpk_sat_arc(
         shader.uniform_float("v", float(max(0.0, min(1.0, val))))
         shader.uniform_float("angtop", float(ang_bot_deg))
         shader.uniform_float("angbot", float(ang_top_deg))
+        ratio = 0.8 if outer_radius_px <= 0.0 else max(0.0, min(0.999, inner_radius_px / outer_radius_px))
+        shader.uniform_float("ring_inner_ratio", float(ratio))
         batch.draw(shader)
 
 
@@ -309,6 +315,7 @@ def draw_colpk_val_arc(
     cx: float,
     cy: float,
     outer_radius_px: float,
+    inner_radius_px: float,
     ang_top_deg: float,
     ang_bot_deg: float,
     hue: float,
@@ -326,4 +333,6 @@ def draw_colpk_val_arc(
         shader.uniform_float("s", float(max(0.0, min(1.0, sat))))
         shader.uniform_float("angtop", float(ang_bot_deg))
         shader.uniform_float("angbot", float(ang_top_deg))
+        ratio = 0.8 if outer_radius_px <= 0.0 else max(0.0, min(0.999, inner_radius_px / outer_radius_px))
+        shader.uniform_float("ring_inner_ratio", float(ratio))
         batch.draw(shader)

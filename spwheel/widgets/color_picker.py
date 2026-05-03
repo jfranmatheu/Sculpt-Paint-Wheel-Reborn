@@ -204,15 +204,17 @@ class ColorPickerWidget(WidgetRing):
         cx, cy = self.center
         h, s, v = self._normalized_hsv(context)
         ho = self.hue_outer_r
+        hi = self.hue_inner_r
         so = self.sv_outer_r
+        si = self.sv_inner_r
         if colpk_linked_preview_enabled(context):
-            draw_colpk_hue_ring(cx, cy, ho, s, v)
-            draw_colpk_sat_arc(cx, cy, so, S_ANGLE_TOP, S_ANGLE_BOT, h, v)
-            draw_colpk_val_arc(cx, cy, so, V_ANGLE_TOP, V_ANGLE_BOT, h, s)
+            draw_colpk_hue_ring(cx, cy, ho, hi, s, v)
+            draw_colpk_sat_arc(cx, cy, so, si, S_ANGLE_TOP, S_ANGLE_BOT, h, v)
+            draw_colpk_val_arc(cx, cy, so, si, V_ANGLE_TOP, V_ANGLE_BOT, h, s)
         else:
-            draw_colpk_hue_ring(cx, cy, ho, 1.0, 1.0)
-            draw_colpk_sat_arc(cx, cy, so, S_ANGLE_TOP, S_ANGLE_BOT, h, 1.0)
-            draw_colpk_val_arc(cx, cy, so, V_ANGLE_TOP, V_ANGLE_BOT, h, 1.0)
+            draw_colpk_hue_ring(cx, cy, ho, hi, 1.0, 1.0)
+            draw_colpk_sat_arc(cx, cy, so, si, S_ANGLE_TOP, S_ANGLE_BOT, h, 1.0)
+            draw_colpk_val_arc(cx, cy, so, si, V_ANGLE_TOP, V_ANGLE_BOT, h, 1.0)
         hr = self._handle_radius()
         col_outline = (0.82, 0.84, 0.88, 0.92)
         col_fill = (0.06, 0.062, 0.07, 0.96)
