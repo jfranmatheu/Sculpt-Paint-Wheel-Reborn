@@ -43,7 +43,7 @@ class BType_PanelTypes:
     """Predefined panel types."""
     CUSTOM = BType_Panel
     # ---
-    POPOVER = _new_panel_type('VIEW_3D', 'HEADER', bl_options={'INSTANCED'}, is_popover=True)
+    POPOVER = _new_panel_type('VIEW_3D', 'HEADER', bl_options={'INSTANCED'}, is_popover=True, bl_category="", bl_context="")
 
     VIEW_3D_SIDEBAR = _new_panel_type('VIEW_3D', 'UI')
     VIEW_3D_TOOLBAR = _new_panel_type('VIEW_3D', 'TOOLS')
