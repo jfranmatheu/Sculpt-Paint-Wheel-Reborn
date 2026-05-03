@@ -13,6 +13,7 @@ from ..gpu.utils import compute_slot_positions_in_double_ring
 from .buttons.pk_brush import PickerBrushButton
 from .widget import WidgetRing
 from ..gpu.draw import draw_circle_fill, draw_ring, draw_text
+from ..core.gpu.imm_2d import draw_lines
 
 
 USE_DEBUG=True
@@ -67,6 +68,12 @@ class BrushSetRing(WidgetRing):
         self._page_drag_start_x = 0.0
         self._page_drag_steps_applied = 0
         self._page_drag_step_px = 14.0
+        self._is_set_dragging = False
+        self._set_drag_start_x = 0.0
+        self._set_drag_steps_applied = 0
+        self._set_drag_step_px = 20.0
+        self._hover_page_area = False
+        self._hover_set_area = False
 
     @property
     def active_brush_set(self) -> Optional[BrushSet]:
@@ -88,12 +95,7 @@ class BrushSetRing(WidgetRing):
 
     def on_scroll_up(self, context: Context, event: Event) -> None:
         if event.shift:
-            # Shift + scroll up: change to next brush set
-            self._storage.active_brush_set_index += 1
-            if self._storage.active_brush_set_index >= len(self.brush_sets):
-                self._storage.active_brush_set_index = 0
-            if self._last_active_index != self.active_brush_set_index:
-                self._rebuild_pickers(context)
+            self._step_set(context, 1)
         else:
             # Scroll up: change to next page.
             active_brush_set: BrushSet = self.active_brush_set
@@ -110,12 +112,7 @@ class BrushSetRing(WidgetRing):
 
     def on_scroll_down(self, context: Context, event: Event) -> None:
         if event.shift:
-            # Shift + scroll down: change to previous brush set
-            self._storage.active_brush_set_index -= 1
-            if self._storage.active_brush_set_index < 0:
-                self._storage.active_brush_set_index = len(self.brush_sets) - 1
-            if self._last_active_index != self.active_brush_set_index:
-                self._rebuild_pickers(context)
+            self._step_set(context, -1)
         else:
             # Scroll down: change to previous page.
             active_brush_set: BrushSet = self.active_brush_set
@@ -276,6 +273,19 @@ class BrushSetRing(WidgetRing):
         dot_y = -wheel.radius - 14.0
         return (page_index, page_count, dot_radius, spacing, start_x, dot_y, total_w)
 
+    def _get_title_layout(self) -> tuple[str, float, float] | None:
+        active_brush_set: BrushSet = self.active_brush_set
+        if not active_brush_set:
+            return None
+        title = (active_brush_set.name or "").strip()
+        if not title:
+            return None
+        wheel = self.wheel
+        title_y = wheel.radius + 14.0
+        # Rough width estimate for hit/arrow placement (no font metrics dependency).
+        title_half_w = max(26.0, len(title) * 4.2)
+        return (title, title_y, title_half_w)
+
     def _step_page(self, context: Context, delta: int) -> bool:
         if delta == 0:
             return False
@@ -293,7 +303,30 @@ class BrushSetRing(WidgetRing):
             return True
         return False
 
+    def _step_set(self, context: Context, delta: int) -> bool:
+        if delta == 0:
+            return False
+        set_count = len(self.brush_sets)
+        if set_count <= 0:
+            return False
+        last_index = self.active_brush_set_index
+        self._storage.active_brush_set_index = (self._storage.active_brush_set_index + delta) % set_count
+        if self._storage.active_brush_set_index != last_index:
+            self._rebuild_pickers(context)
+            return True
+        return False
+
     def test_hit(self, context: Context, p) -> bool:
+        self._hover_page_area = False
+        self._hover_set_area = False
+
+        title_layout = self._get_title_layout()
+        if title_layout is not None:
+            _title, title_y, title_half_w = title_layout
+            if abs(p.y - title_y) <= 14.0 and abs(p.x) <= title_half_w + 28.0:
+                self._hover_set_area = True
+                return True
+
         layout = self._get_page_indicator_layout()
         if layout is None:
             return False
@@ -302,24 +335,44 @@ class BrushSetRing(WidgetRing):
         half_w = total_w * 0.5 + 16.0
         if abs(p.y - dot_y) > max(14.0, dot_radius * 4.0):
             return False
-        return -half_w <= p.x <= half_w
+        self._hover_page_area = -half_w <= p.x <= half_w
+        return self._hover_page_area
 
     def on_left_press(self, context: Context, event: Event) -> bool:
         mx, _my = self.wheel.to_local(event.mouse_region_x, event.mouse_region_y)
-        self._is_page_dragging = True
-        self._page_drag_start_x = mx
-        self._page_drag_steps_applied = 0
-        layout = self._get_page_indicator_layout()
-        if layout is not None:
-            _page_index, _page_count, dot_radius, spacing, _start_x, _dot_y, _total_w = layout
-            self._page_drag_step_px = max(12.0, spacing + dot_radius * 1.2)
-        return True
+        if self._hover_set_area:
+            self._is_set_dragging = True
+            self._set_drag_start_x = mx
+            self._set_drag_steps_applied = 0
+            title_layout = self._get_title_layout()
+            if title_layout is not None:
+                _title, _title_y, title_half_w = title_layout
+                self._set_drag_step_px = max(16.0, min(42.0, (title_half_w * 2.0) / 4.0))
+            return True
+        if self._hover_page_area:
+            self._is_page_dragging = True
+            self._page_drag_start_x = mx
+            self._page_drag_steps_applied = 0
+            layout = self._get_page_indicator_layout()
+            if layout is not None:
+                _page_index, _page_count, dot_radius, spacing, _start_x, _dot_y, _total_w = layout
+                self._page_drag_step_px = max(12.0, spacing + dot_radius * 1.2)
+            return True
+        return False
 
     def modal(self, context: Context, event: Event) -> bool:
-        if not self._is_page_dragging:
+        if not self._is_page_dragging and not self._is_set_dragging:
             return False
         if event.type in {'MOUSEMOVE', 'INBETWEEN_MOUSEMOVE'}:
             mx, _my = self.wheel.to_local(event.mouse_region_x, event.mouse_region_y)
+            if self._is_set_dragging:
+                dx = mx - self._set_drag_start_x
+                target_steps = int(dx / max(1.0, self._set_drag_step_px))
+                delta_steps = target_steps - self._set_drag_steps_applied
+                if delta_steps != 0:
+                    self._set_drag_steps_applied = target_steps
+                    self._step_set(context, delta_steps)
+                return True
             dx = mx - self._page_drag_start_x
             target_steps = int(dx / max(1.0, self._page_drag_step_px))
             delta_steps = target_steps - self._page_drag_steps_applied
@@ -329,9 +382,11 @@ class BrushSetRing(WidgetRing):
             return True
         if event.type == 'LEFTMOUSE' and event.value == 'RELEASE':
             self._is_page_dragging = False
+            self._is_set_dragging = False
             return False
         if event.type in {'RIGHTMOUSE', 'ESC'} and event.value == 'PRESS':
             self._is_page_dragging = False
+            self._is_set_dragging = False
             return False
         return True
 
@@ -343,22 +398,38 @@ class BrushSetRing(WidgetRing):
 
 
     def draw_active_brush_set_title(self, context: Context, theme: WheelTheme) -> None:
-        active_brush_set: BrushSet = self.active_brush_set
-        if not active_brush_set:
+        title_layout = self._get_title_layout()
+        if title_layout is None:
             return
-        title = active_brush_set.name
+        title, title_y, title_half_w = title_layout
         # Draw over the wheel.
-        wheel = self.wheel
         draw_text(
             title,
             0,
-            0 + wheel.radius + 14.0,
+            title_y,
             size=14.0,
             color=theme.text_color,
             align="CENTER",
             shadow=True,
             valign='BOTTOM'
         )
+
+        if self._hover_set_area or self._is_set_dragging:
+            col = (*theme.text_color[:3], min(1.0, theme.text_color[3] + 0.1))
+            y = title_y + 6.0
+            gap = 12.0
+            tip = 6.0
+            lx = -title_half_w - gap
+            rx = title_half_w + gap
+            lines = [
+                # Left tip "<"
+                (lx + tip, y + tip), (lx, y),
+                (lx + tip, y - tip), (lx, y),
+                # Right tip ">"
+                (rx - tip, y + tip), (rx, y),
+                (rx - tip, y - tip), (rx, y),
+            ]
+            draw_lines(lines, col, line_width=1.8, strip=False)
 
     def draw_page_indicator(self, context: Context, theme: WheelTheme) -> None:
         layout = self._get_page_indicator_layout()
