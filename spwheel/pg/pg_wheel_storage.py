@@ -1,10 +1,56 @@
-from bpy.props import BoolProperty, CollectionProperty, IntProperty, PointerProperty
+from typing import Optional
+from bpy.props import BoolProperty, CollectionProperty, EnumProperty, IntProperty, PointerProperty
 from bpy.types import Context
 
 from ..core.bl_types import PropertyGroup
 from .pg_tarta_set import WheelTartaSet
 from .pg_brush_set import BrushSet
 from .default_sets import get_tarta_set, get_brush_set
+
+TARTA_SET_ENUM_ITEMS: list[tuple[str, str, str]] = [("__none__", "No sets", "No custom button sets available")]
+
+def _sorted_tarta_set_entries(storage: "WheelTartaSetStorage") -> list[tuple[int, str]]:
+    entries: list[tuple[int, str]] = []
+    for idx, tarta_set in enumerate(storage.tarta_sets):
+        name = (tarta_set.name or "").strip() or f"Set {idx + 1}"
+        entries.append((idx, name))
+    entries.sort(key=lambda item: (item[1].lower(), item[0]))
+    return entries
+
+
+def enum_tarta_set_items(self: "WheelTartaSetStorage", context):
+    global TARTA_SET_ENUM_ITEMS
+    entries = _sorted_tarta_set_entries(self)
+    if not entries:
+        TARTA_SET_ENUM_ITEMS = [("__none__", "No sets", "No custom button sets available")]
+    else:
+        TARTA_SET_ENUM_ITEMS = [(str(idx), name, "") for idx, name in entries]
+    return TARTA_SET_ENUM_ITEMS
+
+
+def update_tarta_sets_enum(self: "WheelTartaSetStorage", context) -> None:
+    value = self.tarta_sets_enum
+    if value == "__none__":
+        self.active_tarta_set_index = -1
+        return
+    try:
+        idx = int(value)
+    except (TypeError, ValueError):
+        return
+    if 0 <= idx < len(self.tarta_sets):
+        self.active_tarta_set_index = idx
+
+
+def _sync_tarta_sets_enum(storage: "WheelTartaSetStorage") -> None:
+    if not storage.tarta_sets:
+        storage.tarta_sets_enum = "__none__"
+        storage.active_tarta_set_index = -1
+        return
+    active_idx = storage.active_tarta_set_index
+    if not (0 <= active_idx < len(storage.tarta_sets)):
+        active_idx = 0
+        storage.active_tarta_set_index = active_idx
+    storage.tarta_sets_enum = str(active_idx)
 
 
 class WheelTartaSetStorage(PropertyGroup):
@@ -17,6 +63,12 @@ class WheelTartaSetStorage(PropertyGroup):
         description="Index of the active custom buttons set",
         default=-1,
     )
+    tarta_sets_enum: EnumProperty(
+        name="Custom Button Set",
+        description="Select active custom button set",
+        items=enum_tarta_set_items,
+        update=update_tarta_sets_enum,
+    )
 
     @property
     def active_tarta_set(self) -> WheelTartaSet:
@@ -28,11 +80,11 @@ class WheelTartaSetStorage(PropertyGroup):
             return None
         return self.tarta_sets[self.active_tarta_set_index]
 
-    def add_tarta_set(self) -> WheelTartaSet:
+    def add_tarta_set(self, name: Optional[str] = None) -> WheelTartaSet:
         new_tarta_set = self.tarta_sets.add()
         self.active_tarta_set_index = len(self.tarta_sets) - 1
         # Avoid duplicate names.
-        name = f"Button Set {len(self.tarta_sets)}"
+        name = name or f"Button Set {len(self.tarta_sets)}"
         picked_names = {t.name for t in self.tarta_sets}
         if name in picked_names:
             for i in range(1, 100):
@@ -40,11 +92,13 @@ class WheelTartaSetStorage(PropertyGroup):
                 if name not in picked_names:
                     break
         new_tarta_set.name = name
+        _sync_tarta_sets_enum(self)
         return new_tarta_set
 
     def remove_active_tarta_set(self) -> None:
         self.tarta_sets.remove(self.active_tarta_set_index)
         self.active_tarta_set_index = -1 if not self.tarta_sets else self.active_tarta_set_index - 1
+        _sync_tarta_sets_enum(self)
 
     def move_active_tarta_set(self, direction: int) -> None:
         if direction == 1:
@@ -55,14 +109,17 @@ class WheelTartaSetStorage(PropertyGroup):
             raise ValueError(f"Invalid direction: {direction}")
         self.tarta_sets.move(self.active_tarta_set_index, target_index)
         self.active_tarta_set_index = target_index
+        _sync_tarta_sets_enum(self)
 
     def ensure_tarta_set(self, context: Context) -> WheelTartaSet:
         if len(self.tarta_sets) > 0:
+            _sync_tarta_sets_enum(self)
             return
         # Create a default tarta set.
         new_tarta_set = self.tarta_sets.add()
         new_tarta_set.name = "Default Set"
-
+        self.active_tarta_set_index = 0
+        _sync_tarta_sets_enum(self)
         return new_tarta_set
 
 

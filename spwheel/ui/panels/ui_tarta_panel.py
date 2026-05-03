@@ -4,10 +4,24 @@ from ...core.bl_types import PanelTypes
 from ...pg.pg_wheel_storage import WheelStorage, WheelTartaSetStorage
 from ...pg.pg_tarta_set import WheelTartaSet
 from ...pg.pg_create_tarta_button import CreateTartaButton
-from ...ui.lists.ul_tarta_set_list import TartaSetList
 from ...ui.lists.ul_tarta_button_list import TartaButtonList
-from ...ops.op_tarta_set_list import OpTartaSetListAdd, OpTartaSetListRemove, OpTartaSetListMove
-from ...ops.op_tarta_button import OpTartaButtonAdd
+from ...ops.op_tarta_set_list import OpTartaSetListAdd, OpTartaSetListRemove
+from ...ops.op_tarta_button import OpTartaButtonAdd, OpTartaButtonMove, OpTartaButtonRemove
+
+
+class WheelTartaSetOptionsPopover(PanelTypes.POPOVER):
+    bl_label = "Tarta Set Options"
+
+    def draw_ui(self, context: Context, layout: UILayout):
+        wheel_storage: WheelTartaSetStorage = WheelStorage.get_by_mode(context)
+        active_tarta_set = wheel_storage.active_tarta_set
+        if active_tarta_set is None:
+            layout.label(text="No active set", icon="INFO")
+            return
+        layout.prop(active_tarta_set, "name", text="Name")
+        layout.separator()
+        layout.alert = True
+        layout.operator(OpTartaSetListRemove.bl_idname, text="Remove Set", icon="TRASH")
 
 
 class WheelTartaButtonsPanel(PanelTypes.VIEW_3D_SIDEBAR):
@@ -16,18 +30,20 @@ class WheelTartaButtonsPanel(PanelTypes.VIEW_3D_SIDEBAR):
     bl_label = 'Custom Button Sets'
     bl_order = 2
     
-    def draw_set_list(self, wheel_storage: WheelTartaSetStorage, layout: UILayout):
-        row = layout.row()
-        TartaSetList.draw_list(row, wheel_storage, 'tarta_sets', 'active_tarta_set_index')
-        col = row.column(align=True)
-        col.operator(OpTartaSetListAdd.bl_idname, text="", icon='ADD')
-        col.operator(OpTartaSetListRemove.bl_idname, text="", icon='REMOVE')
-        col.separator()
-        col.operator(OpTartaSetListMove.bl_idname, text="", icon='TRIA_UP').direction = 1
-        col.operator(OpTartaSetListMove.bl_idname, text="", icon='TRIA_DOWN').direction = -1
+    def draw_set_selector_row(self, wheel_storage: WheelTartaSetStorage, layout: UILayout):
+        row = layout.row(align=True)
+        row.prop(wheel_storage, "tarta_sets_enum", text="")
+        row.popover(WheelTartaSetOptionsPopover.bl_idname, text="", icon='PROPERTIES')
+        row.operator(OpTartaSetListAdd.bl_idname, text="", icon='ADD')
 
     def draw_button_list(self, active_tarta_set: WheelTartaSet, layout: UILayout):
-        TartaButtonList.draw_list(layout, active_tarta_set, 'buttons', 'active_button_index')
+        row = layout.row(align=True)
+        TartaButtonList.draw_list(row, active_tarta_set, 'buttons', 'active_button_index')
+        col = row.column(align=True)
+        col.operator(OpTartaButtonMove.bl_idname, text="", icon='TRIA_UP').direction = 1
+        col.operator(OpTartaButtonMove.bl_idname, text="", icon='TRIA_DOWN').direction = -1
+        col.separator()
+        col.operator(OpTartaButtonRemove.bl_idname, text="", icon='REMOVE')
 
     def draw_create_button_section(self, create: CreateTartaButton, layout: UILayout):
         header, content = layout.panel('TEMP_PT_create_custom_button')
@@ -75,15 +91,12 @@ class WheelTartaButtonsPanel(PanelTypes.VIEW_3D_SIDEBAR):
         create: CreateTartaButton = CreateTartaButton.get(context)
 
         main = layout.column()
-        lists_row = main.row()
-
-        self.draw_set_list(wheel_storage, lists_row)
+        lists_col = main.column(align=True)
+        self.draw_set_selector_row(wheel_storage, lists_col)
 
         if active_tarta_set := wheel_storage.active_tarta_set:
-            header, content = layout.panel('TEMP_PT_tarta_buttons')
-            header.label(text=f'Buttons for {active_tarta_set.name}')
-            if content:
-                self.draw_button_list(active_tarta_set, content)
+            self.draw_button_list(active_tarta_set, lists_col)
             self.draw_create_button_section(create, main)
         else:
             main.box().label(text="No set selected", icon="INFO")
+            self.draw_create_button_section(create, main)
