@@ -3,10 +3,17 @@ import math
 from typing import TYPE_CHECKING
 
 from mathutils import Vector
+import bpy
 
 from ..pg.pg_wheel_theme import WheelTheme
-from ..utils.ups import get_ups_color_hsv, set_ups_color_hsv
-from ..gpu.colpk import draw_colpk_hue_ring, draw_colpk_sat_arc, draw_colpk_val_arc
+from ..utils.ups import get_ups_color_hsv, get_ups_color, get_ups_secondary_color, set_ups_color_hsv
+from ..gpu.colpk import (
+    draw_colpk_hue_ring,
+    draw_colpk_sat_arc,
+    draw_colpk_val_arc,
+    draw_colpk_sv_swatches,
+    get_colpk_sv_swatches_layout,
+)
 from ..gpu.colpk_helpers import (
     S_ANGLE_BOT,
     S_ANGLE_TOP,
@@ -59,6 +66,7 @@ class ColorPickerWidget(WidgetRing):
         self.sv_outer_r = 0.0
         self._hover_handle: str | None = None
         self._active_handle: str | None = None
+        self._hover_swap = False
 
     @staticmethod
     def _clamp01(v: float) -> float:
@@ -135,6 +143,15 @@ class ColorPickerWidget(WidgetRing):
 
     def _event_local_to_wheel(self, event: "Event") -> tuple[float, float]:
         return self.wheel.to_local(event.mouse_region_x, event.mouse_region_y)
+
+    def _swap_button_hit(self, p_local: Vector) -> bool:
+        _left, center, _right, _swatch_r, swap_r = get_colpk_sv_swatches_layout(
+            self.center.x,
+            self.center.y,
+            self.sv_outer_r - 16,
+            self.sv_outer_r + 16,
+        )
+        return math.hypot(p_local.x - center[0], p_local.y - center[1]) <= swap_r * 1.15
 
     def _apply_handle_drag(self, context: "Context", event: "Event", handle: str) -> None:
         mx, my = self._event_local_to_wheel(event)
@@ -225,13 +242,43 @@ class ColorPickerWidget(WidgetRing):
             draw_circle_fill(hx, hy, hr, col_fill, softness=0.12)
             draw_ring(hx, hy, hr, col_outline, thickness=1.15, softness=0.05)
 
+        primary = get_ups_color(context)
+        secondary = get_ups_secondary_color(context)
+        primary_rgb = (
+            float(primary[0]) if primary else 0.0,
+            float(primary[1]) if primary else 0.0,
+            float(primary[2]) if primary else 0.0,
+        )
+        secondary_rgb = (
+            float(secondary[0]) if secondary else 1.0,
+            float(secondary[1]) if secondary else 1.0,
+            float(secondary[2]) if secondary else 1.0,
+        )
+        draw_colpk_sv_swatches(
+            cx,
+            cy,
+            self.sv_outer_r - 16,
+            self.sv_outer_r + 16,
+            primary_rgb,
+            secondary_rgb,
+            hover_swap=self._hover_swap,
+        )
+
     def test_hit(self, context: "Context", p: Vector) -> bool:
+        self._hover_swap = self._swap_button_hit(p)
+        if self._hover_swap:
+            self._hover_handle = None
+            return True
         self._hover_handle = self._pick_hover_handle(context, p)
         if self._hover_handle is None:
             self._hover_handle = self._pick_control_from_area(p)
         return self._hover_handle is not None
 
     def on_left_press(self, context: "Context", event: "Event") -> bool:
+        if self._hover_swap:
+            bpy.ops.paint.brush_colors_flip()
+            context.region.tag_redraw()
+            return True
         if self._hover_handle is None:
             return False
         self._active_handle = self._hover_handle

@@ -32,9 +32,9 @@ def get_active_brush_mode(context: Optional[Context] = None) -> str | None:
 def get_ups(context: Optional[Context] = None) -> UnifiedPaintSettings | None:
     return UnifiedPaintPanel.paint_settings(context or bpy.context).unified_paint_settings
 
-def _get_ups_attr(context: Context, attr: str) -> float | None:
+def _get_ups_attr(context: Context, attr: str, unif_attr: Optional[str] = None) -> float | None:
     ups = get_ups(context)
-    return getattr(ups, attr) if getattr(ups, f"use_unified_{attr}") else getattr(get_active_brush(context), attr)
+    return getattr(ups, attr) if getattr(ups, f"use_unified_{unif_attr or attr}") else getattr(get_active_brush(context), attr)
 
 def _set_ups_attr(context: Context, attr: str, value: float):
     ups = get_ups(context)
@@ -50,6 +50,7 @@ def get_ups_strength(context: Optional[Context] = None) -> float | None: return 
 def set_ups_strength(context: Context, strength: float = 0.5): _set_ups_attr(context, "strength", strength)
 
 def get_ups_color(context: Optional[Context] = None) -> float | None: return _get_ups_attr(context, "color")
+def get_ups_secondary_color(context: Optional[Context] = None) -> float | None: return _get_ups_attr(context, "secondary_color", unif_attr='color')
 def get_ups_color_hsv(context: Optional[Context] = None) -> float | None: return _get_ups_attr(context, "color").hsv
 def set_ups_color(context: Context, color: tuple[float, float, float, float] = (0.0, 0.0, 0.0)): _set_ups_attr(context, "color", color)
 def set_ups_color_hsv(context: Context, h: float, s: float, v: float):

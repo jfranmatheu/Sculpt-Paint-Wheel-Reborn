@@ -6,6 +6,7 @@ Shaders adapted from Blend-Wheel ``croma_rng_*.frag`` (point sprites → screen 
 
 from __future__ import annotations
 
+import math
 from typing import Tuple
 
 import gpu
@@ -14,7 +15,9 @@ from gpu.types import GPUShader, GPUShaderCreateInfo, GPUStageInterfaceInfo
 from gpu_extras.batch import batch_for_shader
 
 from ..core.gpu.state_control import CM_GPU_BLEND
+from ..core.gpu.imm_2d import draw_lines
 from .utils import _quad_verts
+from .utils import draw_circle_fill, draw_ring
 
 # ---------------------------------------------------------------------------
 # Vertex (shared with wheel quads)
@@ -368,3 +371,65 @@ def draw_colpk_val_arc(
         ratio = 0.8 if outer_radius_px <= 0.0 else max(0.0, min(0.999, inner_radius_px / outer_radius_px))
         shader.uniform_float("ring_inner_ratio", float(ratio))
         batch.draw(shader)
+
+
+def get_colpk_sv_swatches_layout(
+    cx: float,
+    cy: float,
+    sv_inner_r: float,
+    sv_outer_r: float,
+) -> tuple[tuple[float, float], tuple[float, float], tuple[float, float], float, float]:
+    """Layout for (primary, swap, secondary) controls between S/V top caps."""
+    mid_sv = 0.5 * (sv_inner_r + sv_outer_r)
+    band = max(1e-6, sv_outer_r - sv_inner_r)
+    top_y = cy + mid_sv * math.sin(math.radians(65.0))
+    swatch_r = max(5.0, band * 0.30)
+    swap_r = max(4.0, swatch_r * 0.72)
+    half_span = swatch_r * 1.45 + swap_r
+    left = (cx - half_span, top_y)
+    center = (cx, top_y)
+    right = (cx + half_span, top_y)
+    return left, center, right, swatch_r, swap_r
+
+
+def draw_colpk_sv_swatches(
+    cx: float,
+    cy: float,
+    sv_inner_r: float,
+    sv_outer_r: float,
+    primary_rgb: tuple[float, float, float],
+    secondary_rgb: tuple[float, float, float],
+    *,
+    hover_swap: bool = False,
+) -> tuple[tuple[float, float], float]:
+    """Draw left/right color swatches + center swap button. Returns (swap_center, swap_radius)."""
+    left, center, right, swatch_r, swap_r = get_colpk_sv_swatches_layout(cx, cy, sv_inner_r, sv_outer_r)
+
+    # Swatches
+    draw_circle_fill(left[0], left[1], swatch_r, (*primary_rgb, 1.0), softness=0.10)
+    draw_ring(left[0], left[1], swatch_r, (0.92, 0.94, 0.97, 0.90), thickness=1.1, softness=0.06)
+
+    draw_circle_fill(right[0], right[1], swatch_r, (*secondary_rgb, 1.0), softness=0.10)
+    draw_ring(right[0], right[1], swatch_r, (0.92, 0.94, 0.97, 0.90), thickness=1.1, softness=0.06)
+
+    # Swap button
+    fill = (0.15, 0.16, 0.19, 0.98) if hover_swap else (0.11, 0.12, 0.15, 0.95)
+    out = (0.98, 0.98, 0.99, 0.95) if hover_swap else (0.84, 0.86, 0.90, 0.92)
+    draw_circle_fill(center[0], center[1], swap_r, fill, softness=0.12)
+    draw_ring(center[0], center[1], swap_r, out, thickness=1.0, softness=0.06)
+
+    # White arrows icon (no text): top arrow points right, bottom arrow points left.
+    x, y = center
+    arm = swap_r * 0.60
+    ah = swap_r * 0.24
+    dy = swap_r * 0.22
+    lines = [
+        (x - arm, y + dy), (x + arm, y + dy),
+        (x + arm, y + dy), (x + arm - ah, y + dy + ah),
+        (x + arm, y + dy), (x + arm - ah, y + dy - ah),
+        (x + arm, y - dy), (x - arm, y - dy),
+        (x - arm, y - dy), (x - arm + ah, y - dy + ah),
+        (x - arm, y - dy), (x - arm + ah, y - dy - ah),
+    ]
+    draw_lines(lines, (1.0, 1.0, 1.0, 0.95), line_width=1.3, strip=False)
+    return center, swap_r
