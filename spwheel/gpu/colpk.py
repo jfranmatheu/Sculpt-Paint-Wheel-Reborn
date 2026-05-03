@@ -414,9 +414,9 @@ def draw_colpk_sv_swatches(
 
     # Swap button
     fill = (0.15, 0.16, 0.19, 0.98) if hover_swap else (0.11, 0.12, 0.15, 0.95)
-    out = (0.98, 0.98, 0.99, 0.95) if hover_swap else (0.84, 0.86, 0.90, 0.92)
+    # out = (0.98, 0.98, 0.99, 0.95) if hover_swap else (0.84, 0.86, 0.90, 0.92)
     draw_circle_fill(center[0], center[1], swap_r, fill, softness=0.12)
-    draw_ring(center[0], center[1], swap_r, out, thickness=1.0, softness=0.06)
+    # draw_ring(center[0], center[1], swap_r, out, thickness=1.0, softness=0.06)
 
     # White arrows icon (no text): top arrow points right, bottom arrow points left.
     x, y = center
