@@ -104,6 +104,8 @@ void main() {
     float maxRad = 1.0;
     float minRad2 = minRad + RAD_THRES;
     float maxRad2 = maxRad - RAD_THRES;
+    float midRad = 0.5 * (minRad + maxRad);
+    float capRad = 0.5 * (maxRad - minRad);
     if (radius < minRad || radius > maxRad) {
         discard;
     }
@@ -112,7 +114,17 @@ void main() {
     if (angle < 0.0) {
         angle = 360.0 + angle;
     }
-    if (angle < angbot || angle > angtop) {
+    vec2 cap0 = vec2(cos(radians(angbot)), sin(radians(angbot))) * midRad;
+    vec2 cap1 = vec2(cos(radians(angtop)), sin(radians(angtop))) * midRad;
+    bool inSector = (angle >= angbot && angle <= angtop);
+    float cap0Dist = distance(cxy, cap0);
+    float cap1Dist = distance(cxy, cap1);
+    float cap0Fw = max(1e-6, fwidth(cap0Dist));
+    float cap1Fw = max(1e-6, fwidth(cap1Dist));
+    float capAlpha0 = 1.0 - smoothstep(capRad - cap0Fw, capRad + cap0Fw, cap0Dist);
+    float capAlpha1 = 1.0 - smoothstep(capRad - cap1Fw, capRad + cap1Fw, cap1Dist);
+    float shapeAlpha = max(inSector ? 1.0 : 0.0, max(capAlpha0, capAlpha1));
+    if (shapeAlpha < ALPHA_THRES) {
         discard;
     }
 
@@ -121,9 +133,13 @@ void main() {
     } else if (radius > maxRad2) {
         alpha = smoothstep(maxRad, maxRad2, radius);
     }
-    fragColor.a = alpha;
+    fragColor.a = alpha * shapeAlpha;
 
-    float sat = smoothstep(angbot, angtop, angle);
+    float sat = clamp((angle - angbot) / max(1e-6, (angtop - angbot)), 0.0, 1.0);
+    float capMix0 = (1.0 - (inSector ? 1.0 : 0.0)) * capAlpha0;
+    float capMix1 = (1.0 - (inSector ? 1.0 : 0.0)) * capAlpha1;
+    sat = mix(sat, 0.0, clamp(capMix0, 0.0, 1.0));
+    sat = mix(sat, 1.0, clamp(capMix1, 0.0, 1.0));
     vec3 co = hsv2rgb(vec3(h, sat, v));
     fragColor.rgb = pow(co, vec3(2.2));
 }
@@ -159,12 +175,24 @@ void main() {
     float maxRad = 1.0;
     float minRad2 = minRad + RAD_THRES;
     float maxRad2 = maxRad - RAD_THRES;
+    float midRad = 0.5 * (minRad + maxRad);
+    float capRad = 0.5 * (maxRad - minRad);
     if (radius < minRad || radius > maxRad) {
         discard;
     }
 
     float angle = degrees(atan(cxy.y, cxy.x));
-    if (angle > angbot || angle < angtop) {
+    vec2 cap0 = vec2(cos(radians(angbot)), sin(radians(angbot))) * midRad;
+    vec2 cap1 = vec2(cos(radians(angtop)), sin(radians(angtop))) * midRad;
+    bool inSector = (angle <= angbot && angle >= angtop);
+    float cap0Dist = distance(cxy, cap0);
+    float cap1Dist = distance(cxy, cap1);
+    float cap0Fw = max(1e-6, fwidth(cap0Dist));
+    float cap1Fw = max(1e-6, fwidth(cap1Dist));
+    float capAlpha0 = 1.0 - smoothstep(capRad - cap0Fw, capRad + cap0Fw, cap0Dist);
+    float capAlpha1 = 1.0 - smoothstep(capRad - cap1Fw, capRad + cap1Fw, cap1Dist);
+    float shapeAlpha = max(inSector ? 1.0 : 0.0, max(capAlpha0, capAlpha1));
+    if (shapeAlpha < ALPHA_THRES) {
         discard;
     }
 
@@ -173,9 +201,13 @@ void main() {
     } else if (radius > maxRad2) {
         alpha = smoothstep(maxRad, maxRad2, radius);
     }
-    fragColor.a = alpha;
+    fragColor.a = alpha * shapeAlpha;
 
-    float val = smoothstep(angbot, angtop, angle);
+    float val = clamp((angbot - angle) / max(1e-6, (angbot - angtop)), 0.0, 1.0);
+    float capMix0 = (1.0 - (inSector ? 1.0 : 0.0)) * capAlpha0;
+    float capMix1 = (1.0 - (inSector ? 1.0 : 0.0)) * capAlpha1;
+    val = mix(val, 0.0, clamp(capMix0, 0.0, 1.0));
+    val = mix(val, 1.0, clamp(capMix1, 0.0, 1.0));
     vec3 co = hsv2rgb(vec3(h, s, val));
     fragColor.rgb = pow(co, vec3(2.2));
 }
