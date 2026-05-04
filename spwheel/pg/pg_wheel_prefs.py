@@ -80,4 +80,3 @@ class WheelPrefs(PropertyGroup):
         content.prop(self.weight, "show_markers")
         content.prop(self.weight, "use_interactable_markers")
         content.prop(self.weight, "set_weight_of_selection_directly")
-        content.prop(self.weight, "use_add_substract_brush")
