@@ -17,7 +17,7 @@ class PATHS:
     MANIFEST = ROOT / "blender_manifest.toml"
     ASSETS = ROOT / 'assets'
     ICONS = ASSETS / 'icons'
-    USER_DATA = bpy.utils.resource_path('USER')
+    USER_DATA = Path(bpy.utils.resource_path('USER'))
 
 
 with open(PATHS.MANIFEST, "rb") as f:
