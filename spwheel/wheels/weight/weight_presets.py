@@ -13,8 +13,7 @@ preset_panels_weight = (
 )
 
 preset_operators_weight = (
-    ("_BOX_SELECT_OPTIONS", "Box Select Options", "weightwheel.box_select_tool_options"),
+    ("_BOX_SELECT_OPTIONS", "Box Select Options", "spwheel.opweightboxselecttooloptions"),
     ("_WEIGHT_SET", "Apply Weight", "paint.weight_set"),
     ("_WEIGHT_SAMPLE", "Sample Weight", "paint.weight_sample"),
 )
-

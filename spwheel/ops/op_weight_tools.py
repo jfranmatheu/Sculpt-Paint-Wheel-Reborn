@@ -7,7 +7,6 @@ from ..core.bl_types import OperatorAction
 
 class OpWeightBoxSelectToolOptions(OperatorAction):
     """Popup with face/vertex masking toggles for weight paint box select."""
-    bl_idname = "weightwheel.box_select_tool_options"
     bl_label = "Box Select Options"
 
     option: EnumProperty(

@@ -30,14 +30,19 @@ def get_active_brush_mode(context: Optional[Context] = None) -> str | None:
     return UnifiedPaintPanel.get_brush_mode(context or bpy.context)
 
 def get_ups(context: Optional[Context] = None) -> UnifiedPaintSettings | None:
-    return UnifiedPaintPanel.paint_settings(context or bpy.context).unified_paint_settings
+    ups = UnifiedPaintPanel.paint_settings(context or bpy.context)
+    return ups.unified_paint_settings if ups else None
 
 def _get_ups_attr(context: Context, attr: str, unif_attr: Optional[str] = None) -> float | None:
     ups = get_ups(context)
+    if not ups:
+        return None
     return getattr(ups, attr) if getattr(ups, f"use_unified_{unif_attr or attr}") else getattr(get_active_brush(context), attr)
 
 def _set_ups_attr(context: Context, attr: str, value: float):
     ups = get_ups(context)
+    if not ups:
+        return
     if hasattr(ups, f"use_unified_{attr}") and getattr(ups, f"use_unified_{attr}"):
         setattr(ups, attr, value)
     else:
