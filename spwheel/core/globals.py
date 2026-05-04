@@ -17,10 +17,15 @@ class PATHS:
     MANIFEST = ROOT / "blender_manifest.toml"
     ASSETS = ROOT / 'assets'
     ICONS = ASSETS / 'icons'
+    USER_DATA = bpy.utils.resource_path('USER')
 
 
-with PATHS.MANIFEST.open("rb") as f:
+with open(PATHS.MANIFEST, "rb") as f:
     _blender_manifest_contents = tomllib.load(f)
+
+
+PATHS.USER_DATA = PATHS.USER_DATA / _blender_manifest_contents['id']
+PATHS.USER_DATA.mkdir(parents=True, exist_ok=True)
 
 
 class GLOBALS:
