@@ -4,6 +4,7 @@ from bpy.props import IntProperty
 
 from ..core.bl_types import OperatorAction
 from ..pg.pg_wheel_storage import WheelStorage
+from ..utils.ups import get_active_brush_mode, get_tool_settings
 
 
 class OpPollActiveBrushSet:
@@ -33,6 +34,29 @@ class OpBrushListAdd(OperatorAction, OpPollActiveBrushSet):
 
     def action(self, context, event):
         active_set = WheelStorage.get_by_mode(context).active_brush_set
+        ts = get_tool_settings(context)
+        if not ts or not getattr(ts, "brush", None):
+            return "No active brush"
+
+        weak_ref = getattr(ts, "brush_asset_reference", None)
+        key = (
+            getattr(weak_ref, "asset_library_type", "") if weak_ref else "",
+            getattr(weak_ref, "asset_library_identifier", "") if weak_ref else "",
+            getattr(weak_ref, "relative_asset_identifier", "") if weak_ref else "",
+            ts.brush.name,
+            get_active_brush_mode(context),
+        )
+        for item in active_set.items:
+            existing = (
+                getattr(item, "asset_library_type", ""),
+                getattr(item, "asset_library_identifier", ""),
+                getattr(item, "relative_asset_identifier", ""),
+                getattr(item, "name", ""),
+                getattr(item, "mode", ""),
+            )
+            if existing == key:
+                return "Brush is already in the active brush set"
+
         active_set.add_active_brush(context)
         active_set.active_item_index = len(active_set.items) - 1
 
