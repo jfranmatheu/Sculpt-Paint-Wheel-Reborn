@@ -26,6 +26,7 @@ def layout_sector_from_pointer(mx: float, my: float, cx: float, cy: float, n: in
 
 class TartaRing(WidgetRing):
     """GPU pie ring + icons; hit-test prefers icon discs then sector wedge."""
+    click_on_release = True
     _tarta_buttons: list[WheelTartaButton] = []
 
     def init(self) -> None:
@@ -110,6 +111,10 @@ class TartaRing(WidgetRing):
                 draw_text(btn.name[:10], sx, sy, size=9.0, color=col_text, align="CENTER", shadow=True)
 
     def on_left_press(self, context: Context, event) -> bool:
+        # Arm click on press; actual action is executed on release.
+        return self.hover_custom_bid != -1 and self.hover_layout_slot != -1 and self.layout_n > 0
+
+    def on_left_click(self, context: Context, event) -> bool:
         if self.hover_custom_bid == -1 or self.hover_layout_slot == -1 or self.layout_n <= 0:
             return False
         hovered_button = self._tarta_buttons[self.hover_custom_bid]

@@ -11,6 +11,7 @@ from ..pg.pg_wheel_storage import SculptPaintWheelStorage
 
 class Widget:
     use_modal = False
+    click_on_release = False
     _wg_prefs = None
 
     # Parenting ------------
@@ -92,6 +93,11 @@ class Widget:
             return self.modal
         return True
 
+    def _on_left_click(self, context: Context, event: Event) -> bool:
+        if not self.interactable:
+            return False
+        return bool(self.on_left_click(context, event))
+
     def _test_hit(self, context: Context, p: Vector) ->  Optional["Widget"]:
         if not self.enabled:
             return None
@@ -160,6 +166,12 @@ class Widget:
         Returns True if the widget should consume the event, False otherwise.
         """
         pass
+
+    def on_left_click(self, context: Context, event: Event) -> bool:
+        """
+        Called when the left mouse button is released on the same widget where press started.
+        """
+        return self.on_left_press(context, event)
 
     def modal(self, context: Context, event: Event) -> bool:
         return True

@@ -39,6 +39,7 @@ class Wheel:
         self.radius = self.default_radius
         self._widgets: list["Widget"] = []
         self.hovered_widget: "Widget" | None = None
+        self._pressed_widget: "Widget" | None = None
         self._event_subscriptions: CallbackDict = CallbackDict()
         self.setup(context)
         for wg in self.get_all_widgets():
@@ -98,10 +99,26 @@ class Wheel:
             return True
         return False
 
-    def on_left_press(self, context: Context, event: Event) -> Callable[[Context, Event], bool] | None:
+    def on_left_press(self, context: Context, event: Event) -> Callable[[Context, Event], bool] | bool | None:
         if self.hovered_widget:
+            if self.hovered_widget.click_on_release:
+                ret = self.hovered_widget._on_left_press(context, event)
+                if ret:
+                    self._pressed_widget = self.hovered_widget
+                return ret
+            self._pressed_widget = None
             return self.hovered_widget._on_left_press(context, event)
+        self._pressed_widget = None
         return None
+
+    def on_left_release(self, context: Context, event: Event) -> bool:
+        if self._pressed_widget is None:
+            return False
+        pressed_widget = self._pressed_widget
+        self._pressed_widget = None
+        if self.hovered_widget is not pressed_widget:
+            return False
+        return pressed_widget._on_left_click(context, event)
 
     def subscribe_to_event(self, event_name: str, callback: Callable[[Context, Event], None]) -> None:
         self._event_subscriptions.add_callback(event_name, callback)

@@ -70,6 +70,10 @@ class WheelModal(bl_types.OperatorModal):
             else:
                 return OpReturn.RUN
 
+        if event.type == 'LEFTMOUSE' and event.value == 'RELEASE':
+            self.wheel.on_left_release(context, event)
+            return OpReturn.RUN
+
         if event.type == 'WHEELUPMOUSE':
             self.wheel.on_scroll_up(context, event)
             return OpReturn.RUN
