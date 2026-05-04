@@ -9,5 +9,3 @@ def cleanup() -> None:
     if _exit:
         return
     _exit = True
-    print("Cleaning up...")
-    # TODO: Cleanup here
