@@ -87,7 +87,8 @@ class Wheel:
         if self.hovered_widget:
             if not self.hovered_widget._test_hit(context, p_local):
                 self.hovered_widget = None
-        for widget in self._widgets:
+        # Match hit-testing priority with draw order: later drawn widgets are "on top".
+        for widget in reversed(self._widgets):
             result = widget._test_hit(context, p_local)
             if result is not None:
                 self.hovered_widget = result

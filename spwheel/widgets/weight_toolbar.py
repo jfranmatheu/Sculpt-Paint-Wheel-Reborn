@@ -13,7 +13,6 @@ from mathutils import Vector
 from ..gpu.button_texture import get_custom_button_texture
 from ..gpu.draw import draw_circle_fill, draw_ring, draw_text, draw_textured_circle
 from .widget import Widget
-from ..ops.op_weight_tools import OpWeightBoxSelectToolOptions
 
 if TYPE_CHECKING:
     from bpy.types import Context, Event
@@ -36,14 +35,14 @@ class _ToolSpec:
 
 
 _TOOLS: tuple[_ToolSpec, ...] = (
-    _ToolSpec("Draw", "draw", True, "Paint_Draw.png"),
+    _ToolSpec("Draw", "brush", False, "Paint_Draw.png"),
     _ToolSpec("Blur", "blur", True, "Paint_Blur.png", offset=(0.0, -10.0)),
     _ToolSpec("Average", "average", True, "Paint_Average.png", offset=(0.0, -10.0)),
     _ToolSpec("Smear", "smear", True, "Paint_Smear.png"),
-    _ToolSpec("Gradient", "gradient", False, "Paint_Gradient.png", op_call=lambda: bpy.ops.paint.weight_gradient(type='LINEAR')),
-    _ToolSpec("Sample Weight", "sample_weight", False, "Paint_Sample_Weight.png", offset=(0.0, -10.0)), #, op_call=lambda: bpy.ops.paint.weight_sample()),
-    _ToolSpec("Sample Vertex Group", "sample_vertex_group", False, "Paint_Sample_Vertex_Group.png", offset=(0.0, -10.0)), #, op_call=lambda: bpy.ops.paint.weight_sample_group()),
-    _ToolSpec("Select Box", "select_box", False, "Select_Box.png", always_trigger=True) #, op_call=lambda: OpWeightBoxSelectToolOptions.run_invoke()),
+    _ToolSpec("Gradient", "gradient", False, "Paint_Gradient.png"),
+    _ToolSpec("Sample Weight", "sample_weight", False, "Paint_Sample_Weight.png", offset=(0.0, -10.0)),
+    _ToolSpec("Sample Vertex Group", "sample_vertex_group", False, "Paint_Sample_Vertex_Group.png", offset=(0.0, -10.0)),
+    _ToolSpec("Select Box", "select_box", False, "Select_Box.png", always_trigger=True)
 )
 
 
@@ -124,36 +123,12 @@ class WeightToolbarWidget(Widget):
                 return True
         return False
 
-    def _set_weight_draw_toggle(self, context: "Context") -> None:
-        ts = context.tool_settings
-        wpaint = getattr(ts, "weight_paint", None)
-        if wpaint is None or not getattr(wpaint, "brush", None):
-            return
-        current = wpaint.brush
-        if current.name == "Add":
-            name = "Subtract"
-        elif current.name == "Subtract":
-            name = "Add"
-        else:
-            name = "Add"
-        nxt = bpy.data.brushes.get(name)
-        if nxt is not None:
-            wpaint.brush = nxt
 
     def on_left_press(self, context: "Context", event: "Event") -> bool:
         if self._hover_idx < 0:
             return False
         spec = _TOOLS[self._hover_idx]
         current_id = self._active_tool_idname(context)
-        prefs = self.wheel.prefs.weight if hasattr(self.wheel, "prefs") else None
-        if (
-            context.mode == "PAINT_WEIGHT"
-            and spec.name == "Draw"
-            and current_id == spec.identifier
-            and prefs is not None
-            and getattr(prefs, "use_add_substract_brush", False)
-        ):
-            self._set_weight_draw_toggle(context)
         if current_id != spec.identifier or spec.always_trigger:
             bpy.ops.wm.tool_set_by_id(name=spec.identifier)
         if spec.op_call:
