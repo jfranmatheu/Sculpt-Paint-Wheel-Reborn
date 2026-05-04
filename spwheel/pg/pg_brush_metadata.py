@@ -254,7 +254,7 @@ class BrushMetadata(PropertyGroup):
             preview = brush.preview_ensure()
         if not preview:
             return False
-        x, y = preview.icon_size
+        x, y = preview.image_size
         if x == 0 or y == 0:
             return False
         pixels = preview.image_pixels_float
