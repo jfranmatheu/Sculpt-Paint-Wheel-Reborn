@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 
 import bpy
+from bpy.props import BoolProperty
 from bpy.types import Context
 from ...globals import GLOBALS, PATHS
 
@@ -10,6 +11,12 @@ from ..ui.btype_ui_base import BType_UIExtra
 
 class BType_AddonPreferences(BType_UIExtra, bpy.types.AddonPreferences):
     bpy_type = bpy.types.AddonPreferences
+    first_time: BoolProperty(
+        name="First Time",
+        description="Internal flag to detect first register after install and restore saved preferences",
+        default=True,
+        options={"HIDDEN"},
+    )
 
     @classmethod
     def tag_register(cls, **kwargs):
@@ -95,6 +102,57 @@ class BType_AddonPreferences(BType_UIExtra, bpy.types.AddonPreferences):
         return out
 
     @classmethod
+    def _apply_rna(cls, data, payload) -> None:
+        if data is None or not isinstance(payload, dict):
+            return
+
+        props = getattr(getattr(data, "bl_rna", None), "properties", None)
+        if not props:
+            return
+
+        for prop in props:
+            pid = prop.identifier
+            if pid == "rna_type":
+                continue
+            if pid.startswith("bl_") or pid.startswith("_"):
+                continue
+            if pid not in payload:
+                continue
+
+            val = payload.get(pid)
+            try:
+                if prop.type == "POINTER":
+                    if val is None:
+                        continue
+                    target = getattr(data, pid)
+                    if hasattr(target, "bl_rna") and isinstance(val, dict):
+                        cls._apply_rna(target, val)
+                    continue
+
+                if prop.type == "COLLECTION":
+                    coll = getattr(data, pid)
+                    if not isinstance(val, list):
+                        continue
+                    try:
+                        coll.clear()
+                    except Exception:
+                        pass
+                    for item_payload in val:
+                        try:
+                            item = coll.add()
+                        except Exception:
+                            break
+                        if isinstance(item_payload, dict) and hasattr(item, "bl_rna"):
+                            cls._apply_rna(item, item_payload)
+                    continue
+
+                # Plain value property.
+                setattr(data, pid, val)
+            except Exception:
+                # Best-effort restore; skip incompatible/removed properties.
+                continue
+
+    @classmethod
     def _clear_rna(cls, data, visited: set[int] | None = None) -> None:
         if data is None:
             return
@@ -148,8 +206,26 @@ class BType_AddonPreferences(BType_UIExtra, bpy.types.AddonPreferences):
         path = Path(file_path) if file_path else (Path(PATHS.USER_DATA) / "preferences.json")
         path.parent.mkdir(parents=True, exist_ok=True)
         payload = self.to_dict()
+        payload["_metadata_"] = {
+            "version": GLOBALS.ADDON.VERSION,
+        }
         path.write_text(json.dumps(payload, indent=2, ensure_ascii=True), encoding="utf-8")
         return path
+
+    def load(self, file_path: str | Path | None = None) -> bool:
+        path = Path(file_path) if file_path else (Path(PATHS.USER_DATA) / "preferences.json")
+        if not path.exists():
+            return False
+        try:
+            raw = json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
+            return False
+        if not isinstance(raw, dict):
+            return False
+        # Ignore metadata keys and apply known RNA properties recursively.
+        raw.pop("_metadata_", None)
+        self._apply_rna(self, raw)
+        return True
 
     def clear(self) -> None:
         self._clear_rna(self)
