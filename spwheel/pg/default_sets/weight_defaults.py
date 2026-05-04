@@ -1,13 +1,13 @@
 from os.path import dirname, join
 
-icons_dir = join(dirname(dirname(dirname(__file__))), 'images', "custom_buttons")
+icons_dir = join(dirname(dirname(dirname(__file__))), "assets", "images", "custom_buttons")
 
 
 def_weight_buttons = (
     {
         'id': 'BRUSH SETTINGS',
         'name' : "Brush Settings",
-        'image_path' : join(icons_dir, 'brush_icon.png'),
+        'image_path' : join(icons_dir, 'brush.png'),
         'type' : 'POPUP',
         'popup_type' : 'PANEL',
         'as_attribute' : 'CUSTOM',
@@ -16,7 +16,7 @@ def_weight_buttons = (
     {
         'id': 'STROKE_SETTINGS',
         'name' : "Stroke Settings",
-        'image_path' : join(icons_dir, 'stroke_icon.png'),
+        'image_path' : join(icons_dir, 'stroke.png'),
         'type' : 'POPUP',
         'popup_type' : 'PANEL',
         'as_attribute' : 'CUSTOM',
@@ -25,7 +25,7 @@ def_weight_buttons = (
     {
         'id': 'FALLOFF_SETTINGS',
         'name' : "Falloff Settings",
-        'image_path' : join(icons_dir, 'fallOff_icon.png'),
+        'image_path' : join(icons_dir, 'falloff.png'),
         'type' : 'POPUP',
         'popup_type' : 'PANEL',
         'as_attribute' : 'CUSTOM',
@@ -34,7 +34,7 @@ def_weight_buttons = (
     {
         'id': 'MIRROR',
         'name' : "Mirror",
-        'image_path' : join(icons_dir, 'mirror_icon.png'),
+        'image_path' : join(icons_dir, 'mirror.png'),
         'type' : 'POPUP',
         'popup_type' : 'PANEL',
         'as_attribute' : 'CUSTOM',
@@ -43,7 +43,7 @@ def_weight_buttons = (
     {
         'id': 'WEIGHT_OPTIONS',
         'name' : "Weight Options",
-        'image_path' : join(icons_dir, 'options_icon.png'),
+        'image_path' : join(icons_dir, 'options.png'),
         'type' : 'POPUP',
         'popup_type' : 'PANEL',
         'as_attribute' : 'CUSTOM',
@@ -52,7 +52,7 @@ def_weight_buttons = (
     {
         'id': 'WEIGHTS',
         'name' : "Weights",
-        'image_path' : join(icons_dir, 'weights_icon.png'),
+        'image_path' : join(icons_dir, 'weights.png'),
         'type' : 'POPUP',
         'popup_type' : 'MENU',
         'as_attribute' : 'CUSTOM',

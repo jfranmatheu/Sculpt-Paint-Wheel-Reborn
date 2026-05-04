@@ -259,14 +259,17 @@ class WheelStorage(PropertyGroup):
         data = super().get(context)
         if data is None:
             return None
-        return getattr(data, mode.lower(), None)
+        mode_key = mode.lower()
+        if mode_key in {"paint_weight", "weight_gpencil", "weight_grease_pencil"}:
+            mode_key = "weight"
+        return getattr(data, mode_key, None)
 
     def initialize_defaults(self) -> None:
         if self.is_initialized:
             return
         self.is_initialized = True
 
-        for key in ('sculpt', ): #, 'paint_texture', 'weight'):
+        for key in ('sculpt', 'weight'):
             mode = key.upper()
             if default_tarta_buttons := get_tarta_set(mode):
                 tarta_storage: WheelTartaSetStorage = getattr(self, key)

@@ -22,6 +22,7 @@ _registered_types: Dict[str, Type['Wheel']] = {}
 class Wheel:
     instances: dict[str, "Wheel"] = {}
     bl_context_mode: str | Set[str] = 'NONE' # MUST BE SET IN SUBCLASSES!
+    default_radius = 210
 
     @classmethod
     def get(cls, context: Context) -> "Wheel":
@@ -35,7 +36,7 @@ class Wheel:
 
     def __init__(self, context: Context) -> None:
         self.center = Vector((0.0, 0.0))
-        self.radius = 210
+        self.radius = self.default_radius
         self._widgets: list["Widget"] = []
         self.hovered_widget: "Widget" | None = None
         self._event_subscriptions: CallbackDict = CallbackDict()

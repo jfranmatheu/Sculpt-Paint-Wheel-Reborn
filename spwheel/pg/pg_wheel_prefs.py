@@ -75,3 +75,9 @@ class WheelPrefs(PropertyGroup):
         
         _, content = self.draw_section(layout, "Color Picker", icon='COLORSET_02_VEC')
         self.color_picker.draw_ui(context, content)
+
+        _, content = self.draw_section(layout, "Weight Wheel", icon='WPAINT_HLT')
+        content.prop(self.weight, "show_markers")
+        content.prop(self.weight, "use_interactable_markers")
+        content.prop(self.weight, "set_weight_of_selection_directly")
+        content.prop(self.weight, "use_add_substract_brush")
