@@ -221,4 +221,4 @@ class WeightPickerWidget(WidgetRing):
         draw_ring(cx, cy, self.center_pad_radius, (0.40, 0.40, 0.42, 0.8), thickness=1.0, softness=0.05)
 
         w = self._weight_value(context)
-        draw_text(f"{w:.2f}", cx, cy, size=14.0, color=theme.text_color, align="CENTER", shadow=True, font_id=1)
+        draw_text(f"{w:.2f}", cx, cy, size=14.0, color=theme.text_color, align="CENTER", valign='MIDDLE', shadow=True, font_id=1)
