@@ -138,7 +138,7 @@ class Wheel:
 
     def draw(self, context: Context, theme: WheelTheme) -> None:
         draw_circle_fill(0, 0, self.radius, theme.base_color)
-        draw_ring(0, 0, self.radius - 6, theme.base_outline_color)
+        draw_ring(0, 0, self.radius, theme.base_outline_color)
 
 
 # -------------------------------------------------------

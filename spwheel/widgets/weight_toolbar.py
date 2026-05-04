@@ -41,9 +41,9 @@ _TOOLS: tuple[_ToolSpec, ...] = (
     _ToolSpec("Average", "average", True, "Paint_Average.png", offset=(0.0, -10.0)),
     _ToolSpec("Smear", "smear", True, "Paint_Smear.png"),
     _ToolSpec("Gradient", "gradient", False, "Paint_Gradient.png", op_call=lambda: bpy.ops.paint.weight_gradient(type='LINEAR')),
-    _ToolSpec("Sample Weight", "sample_weight", False, "Paint_Sample_Weight.png", offset=(0.0, -10.0), op_call=lambda: bpy.ops.paint.weight_sample()),
-    _ToolSpec("Sample Vertex Group", "sample_vertex_group", False, "Paint_Sample_Vertex_Group.png", offset=(0.0, -10.0), op_call=lambda: bpy.ops.paint.weight_sample_group()),
-    _ToolSpec("Select Box", "select_box", False, "Select_Box.png", always_trigger=True, op_call=lambda: OpWeightBoxSelectToolOptions.run_invoke()),
+    _ToolSpec("Sample Weight", "sample_weight", False, "Paint_Sample_Weight.png", offset=(0.0, -10.0)), #, op_call=lambda: bpy.ops.paint.weight_sample()),
+    _ToolSpec("Sample Vertex Group", "sample_vertex_group", False, "Paint_Sample_Vertex_Group.png", offset=(0.0, -10.0)), #, op_call=lambda: bpy.ops.paint.weight_sample_group()),
+    _ToolSpec("Select Box", "select_box", False, "Select_Box.png", always_trigger=True) #, op_call=lambda: OpWeightBoxSelectToolOptions.run_invoke()),
 )
 
 

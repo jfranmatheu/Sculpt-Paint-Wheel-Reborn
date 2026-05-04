@@ -29,7 +29,7 @@ class _WeightWheelBase(Wheel):
 
     def activate(self, context: Context, prefs, storage) -> None:
         self.prefs = prefs
-        self.weight_picker.set_transform(0, 0, 0.45, 0.78)
+        self.weight_picker.set_transform(0, 0, 0.4, 0.81)
 
 
 class WeightWheel(_WeightWheelBase):
