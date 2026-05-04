@@ -90,7 +90,7 @@ def draw_weight_markers(
         return
     for i, p in enumerate(marker_buttons):
         draw_circle_fill(p[0], p[1], button_radius, (0.016, 0.016, 0.016, 0.80), softness=0.10)
-        col = (1.0, 0.0, 0.9, 1.0) if i == hover_index else (0.2, 0.2, 0.2, 0.8)
+        col = (0.85, 0.85, .89, 1.0) if i == hover_index else (0.2, 0.2, 0.2, 0.8)
         draw_ring(p[0], p[1], button_radius, col, thickness=1.1, softness=0.08)
 
 
