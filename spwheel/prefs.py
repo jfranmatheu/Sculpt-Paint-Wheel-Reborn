@@ -13,5 +13,11 @@ class BlendWheelPrefs(bl_types.AddonPreferences):
     wheel: PointerProperty(type=WheelPrefs)
 
     def draw_ui(self, context: Context, layout: UILayout):
+        layout.operator(
+            "spwheel.opsavebackupaddonpreferences",
+            text="Save/Backup Addon Preferences",
+            icon='EXPORT'
+        )
+        layout.separator()
         # header, content = self.draw_section(layout, "Wheel Preferences", '', align_content=False, content_layout_type='GRID_FLOW')
         self.wheel.draw_preferences_ui(context, layout.grid_flow())
