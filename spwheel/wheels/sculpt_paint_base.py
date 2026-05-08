@@ -28,7 +28,7 @@ class SculptPaintWheel(Wheel):
         self.brush_set_ring = brush_set_ring
 
     def on_brush_set_change(self, context: Context) -> None:
-        self.activate(context, WheelPrefs.get(context), None)
+        self._activate(context)
 
     def activate(self, context: Context, prefs: WheelPrefs, storage: SculptPaintWheelStorage) -> None:
         active_brush_set = WheelStorage.get_by_mode(context).active_brush_set
