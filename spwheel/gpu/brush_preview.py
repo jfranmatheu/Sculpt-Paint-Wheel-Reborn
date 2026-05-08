@@ -81,7 +81,7 @@ def get_brush_preview_texture(preview_path: str, brush_id_key: str = "") -> Any:
         _texture_cache[cache_key] = tex
         return tex
     except Exception:
-        print(f"[Blend Wheel] GPU texture creation failed: {traceback.format_exc()}")
+        print(f"[Wheel] GPU texture creation failed: {traceback.format_exc()}")
         fb = _get_fallback_texture()
         if fb is not None:
             _texture_cache[cache_key] = fb
