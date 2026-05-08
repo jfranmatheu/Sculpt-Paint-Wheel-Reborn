@@ -63,20 +63,26 @@ class WheelTheme(PropertyGroup):
 
         h, content = self.draw_section(layout, "Brush Slot Colors", icon='BRUSH_DATA', align_content=True, content_layout_type='COLUMN')
 
-        row = content.row(align=True)
-        row.label(text=" ", icon='BLANK1')
-        row.label(text="Idle")
-        row.label(text="Hovered")
-        row.label(text="Active")
+        split = content.row(align=True).split(factor=0.15, align=True)
 
-        row = content.row(align=True)
-        row.label(text="Base")
-        row.box().prop(self.button, 'color', text="")
-        row.box().prop(self.button, 'hovered_color', text="")
-        row.box().prop(self.button, 'active_color', text="")
+        left_col = split.column(align=True)
+        left_col.label(text=" ", icon='BLANK1')
+        left_col.label(text="Base")
+        left_col.label(text="Outline")
 
-        row = content.row(align=True)
-        row.label(text="Outline")
-        row.box().prop(self.button, 'outline_color', text="")
-        row.box().prop(self.button, 'hovered_outline_color', text="")
-        row.box().prop(self.button, 'active_outline_color', text="")
+        right_row = split.row(align=True)
+
+        idle_col = right_row.column(align=True)
+        idle_col.label(text="Idle")
+        idle_col.prop(self.button, 'color', text="")
+        idle_col.prop(self.button, 'outline_color', text="")
+
+        hovered_col = right_row.column(align=True)
+        hovered_col.label(text="Hovered")
+        hovered_col.prop(self.button, 'hovered_color', text="")
+        hovered_col.prop(self.button, 'hovered_outline_color', text="")
+
+        active_col = right_row.column(align=True)
+        active_col.label(text="Active")
+        active_col.prop(self.button, 'active_color', text="")
+        active_col.prop(self.button, 'active_outline_color', text="")
