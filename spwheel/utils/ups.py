@@ -29,6 +29,18 @@ def get_active_brush_asset_ref(context: Optional[Context] = None) -> AssetWeakRe
 def get_active_brush_mode(context: Optional[Context] = None) -> str | None:
     return UnifiedPaintPanel.get_brush_mode(context or bpy.context)
 
+def has_brush_color_capabilities(context: Context | Brush | None) -> bool:
+    act_brush = context if isinstance(context, Brush) else get_active_brush(context)
+    if act_brush.use_paint_image or act_brush.use_paint_grease_pencil:
+        return act_brush.image_paint_capabilities.has_color
+    elif act_brush.use_paint_sculpt:
+        return act_brush.sculpt_capabilities.has_color
+    elif act_brush.use_paint_vertex:
+        return act_brush.vertex_paint_capabilities.has_color
+        # we could also act_brush.image_paint_capabilities.has_color
+    else:
+        return False
+
 def get_ups(context: Optional[Context] = None) -> UnifiedPaintSettings | None:
     ups = UnifiedPaintPanel.paint_settings(context or bpy.context)
     return ups.unified_paint_settings if ups else None

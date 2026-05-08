@@ -1,6 +1,7 @@
-from bpy.props import CollectionProperty, IntProperty, StringProperty, FloatProperty
+from bpy.props import BoolProperty, CollectionProperty, EnumProperty, IntProperty, StringProperty, FloatProperty
 from bpy.types import Brush, Context, UILayout
 
+from ..utils.ups import has_brush_color_capabilities
 from .pg_brush_metadata import BrushMetadata
 from ..core.bl_types import PropertyGroup
 from ..ui.lists.ul_brush_metadata_list import BrushMetadataList
@@ -62,6 +63,25 @@ class BrushSet(PropertyGroup):
         default=0
     )
 
+    use_color_picker: BoolProperty(
+        name="Show Color Picker",
+        description="Whether to show the color picker for this brush set",
+        default=False
+    )
+
+    wheel_type: EnumProperty(
+        name="Wheel Type",
+        description="Type of the wheel",
+        default="UNDEFINED",
+        items=[
+            ("UNDEFINED", "Undefined", ""),
+            ("SCULPT", "Sculpt", ""),
+            ("PAINT", "Paint", ""),
+            ("VERTEX", "Vertex Paint", ""),
+            ("WEIGHT", "Weight", ""),
+        ]
+    )
+
     @property
     def brushes(self) -> list[Brush]:
         """
@@ -85,6 +105,9 @@ class BrushSet(PropertyGroup):
         brush_metadata: BrushMetadata = self.items.add()
         brush_metadata.setup_from_active(context)
         brush_metadata.wheel_order = len(self.items) - 1
+        has_color_capabilities = has_brush_color_capabilities(context)
+        if has_color_capabilities:
+            self.use_color_picker = True
         return brush_metadata
 
     def add_brush_from_essential(self, mode: str, brush_name: str) -> BrushMetadata:

@@ -195,7 +195,7 @@ class WheelBrushSetStorage(PropertyGroup):
             return None
         return self.brush_sets[self.active_brush_set_index]
     
-    def add_brush_set(self) -> BrushSet:
+    def add_brush_set(self, mode: str) -> BrushSet:
         new_brush_set = self.brush_sets.add()
         self.active_brush_set_index = len(self.brush_sets) - 1
         # Avoid duplicate names.
@@ -207,6 +207,14 @@ class WheelBrushSetStorage(PropertyGroup):
                 if name not in picked_names:
                     break
         new_brush_set.name = name
+        if 'SCULPT' in mode:
+            new_brush_set.wheel_type = 'SCULPT'
+        elif 'VERTEX' in mode:
+            new_brush_set.wheel_type = 'VERTEX'
+        elif 'WEIGHT' in mode:
+            new_brush_set.wheel_type = 'WEIGHT'
+        else:
+            new_brush_set.wheel_type = 'PAINT'
         _sync_brush_sets_enum(self)
         return new_brush_set
 

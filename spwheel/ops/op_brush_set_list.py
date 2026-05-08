@@ -16,7 +16,7 @@ class OpPollActive:
 class OpBrushSetListAdd(OperatorAction):
     """ Add a new Brush Set to the Brush Set List."""
     def action(self, context, event):
-        WheelStorage.get_by_mode(context).add_brush_set()
+        WheelStorage.get_by_mode(context).add_brush_set(context.mode)
 
 class OpBrushSetListRemove(OperatorAction, OpPollActive):
     """ Add a new Brush Set to the Brush Set List."""

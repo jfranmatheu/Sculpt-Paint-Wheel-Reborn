@@ -312,6 +312,9 @@ class BrushSetRing(WidgetRing):
         last_index = self.active_brush_set_index
         self._storage.active_brush_set_index = (self._storage.active_brush_set_index + delta) % set_count
         if self._storage.active_brush_set_index != last_index:
+            wheel = self.wheel
+            if hasattr(wheel, "on_brush_set_change"):
+                wheel.on_brush_set_change(context)
             self._rebuild_pickers(context)
             return True
         return False

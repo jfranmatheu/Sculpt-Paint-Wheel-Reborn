@@ -20,6 +20,8 @@ class WheelBrushSetOptionsPopover(PanelTypes.POPOVER):
             layout.label(text="No active set", icon="INFO")
             return
         layout.prop(active_brush_set, "name", text="Name")
+        if active_brush_set.wheel_type in {"SCULPT", "PAINT", "VERTEX"}:
+            layout.prop(active_brush_set, "use_color_picker", text="Show Color Picker")
         layout.separator()
         layout.alert = True
         layout.operator(OpBrushSetListRemove.bl_idname, text="Remove Set", icon="TRASH")
