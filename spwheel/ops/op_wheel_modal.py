@@ -7,7 +7,6 @@ from ..core.utils.mouse_utils import ModalMouse
 from ..utils.ups import get_tool_settings
 
 from ..wheels.wheel import Wheel, WheelPrefs
-from ..pg.pg_wheel_storage import WheelStorage
 
 
 supported_modes = {'SCULPT', 'SCULPT_CURVES', 'PAINT_WEIGHT', 'PAINT_VERTEX', 'PAINT_TEXTURE', 'PAINT_GPENCIL', 'SCULPT_GPENCIL', 'WEIGHT_GPENCIL', 'VERTEX_GPENCIL', 'PAINT_GREASE_PENCIL', 'SCULPT_GREASE_PENCIL', 'WEIGHT_GREASE_PENCIL', 'VERTEX_GREASE_PENCIL' }
@@ -37,10 +36,9 @@ class WheelModal(bl_types.OperatorModal):
                 ts.show_brush = False
         self.wheel = Wheel.get(context)
         self.prefs = WheelPrefs.get(context)
-        self.storage = WheelStorage.get_by_mode(context)
-        self.wheel._activate(context, self.prefs, self.storage, modal_mouse.init)
+        self.wheel._activate(context, modal_mouse.init)
         self.wheel_is_hovered = True
-        
+
     def modal_end(self, context: Context, cancel: bool, mouse: ModalMouse) -> None:
         if ts := get_tool_settings(context):
             if ts.brush:

@@ -1,5 +1,5 @@
 
-from typing import TYPE_CHECKING, Callable, Dict, Set, Type
+from typing import TYPE_CHECKING, Callable, Dict, Optional, Set, Type
 from collections import defaultdict
 
 from bpy.types import Context, Event
@@ -10,7 +10,7 @@ from ..core.utils.callback_utils import CallbackDict
 from ..utils.fun import point_inside_circle
 from ..pg.pg_wheel_prefs import WheelPrefs, WheelTheme
 from ..gpu.draw import draw_circle_fill, draw_ring
-from ..pg.pg_wheel_storage import SculptPaintWheelStorage
+from ..pg.pg_wheel_storage import SculptPaintWheelStorage, WheelStorage
 
 if TYPE_CHECKING:
     from ..widgets import Widget
@@ -59,8 +59,11 @@ class Wheel:
             visit(wg)
         return all_widgets
 
-    def _activate(self, context: Context, prefs: WheelPrefs, storage: SculptPaintWheelStorage, center: Vector) -> None:
-        self.center = center
+    def _activate(self, context: Context, center: Optional[Vector] = None) -> None:
+        if center:
+            self.center = center
+        prefs = WheelPrefs.get(context)
+        storage = WheelStorage.get_by_mode(context)
         self.activate(context, prefs, storage)
         for widget in self._widgets:
             widget._on_wheel_activate(context, prefs, storage)
