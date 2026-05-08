@@ -85,6 +85,11 @@ def update_brush_sets_enum(self: "WheelBrushSetStorage", context) -> None:
     if 0 <= idx < len(self.brush_sets):
         self.active_brush_set_index = idx
 
+def update_active_brush_set_index(self: "WheelBrushSetStorage", context) -> None:
+    if int(self.brush_sets_enum) == self.active_brush_set_index:
+        return
+    self.brush_sets_enum = str(self.active_brush_set_index)
+
 
 def _sync_brush_sets_enum(storage: "WheelBrushSetStorage") -> None:
     if not storage.brush_sets:
@@ -106,7 +111,7 @@ class WheelTartaSetStorage(PropertyGroup):
     active_tarta_set_index: IntProperty(
         name="Active Custom Buttons Set Index",
         description="Index of the active custom buttons set",
-        default=-1,
+        default=-1
     )
     tarta_sets_enum: EnumProperty(
         name="Custom Button Set",
@@ -177,6 +182,7 @@ class WheelBrushSetStorage(PropertyGroup):
         name="Active Brush Set Index",
         description="Index of the active brush set",
         default=-1,
+        update=update_active_brush_set_index,
     )
     brush_sets_enum: EnumProperty(
         name="Brush Set",
