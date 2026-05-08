@@ -394,8 +394,9 @@ class BrushSetRing(WidgetRing):
         return True
 
     def draw(self, context: Context, theme: WheelTheme) -> None:
-        draw_ring(*self.offset, self.radius_outer, theme.base_outline_color, thickness=1.25)
-        draw_ring(*self.offset, self.radius_inner, theme.base_outline_color, thickness=1.25)
+        # draw_ring(*self.offset, self.radius_outer, theme.base_outline_color, thickness=1.25)
+        if self.active_brush_set is not None and self.active_brush_set.use_color_picker:
+            draw_ring(*self.offset, self.radius_inner, theme.base_outline_color, thickness=1.25)
         self.draw_active_brush_set_title(context, theme)
         self.draw_page_indicator(context, theme)
 
