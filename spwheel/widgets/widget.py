@@ -64,7 +64,6 @@ class Widget:
         return None
 
     def _on_wheel_activate(self, context: Context, wheel_prefs: WheelPrefs, storage: SculptPaintWheelStorage) -> None:
-        self.enabled = True
         wg_prefs = self._wg_prefs.get(context) if self._wg_prefs is not None else None
         self.on_wheel_activate(context, wheel_prefs, storage, wg_prefs)
         for child in self.children:
