@@ -49,7 +49,7 @@ class WheelPrefs(PropertyGroup):
 
     select_on_release: BoolProperty(
         name="Select on Release",
-        description="Select the hovered brush when the trigger key is released instead of clicking",
+        description="Select the hovered brush or press hovered pie button when the trigger key is released instead of clicking, then closes the wheel",
         default=False,
     )
 

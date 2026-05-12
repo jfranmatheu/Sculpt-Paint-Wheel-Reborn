@@ -38,6 +38,8 @@ class WheelModal(bl_types.OperatorModal):
         self.prefs = WheelPrefs.get(context)
         self.wheel._activate(context, modal_mouse.init)
         self.wheel_is_hovered = True
+        self.trigger_key = event.type
+        self.trigger_key_released = False
 
     def modal_end(self, context: Context, cancel: bool, mouse: ModalMouse) -> None:
         if ts := get_tool_settings(context):
@@ -52,10 +54,28 @@ class WheelModal(bl_types.OperatorModal):
         if event.type in {'ESC', 'RIGHTMOUSE'}:
             return OpReturn.CANCEL
 
-        if event.type == 'SPACE':
+        if event.type == self.trigger_key:
             if event.value == 'RELEASE':
-                return OpReturn.FINISH
-            return OpReturn.RUN
+                if not self.trigger_key_released:
+                    self.trigger_key_released = True
+                    
+                    if self.prefs.select_on_release:
+                        if self.wheel_is_hovered:
+                            ret = self.wheel.on_left_press(context, event)
+                            if ret and callable(ret):
+                                return ret
+                            self.wheel.on_left_release(context, event)
+                        
+                        if not self.prefs.keep_open:
+                            return OpReturn.FINISH
+                        return OpReturn.RUN
+                        
+                    if not self.prefs.keep_open:
+                        return OpReturn.FINISH
+                return OpReturn.RUN
+            elif event.value == 'PRESS':
+                if self.trigger_key_released and self.prefs.keep_open:
+                    return OpReturn.FINISH
 
         if event.type == 'LEFTMOUSE' and event.value == 'PRESS':
             if not self.wheel_is_hovered:
