@@ -86,8 +86,11 @@ def update_brush_sets_enum(self: "WheelBrushSetStorage", context) -> None:
         self.active_brush_set_index = idx
 
 def update_active_brush_set_index(self: "WheelBrushSetStorage", context) -> None:
-    if int(self.brush_sets_enum) == self.active_brush_set_index:
+    if self.active_brush_set_index < 0:
         return
+    if self.brush_sets_enum != '__none__':
+        if int(self.brush_sets_enum) == self.active_brush_set_index:
+            return
     self.brush_sets_enum = str(self.active_brush_set_index)
 
 
