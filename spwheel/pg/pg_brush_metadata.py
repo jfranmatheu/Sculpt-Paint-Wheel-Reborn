@@ -203,6 +203,8 @@ class BrushMetadata(PropertyGroup):
         return get_brush_gputex(self.hash_id)
 
     def activate(self) -> None:
+        if self.name == "":
+            return
         bpy.ops.brush.asset_activate(
             asset_library_type=self.asset_library_type,
             asset_library_identifier=self.asset_library_identifier,
