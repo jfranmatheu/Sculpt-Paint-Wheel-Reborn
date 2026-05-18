@@ -290,14 +290,21 @@ class WheelStorage(PropertyGroup):
             mode = key.upper()
             if default_tarta_buttons := get_tarta_set(mode):
                 tarta_storage: WheelTartaSetStorage = getattr(self, key)
+                if len(tarta_storage.tarta_sets) > 0:
+                    continue
                 def_tarta_set: WheelTartaSet = tarta_storage.add_tarta_set()
                 def_tarta_set.name = "Default Set"
                 for button_meta in default_tarta_buttons:
+                    if not isinstance(button_meta, dict):
+                        print(f"WARN: Invalid tarta button metadata type: {button_meta}")
+                        continue
                     def_tarta_set.add_tarta_button_from_metadata(button_meta)
 
             if default_brush_names := get_brush_set(mode):
                 brush_storage: WheelBrushSetStorage = getattr(self, key)
-                def_brush_set: BrushSet = brush_storage.add_brush_set()
+                if len(brush_storage.brush_sets) > 0:
+                    continue
+                def_brush_set: BrushSet = brush_storage.add_brush_set(mode)
                 def_brush_set.name = "Default Set"
                 for brush_name in default_brush_names:
                     def_brush_set.add_brush_from_essential(mode, brush_name)
