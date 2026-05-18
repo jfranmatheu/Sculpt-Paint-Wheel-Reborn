@@ -4,6 +4,7 @@ icons_dir = join(dirname(dirname(dirname(__file__))), "assets", 'images', "custo
 
 def_paint_texture_tools = (
     'Paint Pixel Art',
+    'Erase Pixel Art',
     'Airbrush',
     'Paint Hard',
     'Paint Hard Pressure',
@@ -12,7 +13,6 @@ def_paint_texture_tools = (
     'Erase Hard',
     'Erase Hard Pressure',
     'Erase Soft',
-    'Erase Soft Pressure',
     'Blur',
     'Smear',
     'Clone',
