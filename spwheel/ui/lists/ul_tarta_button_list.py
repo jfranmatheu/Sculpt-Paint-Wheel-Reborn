@@ -59,7 +59,10 @@ class TartaButtonList(UIList):
         #     sub = layout.row(align=True)
         row = layout.row(align=True)
         icon_id = get_image_icon_id(item.image_path)
-        row.prop(item, "name", text="", icon_value=icon_id if icon_id else None, emboss=False)
+        if icon_id:
+            row.prop(item, "name", text="", icon_value=icon_id, emboss=False)
+        else:
+            row.prop(item, "name", text="", emboss=False)
         _row = row.row(align=False)
         _row.alignment = 'RIGHT'
         _row.active = False
