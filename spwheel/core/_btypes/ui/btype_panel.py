@@ -7,7 +7,8 @@ from .btype_ui_base import BType_UIExtra
 
 
 class BType_Panel(BType_UIExtra, Panel):
-    bl_icon: Optional[str | int] = None
+    # Panel.bl_icon is an RNA enum in Blender 5.2+: None fails class validation.
+    bl_icon: Optional[str | int] = 'NONE'
     bl_space_type: str = GLOBALS.ADDON.DEFAULT_PANELS_SPACE_TYPE
     bl_region_type: str = GLOBALS.ADDON.DEFAULT_PANELS_REGION_TYPE
     bl_context: str = GLOBALS.ADDON.DEFAULT_PANELS_CONTEXT

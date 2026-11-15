@@ -109,7 +109,18 @@ class BType_OpModal(BType_Operator):
                 return msg
         if not context.window_manager.modal_handler_add(self):
             return OpReturn.CANCEL
-        self._modal_begin(context, event)
+        try:
+            self._modal_begin(context, event)
+        except Exception:
+            # Don't leak draw handlers/timers bound to a dead operator instance.
+            if getattr(self, '_tm_timer', None) is not None:
+                context.window_manager.event_timer_remove(self._tm_timer)
+                self._tm_timer = None
+            if handlers := getattr(self, '_remove_draw_handlers', None):
+                handlers.call_callbacks()
+                handlers.clear_callbacks()
+            self.running = False
+            raise
         return OpReturn.RUN
 
     def _modal_begin(self, context: Context, event: Event) -> None:

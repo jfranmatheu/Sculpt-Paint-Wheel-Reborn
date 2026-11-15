@@ -5,7 +5,8 @@ from .btype_ui_base import BType_UICommon
 
 
 class BType_Menu(BType_UICommon, Menu):
-    bl_icon: Optional[str | int] = None
+    # Must be a valid icon enum name: None fails RNA class validation (Blender 5.2+).
+    bl_icon: Optional[str | int] = 'NONE'
 
     @classmethod
     def draw_as_menu(cls, layout: UILayout, title: Optional[str] = None, icon: Optional[str | int] = None):
