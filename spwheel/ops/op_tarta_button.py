@@ -1,3 +1,4 @@
+import bpy
 """Operators for tarta button CRUD actions."""
 
 from bpy.props import EnumProperty, IntProperty, StringProperty
@@ -73,12 +74,13 @@ class OpTartaButtonAdd(OperatorAction, OpPollActiveSet):
 
     def enum_preset_menus(self, context):
         if context is not None and (presets := preset_type_per_mode.get(context.mode, None)):
-            return [(a, b, c or "") for a, b, c in presets[0]]
+            # Skip UI types that don't exist in the running Blender version.
+            return [(a, b, c or "") for a, b, c in presets[0] if hasattr(bpy.types, a)]
         return [("VIEW3D_MT_sculpt", "Sculpt Menu", "")]
 
     def enum_preset_panels(self, context):
         if context is not None and (presets := preset_type_per_mode.get(context.mode, None)):
-            return [(a, b, c or "") for a, b, c in presets[1]]
+            return [(a, b, c or "") for a, b, c in presets[1] if hasattr(bpy.types, a)]
         return [("VIEW3D_PT_tools_brush_settings_advanced", "Advanced Settings", "")]
 
     def enum_preset_operators(self, context):

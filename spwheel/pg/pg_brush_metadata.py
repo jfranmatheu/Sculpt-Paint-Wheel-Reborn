@@ -20,8 +20,11 @@ from ..utils.ups import get_tool_settings, get_active_brush_mode
 
 _MAP_MODE_TO_ESSENTIALS_ASSET_ID = {
     "SCULPT": "mesh_sculpt",
+    "SCULPT_CURVES": "curve_sculpt",
     "WEIGHT": "mesh_weight",
+    "PAINT_WEIGHT": "mesh_weight",
     "PAINT_TEXTURE": "mesh_texture",
+    "PAINT_VERTEX": "mesh_vertex",
     "VERTEX_PAINT": "mesh_vertex",
     "WEIGHT_GREASE_PENCIL": "gp_weight",
     "VERTEX_GREASE_PENCIL": "gp_vertex",
