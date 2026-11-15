@@ -6,15 +6,19 @@ import bpy
 from bpy.types import AssetWeakReference, Brush, Context, Sculpt, Paint, UnifiedPaintSettings
 
 
+# Blender 5.3 renamed UnifiedPaintPanel.paint_settings() to paint_settings_from_active_tool().
+_paint_settings = getattr(UnifiedPaintPanel, "paint_settings_from_active_tool", None) or UnifiedPaintPanel.paint_settings
+
+
 def get_tool_settings(context: Optional[Context] = None) -> Sculpt | Paint | None:
-    return UnifiedPaintPanel.paint_settings(context or bpy.context)
+    return _paint_settings(context or bpy.context)
 
 def get_active_brush(context: Optional[Context] = None) -> Brush | None:
     if context is None:
         tool = ToolSelectPanelHelper.tool_active_from_context(bpy.context)
         if not tool or not tool.use_brushes:
             return None
-        paint_settings = UnifiedPaintPanel.paint_settings(bpy.context)
+        paint_settings = _paint_settings(bpy.context)
         return paint_settings.brush_asset_reference if paint_settings else None
     else:
         ts = get_tool_settings(context)
@@ -42,7 +46,7 @@ def has_brush_color_capabilities(context: Context | Brush | None) -> bool:
         return False
 
 def get_ups(context: Optional[Context] = None) -> UnifiedPaintSettings | None:
-    ups = UnifiedPaintPanel.paint_settings(context or bpy.context)
+    ups = _paint_settings(context or bpy.context)
     return ups.unified_paint_settings if ups else None
 
 def _get_ups_attr(context: Context, attr: str, unif_attr: Optional[str] = None) -> float | None:

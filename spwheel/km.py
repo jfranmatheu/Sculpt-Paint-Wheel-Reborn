@@ -6,9 +6,12 @@ modes = {
     'Vertex Paint',
     'Weight Paint',
     'Sculpt',
-    'Grease Pencil Stroke Paint Mode',
-    'Grease Pencil Stroke Vertex Mode',
-    'Grease Pencil Stroke Weight Mode'
+    'Sculpt Curves',
+    # Grease Pencil v3 keymap names (Blender 4.3+).
+    'Grease Pencil Draw Mode',
+    'Grease Pencil Sculpt Mode',
+    'Grease Pencil Vertex Paint',
+    'Grease Pencil Weight Paint',
 }
 
 #addon_keymaps = []

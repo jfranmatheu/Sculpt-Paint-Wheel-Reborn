@@ -9,6 +9,21 @@ from ..gpu.brush_preview import _cache_root
 from ..core.bl_types import PropertyGroup
 
 
+# Blender 5.3 moved brush falloff into the "Shape" panel for mesh paint modes, and the old
+# Falloff panel no longer polls there. Keep stored IDs version-agnostic and alias at call time.
+_SHAPE_PANEL_MODES = {'SCULPT', 'PAINT_VERTEX', 'PAINT_WEIGHT', 'PAINT_TEXTURE'}
+
+
+def _resolve_panel_id(context, panel_id: str) -> str:
+    if (
+        panel_id == "VIEW3D_PT_tools_brush_falloff"
+        and context.mode in _SHAPE_PANEL_MODES
+        and hasattr(bpy.types, "VIEW3D_PT_tools_brush_shape")
+    ):
+        return "VIEW3D_PT_tools_brush_shape"
+    return panel_id
+
+
 class WheelTartaButton(PropertyGroup):
     pg_parent = None
 
@@ -137,4 +152,4 @@ class WheelTartaButton(PropertyGroup):
                 bpy.ops.wm.call_menu(name=self.operator_id)
         elif self.is_popup_panel:
             if self.operator_id:
-                bpy.ops.wm.call_panel(name=self.operator_id)
+                bpy.ops.wm.call_panel(name=_resolve_panel_id(context, self.operator_id))

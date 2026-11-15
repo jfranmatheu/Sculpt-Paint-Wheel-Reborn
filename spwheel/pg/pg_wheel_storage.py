@@ -1,3 +1,4 @@
+import bpy
 from typing import Optional
 from bpy.props import BoolProperty, CollectionProperty, EnumProperty, IntProperty, PointerProperty
 from bpy.types import Context
@@ -252,6 +253,28 @@ class WeightWheelStorage(WheelTartaSetStorage, PropertyGroup):
     pass
 
 
+# `context.mode` values that have a wheel.
+SUPPORTED_MODES = (
+    "SCULPT",
+    "SCULPT_CURVES",
+    "SCULPT_GREASE_PENCIL",
+    "PAINT_TEXTURE",
+    "PAINT_VERTEX",
+    "PAINT_GREASE_PENCIL",
+    "VERTEX_GREASE_PENCIL",
+    "PAINT_WEIGHT",
+    "WEIGHT_GREASE_PENCIL",
+)
+
+_STORAGE_ATTR_OVERRIDES = {
+    "PAINT_WEIGHT": "weight",
+}
+
+
+def _storage_attr(mode: str) -> str:
+    return _STORAGE_ATTR_OVERRIDES.get(mode, mode.lower())
+
+
 class WheelStorage(PropertyGroup):
     is_initialized: BoolProperty(
         name="Initialized",
@@ -260,8 +283,17 @@ class WheelStorage(PropertyGroup):
     )
 
     sculpt: PointerProperty(type=SculptPaintWheelStorage)
+    sculpt_curves: PointerProperty(type=SculptPaintWheelStorage)
+    sculpt_grease_pencil: PointerProperty(type=SculptPaintWheelStorage)
+
     paint_texture: PointerProperty(type=SculptPaintWheelStorage)
+    paint_vertex: PointerProperty(type=SculptPaintWheelStorage)
+    paint_grease_pencil: PointerProperty(type=SculptPaintWheelStorage)
+    vertex_grease_pencil: PointerProperty(type=SculptPaintWheelStorage)
+
+    # Mesh weight paint keeps its original property name so saved user data still loads.
     weight: PointerProperty(type=WeightWheelStorage)
+    weight_grease_pencil: PointerProperty(type=WeightWheelStorage)
 
     @classmethod
     def get(cls, context: Context) -> 'WheelStorage':
@@ -273,38 +305,35 @@ class WheelStorage(PropertyGroup):
             mode = context.mode
         else:
             mode = context
+            context = bpy.context
         data = super().get(context)
         if data is None:
             return None
-        mode_key = mode.lower()
-        if mode_key in {"paint_weight", "weight_gpencil", "weight_grease_pencil"}:
-            mode_key = "weight"
-        return getattr(data, mode_key, None)
+        return getattr(data, _storage_attr(mode), None)
 
     def initialize_defaults(self) -> None:
         #if self.is_initialized:
         #    return
         self.is_initialized = True
 
-        for key in ('sculpt', 'weight', 'paint_texture'):
-            mode = key.upper()
+        for mode in SUPPORTED_MODES:
+            storage = getattr(self, _storage_attr(mode), None)
+            if storage is None:
+                continue
+
             if default_tarta_buttons := get_tarta_set(mode):
-                tarta_storage: WheelTartaSetStorage = getattr(self, key)
-                if len(tarta_storage.tarta_sets) > 0:
-                    continue
-                def_tarta_set: WheelTartaSet = tarta_storage.add_tarta_set()
-                def_tarta_set.name = "Default Set"
-                for button_meta in default_tarta_buttons:
-                    if not isinstance(button_meta, dict):
-                        print(f"WARN: Invalid tarta button metadata type: {button_meta}")
-                        continue
-                    def_tarta_set.add_tarta_button_from_metadata(button_meta)
+                tarta_storage: WheelTartaSetStorage = storage
+                if len(tarta_storage.tarta_sets) == 0:
+                    def_tarta_set: WheelTartaSet = tarta_storage.add_tarta_set()
+                    def_tarta_set.name = "Default Set"
+                    for button_meta in default_tarta_buttons:
+                        if isinstance(button_meta, dict):
+                            def_tarta_set.add_tarta_button_from_metadata(button_meta)
 
             if default_brush_names := get_brush_set(mode):
-                brush_storage: WheelBrushSetStorage = getattr(self, key)
-                if len(brush_storage.brush_sets) > 0:
-                    continue
-                def_brush_set: BrushSet = brush_storage.add_brush_set(mode)
-                def_brush_set.name = "Default Set"
-                for brush_name in default_brush_names:
-                    def_brush_set.add_brush_from_essential(mode, brush_name)
+                brush_storage: WheelBrushSetStorage = storage
+                if hasattr(brush_storage, "brush_sets") and len(brush_storage.brush_sets) == 0:
+                    def_brush_set: BrushSet = brush_storage.add_brush_set(mode)
+                    def_brush_set.name = "Default Set"
+                    for brush_name in default_brush_names:
+                        def_brush_set.add_brush_from_essential(mode, brush_name)

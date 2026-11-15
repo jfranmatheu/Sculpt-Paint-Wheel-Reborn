@@ -36,5 +36,5 @@ class WeightWheel(_WeightWheelBase):
     bl_context_mode = 'PAINT_WEIGHT'
 
 
-class WeightGpencilWheel(_WeightWheelBase):
-    bl_context_mode = 'WEIGHT_GPENCIL'
+class WeightGreasePencilWheel(_WeightWheelBase):
+    bl_context_mode = 'WEIGHT_GREASE_PENCIL'
