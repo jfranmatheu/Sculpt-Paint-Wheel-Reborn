@@ -1,3 +1,15 @@
+<p align="center">
+  <a href="https://superhivemarket.com/products/sculpt-paint-wheel">
+    <img src="docs/images/support_banner.png" alt="Support the developer: buy Sculpt-Paint Wheel on Superhive" width="100%">
+  </a>
+</p>
+
+<h3 align="center">
+  ❤️ Like this add-on? <a href="https://superhivemarket.com/products/sculpt-paint-wheel">Support the developer by buying it on Superhive</a> ❤️
+</h3>
+
+---
+
 # SculptPaintWheel: Reborn
 
 Original addon repo: https://github.com/jfranmatheu/Sculpt-Paint-Wheel
