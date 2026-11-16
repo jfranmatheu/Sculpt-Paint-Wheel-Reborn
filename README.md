@@ -5,7 +5,7 @@
 </p>
 
 <h3 align="center">
-  ❤️ Like this add-on? <a href="https://superhivemarket.com/products/sculpt-paint-wheel">Support the developer by buying it on Superhive</a> ❤️
+  ❤️ Like this add-on? Support the developer by buying it on <a href="https://superhivemarket.com/products/sculpt-paint-wheel">Superhive</a> or <a href="https://payhip.com/b/zXfm2">Payhip</a> ❤️
 </h3>
 
 ---
@@ -27,7 +27,7 @@ A Blender addon that enables a cool UI for sculpt and paint modes for a better a
 
 ## Documentation
 
-![Sculpt-Paint Wheel in Sculpt mode](docs/images/spwheel_sculpt.png)
+![Sculpt-Paint Wheel: your brushes, one keypress away](docs/images/promo/01_hero.png)
 
 ### Requirements
 
@@ -35,6 +35,8 @@ A Blender addon that enables a cool UI for sculpt and paint modes for a better a
 - Built as a Blender **extension** (`blender_manifest.toml`), not a legacy add-on.
 
 ### Installation
+
+<a href="https://github.com/jfran3d/Sculpt-Paint-Wheel-Reborn/releases/latest"><img src="docs/images/promo/05_download.png" alt="Download the latest release on GitHub" width="100%"></a>
 
 1. Download `spwheel-<version>.zip` from the [Releases](../../releases) page. Don't unzip it.
 2. In Blender: **Edit > Preferences > Get Extensions**, open the **v** menu at the top right, choose **Install from Disk...**, and pick the zip.
@@ -44,6 +46,8 @@ A Blender addon that enables a cool UI for sculpt and paint modes for a better a
 To update, install the newer zip the same way. Your brush sets and custom buttons are kept.
 
 ### Opening the wheel
+
+![How it works: hold Space, flick and click, keep working](docs/images/promo/02_how_it_works.png)
 
 Hover the 3D Viewport in any supported mode and **hold `Space`**.
 
@@ -74,16 +78,13 @@ Each mode has its own wheel, its own brush sets and its own custom button sets.
 | **Grease Pencil Weight** | Weight markers (no brush ring) | Options, Falloff, Weights menu, Normalize All, Invert, Smooth |
 | **Grease Pencil Vertex** | 5 Essentials vertex brushes | Color, Falloff, Multi Frame, Paint menu, Reset Vertex Color, Invert |
 
-<p>
-  <img src="docs/images/spwheel_grease_pencil.png" alt="Grease Pencil Draw wheel" width="49%">
-  <img src="docs/images/spwheel_vertex_paint.png" alt="Vertex Paint wheel" width="49%">
-</p>
+![Sculpt, Texture Paint, Grease Pencil Draw and Weight Paint wheels](docs/images/promo/03_modes.png)
 
 ### Customizing brushes and buttons
 
 Open the 3D Viewport sidebar (`N`) and go to the **Wheel** tab while you are in the mode you want to customize.
 
-![Wheel tab in the sidebar](docs/images/spwheel_sidebar_sculpt.png)
+![Brush sets and custom buttons in the Wheel tab of the sidebar](docs/images/promo/04_customize.png)
 
 - **Brush Sets** controls the outer ring.
   - Pick the active set from the dropdown, or create a new one with the button next to it.
@@ -106,8 +107,27 @@ Find them in **Edit > Preferences > Add-ons > Sculpt-Paint Wheel**:
 - **Keep Open**: releasing the hotkey doesn't close the wheel. Click to pick, then press the hotkey again to close it.
 - **Select on Release**: picks whatever is under the cursor when you release the hotkey, then closes the wheel. This allows a quick press-move-release workflow.
 - **Theme**, **Color Picker**, **Brush Set Ring** and **Weight** settings to tune how the wheel looks and behaves.
+- **Support Development**: a link to support the developer.
 
 Your preferences, brush sets and custom buttons are saved to disk and restored when the extension is updated or reinstalled.
+
+### Support development
+
+![Support the developer](docs/images/promo/06_support_github.png)
+
+Sculpt-Paint Wheel stays **free and open source** here on GitHub. If it saves you time, you can support its development by buying it on either store:
+
+<p align="center">
+  <a href="https://superhivemarket.com/products/sculpt-paint-wheel"><b>➜ Buy on Superhive</b></a>
+  &nbsp;&nbsp;•&nbsp;&nbsp;
+  <a href="https://payhip.com/b/zXfm2"><b>➜ Buy on Payhip</b></a>
+</p>
+
+![More ways to help: star on GitHub, report bugs, share it](docs/images/promo/07_help.png)
+
+- ⭐ [Star the repository](https://github.com/jfran3d/Sculpt-Paint-Wheel-Reborn)
+- 🐞 [Report a bug or suggest a feature](https://github.com/jfran3d/Sculpt-Paint-Wheel-Reborn/issues)
+- 📣 Share it with other Blender artists
 
 ### Changelog
 
