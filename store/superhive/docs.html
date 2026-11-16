@@ -1,34 +1,3 @@
-<!--
-  Superhive documentation for Sculpt-Paint Wheel. GENERATED from DOCS.md by build_docs.py; edit DOCS.md instead.
-
-  Paste everything between "PASTE START" and "PASTE END" into the Superhive documentation editor (HTML / source mode).
-  Open this file in a browser to preview it on a white page, like Superhive.
--->
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Sculpt-Paint Wheel – Superhive documentation preview</title>
-<style>
-  /* Preview only: approximates Superhive's white page. Superhive applies its own styles. */
-  body { margin: 0; background: #fff; color: #333; font: 16px/1.6 "Segoe UI", system-ui, sans-serif; }
-  .preview { max-width: 900px; margin: 0 auto; padding: 32px 16px 64px; }
-  h1, h2, h3 { color: #111; line-height: 1.25; }
-  h2 { margin-top: 2.2em; }
-  a { color: #d9630a; }
-  img { max-width: 100%; height: auto; }
-  table { width: 100%; border-collapse: collapse; }
-  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #e3e3e3; vertical-align: top; }
-  code { background: #f3f3f3; padding: 1px 5px; border-radius: 4px; }
-  blockquote { margin: 1.5em 0; padding: 0.6em 1.2em; border-left: 4px solid #ff8c28; background: #fff6ee; }
-  hr { border: 0; border-top: 1px solid #e3e3e3; margin: 2.5em 0; }
-</style>
-</head>
-<body>
-<div class="preview">
-<!-- ======================= PASTE START ======================= -->
-
 <h1 id="sculpt-paint-wheel-user-guide">Sculpt-Paint Wheel: User Guide</h1>
 <p><img alt="Sculpt-Paint Wheel" src="https://raw.githubusercontent.com/jfran3d/Sculpt-Paint-Wheel-Reborn/main/store/superhive/images/01_hero.png" width="100%" /></p>
 <p>The complete guide to Sculpt-Paint Wheel <strong>1.1.0</strong>. For quick answers, see the <a href="https://github.com/jfran3d/Sculpt-Paint-Wheel-Reborn/blob/main/FAQ.md">FAQ</a>.</p>
@@ -71,80 +40,25 @@
 <h2 id="2-the-wheel-at-a-glance">2. The wheel at a glance</h2>
 <p><img alt="How it works" src="https://raw.githubusercontent.com/jfran3d/Sculpt-Paint-Wheel-Reborn/main/store/superhive/images/02_how_it_works.png" width="100%" /></p>
 <p>The wheel opens centered on your mouse cursor and has these parts:</p>
-<table>
-<thead>
-<tr>
-<th>Part</th>
-<th>What it does</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>Set name</strong> (top)</td>
-<td>The name of the active brush set, for example <em>Default Set</em>.</td>
-</tr>
-<tr>
-<td><strong>Brush ring</strong> (outer ring)</td>
-<td>The brushes of the active brush set, shown with their Blender previews. The active brush is highlighted.</td>
-</tr>
-<tr>
-<td><strong>Custom buttons</strong> (center pie)</td>
-<td>The buttons of the active custom button set: popups with settings, menus and one-click operators.</td>
-</tr>
-<tr>
-<td><strong>Page indicator</strong> (bottom)</td>
-<td>Shown as <code>1 / 2</code> when the set has more brushes than fit on the ring.</td>
-</tr>
-<tr>
-<td><strong>Color picker ring</strong> (optional)</td>
-<td>Pick the brush color without leaving the wheel. Turn it on per brush set; see <a href="#brush-set-options">Brush set options</a>.</td>
-</tr>
-<tr>
-<td><strong>Weight dial</strong> (Weight Paint only)</td>
-<td>Replaces the brush ring: a color-coded dial from 0.0 to 1.0 to set the brush weight in one gesture.</td>
-</tr>
-</tbody>
-</table>
+<ul>
+<li><strong>Set name</strong> (top): The name of the active brush set, for example <em>Default Set</em>.</li>
+<li><strong>Brush ring</strong> (outer ring): The brushes of the active brush set, shown with their Blender previews. The active brush is highlighted.</li>
+<li><strong>Custom buttons</strong> (center pie): The buttons of the active custom button set: popups with settings, menus and one-click operators.</li>
+<li><strong>Page indicator</strong> (bottom): Shown as <code>1 / 2</code> when the set has more brushes than fit on the ring.</li>
+<li><strong>Color picker ring</strong> (optional): Pick the brush color without leaving the wheel. Turn it on per brush set; see <a href="#brush-set-options">Brush set options</a>.</li>
+<li><strong>Weight dial</strong> (Weight Paint only): Replaces the brush ring: a color-coded dial from 0.0 to 1.0 to set the brush weight in one gesture.</li>
+</ul>
 <hr />
 <h2 id="3-controls">3. Controls</h2>
-<table>
-<thead>
-<tr>
-<th>Input</th>
-<th>Action</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Hold <code>Space</code></td>
-<td>Open the wheel under the cursor</td>
-</tr>
-<tr>
-<td>Move the mouse</td>
-<td>Highlight a brush or a button</td>
-</tr>
-<tr>
-<td><code>Left Click</code></td>
-<td>Activate the highlighted brush, or run the highlighted button</td>
-</tr>
-<tr>
-<td><code>Mouse Wheel</code></td>
-<td>Switch brush pages</td>
-</tr>
-<tr>
-<td>Release <code>Space</code></td>
-<td>Close the wheel</td>
-</tr>
-<tr>
-<td><code>Esc</code> / <code>Right Click</code></td>
-<td>Cancel and close the wheel</td>
-</tr>
-<tr>
-<td><code>Left Click</code> outside the wheel</td>
-<td>Close the wheel</td>
-</tr>
-</tbody>
-</table>
+<ul>
+<li><strong>Hold <code>Space</code></strong>: Open the wheel under the cursor</li>
+<li><strong>Move the mouse</strong>: Highlight a brush or a button</li>
+<li><code>Left Click</code>: Activate the highlighted brush, or run the highlighted button</li>
+<li><code>Mouse Wheel</code>: Switch brush pages</li>
+<li><strong>Release <code>Space</code></strong>: Close the wheel</li>
+<li><code>Esc</code> / <code>Right Click</code>: Cancel and close the wheel</li>
+<li><code>Left Click</code> outside the wheel: Close the wheel</li>
+</ul>
 <p>Two preferences change this behavior:</p>
 <ul>
 <li><strong>Select on Release</strong>: whatever is under the cursor when you release <code>Space</code> gets picked, then the wheel closes. Press, move, release: one fluid motion.</li>
@@ -199,9 +113,7 @@
 <li><strong>Brushes (5):</strong> Paint, Blur, Average, Smear, Replace.</li>
 <li><strong>Buttons:</strong> Color, Falloff, Multi Frame, Paint menu, Reset Vertex Color, Invert Colors.</li>
 </ul>
-<blockquote>
 <p><strong>Blender 5.3 note:</strong> in Sculpt, Texture, Vertex and Weight Paint, Blender moved brush falloff into the new <strong>Shape</strong> panel. <em>Falloff</em> buttons open that panel automatically.</p>
-</blockquote>
 <hr />
 <h2 id="5-brush-sets">5. Brush sets</h2>
 <p><img alt="Customize" src="https://raw.githubusercontent.com/jfran3d/Sculpt-Paint-Wheel-Reborn/main/store/superhive/images/04_customize.png" width="100%" /></p>
@@ -220,63 +132,23 @@
 </ol>
 <p>Any brush asset works, including your own brushes and brushes from other asset libraries.</p>
 <h3 id="brush-set-options">Brush set options</h3>
-<table>
-<thead>
-<tr>
-<th>Option</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>Name</strong></td>
-<td>The set's name, shown at the top of the wheel.</td>
-</tr>
-<tr>
-<td><strong>Show Color Picker</strong></td>
-<td>Adds a color picker ring to the wheel, so you can change the brush color without leaving it. Available for sculpt and paint brush sets.</td>
-</tr>
-<tr>
-<td><strong>Remove Set</strong></td>
-<td>Deletes the set.</td>
-</tr>
-</tbody>
-</table>
+<ul>
+<li><strong>Name</strong>: The set's name, shown at the top of the wheel.</li>
+<li><strong>Show Color Picker</strong>: Adds a color picker ring to the wheel, so you can change the brush color without leaving it. Available for sculpt and paint brush sets.</li>
+<li><strong>Remove Set</strong>: Deletes the set.</li>
+</ul>
 <hr />
 <h2 id="6-custom-buttons">6. Custom buttons</h2>
 <p>Custom buttons fill the <strong>center pie</strong>. Manage them in the sidebar's <strong>Wheel</strong> tab under <strong>Custom Button Sets</strong>. Switching, creating, renaming and removing sets works the same way as for brush sets.</p>
 <h3 id="add-a-button">Add a button</h3>
 <p>Click <strong>+</strong> and fill in:</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>Name</strong></td>
-<td>The label shown for the button.</td>
-</tr>
-<tr>
-<td><strong>Icon Image</strong></td>
-<td>An optional image file for the button's icon.</td>
-</tr>
-<tr>
-<td><strong>Type</strong></td>
-<td><strong>Operator</strong> runs a Blender operator. <strong>Popup</strong> opens a panel or menu as a popup.</td>
-</tr>
-<tr>
-<td><strong>Popup</strong></td>
-<td>For popups only: <strong>Menu</strong> or <strong>Panel</strong>.</td>
-</tr>
-<tr>
-<td><strong>Source</strong></td>
-<td><strong>Preset</strong> picks from a list of operators, menus or panels that make sense in the current mode. <strong>Custom</strong> lets you type any ID by hand.</td>
-</tr>
-</tbody>
-</table>
+<ul>
+<li><strong>Name</strong>: The label shown for the button.</li>
+<li><strong>Icon Image</strong>: An optional image file for the button's icon.</li>
+<li><strong>Type</strong>: <strong>Operator</strong> runs a Blender operator. <strong>Popup</strong> opens a panel or menu as a popup.</li>
+<li><strong>Popup</strong>: For popups only: <strong>Menu</strong> or <strong>Panel</strong>.</li>
+<li><strong>Source</strong>: <strong>Preset</strong> picks from a list of operators, menus or panels that make sense in the current mode. <strong>Custom</strong> lets you type any ID by hand.</li>
+</ul>
 <p>Use <strong>−</strong> and the arrows to remove and reorder buttons.</p>
 <h3 id="presets-per-mode">Presets per mode</h3>
 <p>Each mode offers a hand-picked list of the panels, menus and operators that Blender itself shows in that mode. Some examples:</p>
@@ -295,9 +167,7 @@
 <li><strong>Operators:</strong> the operator ID, optionally followed by <code>#</code> and its arguments, for example <code>paint.mask_flood_fill#mode='INVERT'</code>.</li>
 </ul>
 <p>To find an ID, enable <strong>Edit › Preferences › Interface › Developer Extras</strong> and <strong>Python Tooltips</strong>, then hover the item in Blender's UI.</p>
-<blockquote>
 <p>Some operators only work in the right context. For example, multires buttons need a Multires modifier.</p>
-</blockquote>
 <hr />
 <h2 id="7-preferences">7. Preferences</h2>
 <p>Open <strong>Edit › Preferences › Add-ons › Sculpt-Paint Wheel</strong>.</p>
@@ -306,76 +176,23 @@
 <h3 id="savebackup-addon-preferences">Save/Backup Addon Preferences</h3>
 <p>Saves your preferences, brush sets and custom buttons to disk right away. See <a href="#8-your-data-and-backups">Your data and backups</a>.</p>
 <h3 id="settings">Settings</h3>
-<table>
-<thead>
-<tr>
-<th>Setting</th>
-<th>Default</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>Scale</strong></td>
-<td>1.00</td>
-<td>Overall size of the wheel, from 0.1 to 10.</td>
-</tr>
-<tr>
-<td><strong>Keep Open</strong></td>
-<td>Off</td>
-<td>Releasing the hotkey doesn't close the wheel; press it again to close.</td>
-</tr>
-<tr>
-<td><strong>Select on Release</strong></td>
-<td>Off</td>
-<td>Releasing the hotkey picks what's under the cursor, then closes the wheel.</td>
-</tr>
-</tbody>
-</table>
+<ul>
+<li><strong>Scale</strong>: Overall size of the wheel, from 0.1 to 10. (default: 1.00)</li>
+<li><strong>Keep Open</strong>: Releasing the hotkey doesn't close the wheel; press it again to close. (default: Off)</li>
+<li><strong>Select on Release</strong>: Releasing the hotkey picks what's under the cursor, then closes the wheel. (default: Off)</li>
+</ul>
 <h3 id="theme">Theme</h3>
 <p>Colors of the wheel: text, wheel base and outline, center pie and outline, and the idle, hovered and active colors of the buttons.</p>
 <h3 id="color-picker">Color Picker</h3>
-<table>
-<thead>
-<tr>
-<th>Setting</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>[Ring] Lock Saturation/Lightness</strong></td>
-<td>The color ring only changes the hue, keeping the current saturation and lightness.</td>
-</tr>
-</tbody>
-</table>
+<ul>
+<li><strong>[Ring] Lock Saturation/Lightness</strong>: The color ring only changes the hue, keeping the current saturation and lightness.</li>
+</ul>
 <h3 id="weight-wheel">Weight Wheel</h3>
-<table>
-<thead>
-<tr>
-<th>Setting</th>
-<th>Default</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>Show Markers</strong></td>
-<td>On</td>
-<td>Shows the 0.0–1.0 value markers around the weight dial.</td>
-</tr>
-<tr>
-<td><strong>Interactable Markers</strong></td>
-<td>On</td>
-<td>Click a marker to set that exact weight.</td>
-</tr>
-<tr>
-<td><strong>Direct Selection Weight</strong></td>
-<td>On</td>
-<td>When a selection mask is active, changing the weight also updates the weight of the selection.</td>
-</tr>
-</tbody>
-</table>
+<ul>
+<li><strong>Show Markers</strong>: Shows the 0.0–1.0 value markers around the weight dial. (default: On)</li>
+<li><strong>Interactable Markers</strong>: Click a marker to set that exact weight. (default: On)</li>
+<li><strong>Direct Selection Weight</strong>: When a selection mask is active, changing the weight also updates the weight of the selection. (default: On)</li>
+</ul>
 <hr />
 <h2 id="8-your-data-and-backups">8. Your data and backups</h2>
 <p>Your preferences, brush sets and custom buttons are stored in <code>preferences.json</code>, in an <code>spwheel</code> folder inside Blender's user configuration directory.</p>
@@ -392,43 +209,15 @@
 <p>To change the key, go to <strong>Edit › Preferences › Keymap</strong>, search for <code>Sculpt-Paint Wheel Modal</code>, and edit the entry in the modes you want.</p>
 <hr />
 <h2 id="10-troubleshooting">10. Troubleshooting</h2>
-<table>
-<thead>
-<tr>
-<th>Problem</th>
-<th>Try this</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>Space</code> does nothing</td>
-<td>Hover the <strong>3D Viewport</strong>, be in a <strong>supported mode</strong> (not Object or Edit Mode) with an <strong>active object</strong>, and check that no other add-on uses <code>Space</code> there.</td>
-</tr>
-<tr>
-<td>A button does nothing</td>
-<td>The operator may need a specific context, such as a Multires modifier or an existing keyframe. Check the system console for the reason.</td>
-</tr>
-<tr>
-<td><em>Falloff</em> opens a "Shape" panel</td>
-<td>Expected on Blender 5.3; Blender moved falloff into that panel.</td>
-</tr>
-<tr>
-<td>Brushes are missing from the ring</td>
-<td>The set may have more brushes than fit: scroll the mouse wheel to change pages.</td>
-</tr>
-<tr>
-<td>Something else</td>
-<td>See the <a href="https://github.com/jfran3d/Sculpt-Paint-Wheel-Reborn/blob/main/FAQ.md">FAQ</a> or <a href="https://github.com/jfran3d/Sculpt-Paint-Wheel-Reborn/issues">open an issue</a> with your Blender version, the mode, the steps to reproduce it, and any console error.</td>
-</tr>
-</tbody>
-</table>
+<ul>
+<li><code>Space</code> does nothing: Hover the <strong>3D Viewport</strong>, be in a <strong>supported mode</strong> (not Object or Edit Mode) with an <strong>active object</strong>, and check that no other add-on uses <code>Space</code> there.</li>
+<li><strong>A button does nothing</strong>: The operator may need a specific context, such as a Multires modifier or an existing keyframe. Check the system console for the reason.</li>
+<li><strong><em>Falloff</em> opens a "Shape" panel</strong>: Expected on Blender 5.3; Blender moved falloff into that panel.</li>
+<li><strong>Brushes are missing from the ring</strong>: The set may have more brushes than fit: scroll the mouse wheel to change pages.</li>
+<li><strong>Something else</strong>: See the <a href="https://github.com/jfran3d/Sculpt-Paint-Wheel-Reborn/blob/main/FAQ.md">FAQ</a> or <a href="https://github.com/jfran3d/Sculpt-Paint-Wheel-Reborn/issues">open an issue</a> with your Blender version, the mode, the steps to reproduce it, and any console error.</li>
+</ul>
 <hr />
 <h2 id="supporting-the-project">Supporting the project</h2>
 <p><img alt="Your purchase supports the developer" src="https://raw.githubusercontent.com/jfran3d/Sculpt-Paint-Wheel-Reborn/main/store/superhive/images/06_support_store.png" width="100%" /></p>
 <p>Sculpt-Paint Wheel is <strong>free and open source</strong>, just like Blender. It's maintained by one independent developer, and every new Blender version needs porting, testing and fixing.</p>
 <p>By buying it here on Superhive, you fund that work, so the add-on keeps improving and stays available to everyone, including students and artists who can't afford to buy it. <strong>Thank you!</strong> ♥</p>
-
-<!-- ======================== PASTE END ======================== -->
-</div>
-</body>
-</html>

@@ -9,6 +9,14 @@ Marketing material for the store listings of Sculpt-Paint Wheel. This folder isn
 
 The images are copies of `docs/images/promo/`. They're regenerated from real Blender 5.3 screenshots, so if the add-on's look changes, update `docs/images/promo/` first and copy the files here again.
 
+## Superhive HTML
+
+Superhive's description and documentation editors don't accept `<head>`, `<style>` or styled markup. `description.html` and `docs.html` are therefore plain HTML fragments: **paste each file as a whole**. They only use headings, paragraphs, lists, links and images; the images carry the visual design and load from this repository on GitHub.
+
+`docs.html` is generated: edit `DOCS.md`, then run `python store/superhive/build_docs.py` (needs `pip install markdown`).
+
+## Wording
+
 All channels share the same wording rules:
 - The add-on is **free and open source** on GitHub.
 - Buying it in a store **funds development**, so everyone benefits, including people who can't afford it.

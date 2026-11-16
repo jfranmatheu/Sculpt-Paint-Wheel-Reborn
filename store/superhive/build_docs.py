@@ -3,8 +3,12 @@
 Run from anywhere:  python store/superhive/build_docs.py
 Requires:           pip install markdown
 
+Superhive's editors don't accept <head>, <style> or styled markup, so the output is a plain HTML fragment,
+ready to paste as a whole: headings, paragraphs, lists, links and images only.
+
 What it does:
-- Converts DOCS.md to HTML (tables and heading anchors included).
+- Converts DOCS.md to HTML.
+- Turns tables into lists (tables look broken without styles) and quotes into plain paragraphs.
 - Points images at the rounded store images on GitHub (store/superhive/images/), falling back to docs/images/promo/.
 - Makes relative links (FAQ.md, README.md, ...) absolute GitHub links.
 - Rewrites the "Supporting the project" section for the Superhive page: buy it here, no link to other stores.
@@ -35,53 +39,38 @@ By buying it here on Superhive, you fund that work, so the add-on keeps improvin
 html = markdown.markdown(md, extensions=["tables", "toc", "sane_lists"])
 
 
+def table_to_list(match):
+    """<table> -> <ul>: each row becomes '<strong>first cell</strong>: other cells'."""
+    headers = [h.strip().lower() for h in re.findall(r"<th[^>]*>(.*?)</th>", match.group(0), re.S)]
+    items = []
+    for row in re.findall(r"<tr>(.*?)</tr>", match.group(0), re.S):
+        cells = [c.strip() for c in re.findall(r"<td[^>]*>(.*?)</td>", row, re.S)]
+        if not cells:
+            continue  # header row
+        first = cells[0] if cells[0].startswith(("<strong>", "<code>")) else f"<strong>{cells[0]}</strong>"
+        rest = cells[1:]
+        if len(headers) == 3 and headers[1] == "default":  # Setting | Default | Description
+            text = f"{rest[1]} (default: {rest[0]})"
+        else:
+            text = " — ".join(rest)
+        items.append(f"<li>{first}: {text}</li>")
+    return "<ul>\n" + "\n".join(items) + "\n</ul>"
+
+
 def image_url(match):
     name = match.group(1)
-    store_img = HERE / "images" / name
-    path = f"store/superhive/images/{name}" if store_img.exists() else f"docs/images/promo/{name}"
+    path = f"store/superhive/images/{name}" if (HERE / "images" / name).exists() else f"docs/images/promo/{name}"
     return f'src="{RAW}/{path}" width="100%"'
 
 
+html = re.sub(r"<table>.*?</table>", table_to_list, html, flags=re.S)
+html = re.sub(r"<blockquote>\s*(.*?)\s*</blockquote>", r"\1", html, flags=re.S)
 html = re.sub(r'src="docs/images/promo/([^"]+)"', image_url, html)
-html = re.sub(r'href="(FAQ\.md|README\.md|DOCS\.md)(#[^"]*)?"', lambda m: f'href="{REPO}/blob/main/{m.group(1)}{m.group(2) or ""}"', html)
+html = re.sub(r'href="(FAQ\.md|README\.md|DOCS\.md)(#[^"]*)?"',
+              lambda m: f'href="{REPO}/blob/main/{m.group(1)}{m.group(2) or ""}"', html)
 
-page = f"""<!--
-  Superhive documentation for Sculpt-Paint Wheel. GENERATED from DOCS.md by build_docs.py; edit DOCS.md instead.
+for forbidden in ("<table", "<style", "<!--", "<head", "<div", "style="):
+    assert forbidden not in html, forbidden
 
-  Paste everything between "PASTE START" and "PASTE END" into the Superhive documentation editor (HTML / source mode).
-  Open this file in a browser to preview it on a white page, like Superhive.
--->
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Sculpt-Paint Wheel – Superhive documentation preview</title>
-<style>
-  /* Preview only: approximates Superhive's white page. Superhive applies its own styles. */
-  body {{ margin: 0; background: #fff; color: #333; font: 16px/1.6 "Segoe UI", system-ui, sans-serif; }}
-  .preview {{ max-width: 900px; margin: 0 auto; padding: 32px 16px 64px; }}
-  h1, h2, h3 {{ color: #111; line-height: 1.25; }}
-  h2 {{ margin-top: 2.2em; }}
-  a {{ color: #d9630a; }}
-  img {{ max-width: 100%; height: auto; }}
-  table {{ width: 100%; border-collapse: collapse; }}
-  th, td {{ text-align: left; padding: 8px 10px; border-bottom: 1px solid #e3e3e3; vertical-align: top; }}
-  code {{ background: #f3f3f3; padding: 1px 5px; border-radius: 4px; }}
-  blockquote {{ margin: 1.5em 0; padding: 0.6em 1.2em; border-left: 4px solid #ff8c28; background: #fff6ee; }}
-  hr {{ border: 0; border-top: 1px solid #e3e3e3; margin: 2.5em 0; }}
-</style>
-</head>
-<body>
-<div class="preview">
-<!-- ======================= PASTE START ======================= -->
-
-{html}
-
-<!-- ======================== PASTE END ======================== -->
-</div>
-</body>
-</html>
-"""
-(HERE / "docs.html").write_text(page, encoding="utf-8")
+(HERE / "docs.html").write_text(html.strip() + "\n", encoding="utf-8")
 print("wrote", HERE / "docs.html")
