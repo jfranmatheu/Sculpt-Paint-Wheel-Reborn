@@ -15,6 +15,14 @@ Superhive's description and documentation editors don't accept `<head>`, `<style
 
 `docs.html` is generated: edit `DOCS.md`, then run `python store/superhive/build_docs.py` (needs `pip install markdown`).
 
+## Image tools
+
+The graphics are rendered with Pillow from real Blender 5.3 screenshots:
+- `tools/promo_images.py`: the shared promo images (`docs/images/promo/`).
+- `tools/store_graphics.py`: extra store graphics (benefits, controls, wheel anatomy, modes reference, requirements, preferences, free & open) and the numbered chapter banners for `docs.html`.
+
+Store copies get transparent rounded corners so they sit well on white store pages.
+
 ## Wording
 
 All channels share the same wording rules:

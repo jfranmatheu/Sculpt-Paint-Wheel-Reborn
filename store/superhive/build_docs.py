@@ -69,6 +69,27 @@ html = re.sub(r'src="docs/images/promo/([^"]+)"', image_url, html)
 html = re.sub(r'href="(FAQ\.md|README\.md|DOCS\.md)(#[^"]*)?"',
               lambda m: f'href="{REPO}/blob/main/{m.group(1)}{m.group(2) or ""}"', html)
 
+# Graphics: numbered chapter headings become banner images (anchors kept), plus a graphic per chapter.
+CHAPTER_GRAPHICS = {
+    1: ("14_requirements.png", "Requirements and install"),
+    2: ("12_anatomy.png", "The wheel at a glance"),
+    3: ("11_controls.png", "Controls"),
+    4: ("13_modes_reference.png", "A wheel for every mode"),
+    7: ("15_preferences.png", "Preferences"),
+}
+
+
+def chapter_banner(match):
+    anchor, num, title = match.group(1), int(match.group(2)), match.group(3)
+    out = f'<h2 id="{anchor}"><img src="{RAW}/store/superhive/images/ch{num:02d}.png" alt="{num}. {title}" width="100%"></h2>'
+    if num in CHAPTER_GRAPHICS:
+        name, alt = CHAPTER_GRAPHICS[num]
+        out += f'\n<p><img src="{RAW}/store/superhive/images/{name}" alt="{alt}" width="100%"></p>'
+    return out
+
+
+html = re.sub(r'<h2 id="([^"]+)">(\d+)\. ([^<]+)</h2>', chapter_banner, html)
+
 for forbidden in ("<table", "<style", "<!--", "<head", "<div", "style="):
     assert forbidden not in html, forbidden
 
