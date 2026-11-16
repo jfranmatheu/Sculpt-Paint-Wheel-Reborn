@@ -262,12 +262,12 @@ def support_image(name, kicker, title, cta, footer, pills=()):
     save(img, H, name)
 
 
-# GitHub: points to the stores.
+# GitHub: points to the store.
 support_image(
     "06_support_github.png", "LIKE THE WHEEL?", "Support the developer",
-    "Buying it on Superhive or Payhip funds what comes next:",
+    "Buying it on Superhive funds what comes next:",
     "The add-on stays free and open source here on GitHub. Buying it is how you say thanks.",
-    pills=(("Superhive  →", ORANGE), ("Payhip  →", (90, 70, 140))),
+    pills=(("Buy on Superhive  →", ORANGE),),
 )
 # Stores: thanks the buyer, no pricing talk.
 support_image(

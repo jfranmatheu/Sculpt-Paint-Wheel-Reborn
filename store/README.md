@@ -5,7 +5,6 @@ Marketing material for the store listings of Sculpt-Paint Wheel. This folder isn
 | Store | Product page | Contents |
 |---|---|---|
 | [Superhive](superhive/) | https://superhivemarket.com/products/sculpt-paint-wheel | `description.html` (product description), `docs.html` (documentation tab, generated from `DOCS.md` by `build_docs.py`) and `images/` for the gallery |
-| [Payhip](payhip/) | https://payhip.com/b/zXfm2 | `README.md` (image order and text links) and `images/` |
 
 The images are copies of `docs/images/promo/`. They're regenerated from real Blender 5.3 screenshots, so if the add-on's look changes, update `docs/images/promo/` first and copy the files here again.
 
@@ -21,7 +20,7 @@ Superhive's description and documentation editors don't accept `<head>`, `<style
 python store/tools/build_release.py
 ```
 
-Creates `build/store/spwheel-<version>.zip` (ignored by git) with Blender's own extension builder, from the git-tracked files only, and validates it. Upload that zip as the product file on Superhive and Payhip, and attach it to the GitHub release. Blender is found automatically; pass `--blender PATH` to choose one.
+Creates `build/store/spwheel-<version>.zip` (ignored by git) with Blender's own extension builder, from the git-tracked files only, and validates it. Upload that zip as the product file on Superhive, and attach it to the GitHub release. Blender is found automatically; pass `--blender PATH` to choose one.
 
 ## Image tools
 

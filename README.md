@@ -5,7 +5,7 @@
 </p>
 
 <h3 align="center">
-  ❤️ Like this add-on? Support the developer by buying it on <a href="https://superhivemarket.com/products/sculpt-paint-wheel">Superhive</a> or <a href="https://payhip.com/b/zXfm2">Payhip</a> ❤️
+  ❤️ Like this add-on? <a href="https://superhivemarket.com/products/sculpt-paint-wheel">Support the developer by buying it on Superhive</a> ❤️
 </h3>
 
 ---
@@ -117,12 +117,10 @@ Your preferences, brush sets and custom buttons are saved to disk and restored w
 
 ![Support the developer](docs/images/promo/06_support_github.png)
 
-Sculpt-Paint Wheel stays **free and open source** here on GitHub. If it saves you time, you can support its development by buying it on either store:
+Sculpt-Paint Wheel stays **free and open source** here on GitHub. If it saves you time, you can support its development by buying it on Superhive:
 
 <p align="center">
   <a href="https://superhivemarket.com/products/sculpt-paint-wheel"><b>➜ Buy on Superhive</b></a>
-  &nbsp;&nbsp;•&nbsp;&nbsp;
-  <a href="https://payhip.com/b/zXfm2"><b>➜ Buy on Payhip</b></a>
 </p>
 
 ![More ways to help: star on GitHub, report bugs, share it](docs/images/promo/07_help.png)

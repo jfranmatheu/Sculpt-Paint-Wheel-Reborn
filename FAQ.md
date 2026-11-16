@@ -109,15 +109,15 @@ In `preferences.json`, inside an `spwheel` folder in Blender's user configuratio
 
 ### If it's free, why is it for sale?
 
-Buying it on [Superhive](https://superhivemarket.com/products/sculpt-paint-wheel) or [Payhip](https://payhip.com/b/zXfm2) is how you support its development. Sculpt-Paint Wheel is maintained by one independent developer, and every new Blender version needs porting, testing and fixing. Purchases fund that work, so the add-on keeps improving and stays free for everyone, including students and artists who can't afford to buy it.
+Buying it on [Superhive](https://superhivemarket.com/products/sculpt-paint-wheel) is how you support its development. Sculpt-Paint Wheel is maintained by one independent developer, and every new Blender version needs porting, testing and fixing. Purchases fund that work, so the add-on keeps improving and stays free for everyone, including students and artists who can't afford to buy it.
 
 ### Do buyers get a different version?
 
 No. Everyone gets the same add-on, with the same features. Buying it is a way of saying thanks and keeping the project alive.
 
-### Where should I buy it?
+### Where can I buy it?
 
-Wherever you prefer: [Superhive](https://superhivemarket.com/products/sculpt-paint-wheel) or [Payhip](https://payhip.com/b/zXfm2). Both support the same developer.
+On [Superhive](https://superhivemarket.com/products/sculpt-paint-wheel).
 
 ### Can I help without buying it?
 

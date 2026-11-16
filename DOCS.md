@@ -288,6 +288,6 @@ To change the key, go to **Edit › Preferences › Keymap**, search for `Sculpt
 
 Sculpt-Paint Wheel is **free and open source**, just like Blender. It's maintained by one independent developer, and every new Blender version needs porting, testing and fixing.
 
-If it saves you time, you can support its development by buying it on [Superhive](https://superhivemarket.com/products/sculpt-paint-wheel) or [Payhip](https://payhip.com/b/zXfm2). Purchases keep the add-on improving and available to everyone, including students and artists who can't afford to buy it.
+If it saves you time, you can support its development by buying it on [Superhive](https://superhivemarket.com/products/sculpt-paint-wheel). Purchases keep the add-on improving and available to everyone, including students and artists who can't afford to buy it.
 
 You can also help by [starring the repository](https://github.com/jfran3d/Sculpt-Paint-Wheel-Reborn), [reporting bugs](https://github.com/jfran3d/Sculpt-Paint-Wheel-Reborn/issues), and sharing it with other Blender artists. Thank you! ♥
