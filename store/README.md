@@ -4,7 +4,7 @@ Marketing material for the store listings of Sculpt-Paint Wheel. This folder isn
 
 | Store | Product page | Contents |
 |---|---|---|
-| [Superhive](superhive/) | https://superhivemarket.com/products/sculpt-paint-wheel | `description.html` (paste into the description editor) and `images/` for the gallery |
+| [Superhive](superhive/) | https://superhivemarket.com/products/sculpt-paint-wheel | `description.html` (product description), `docs.html` (documentation tab, generated from `DOCS.md` by `build_docs.py`) and `images/` for the gallery |
 | [Payhip](payhip/) | https://payhip.com/b/zXfm2 | `README.md` (image order and text links) and `images/` |
 
 The images are copies of `docs/images/promo/`. They're regenerated from real Blender 5.3 screenshots, so if the add-on's look changes, update `docs/images/promo/` first and copy the files here again.

@@ -27,7 +27,7 @@ A Blender addon that enables a cool UI for sculpt and paint modes for a better a
 
 ## Documentation
 
-> ❓ Have a question? Check the **[FAQ](FAQ.md)**.
+> 📘 Full user guide: **[DOCS.md](DOCS.md)** &nbsp;•&nbsp; ❓ Quick answers: **[FAQ](FAQ.md)**
 
 ![Sculpt-Paint Wheel: your brushes, one keypress away](docs/images/promo/01_hero.png)
 

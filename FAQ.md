@@ -1,6 +1,6 @@
 # Frequently Asked Questions
 
-Quick answers about Sculpt-Paint Wheel. For the full guide, see the [README documentation](README.md#documentation).
+Quick answers about Sculpt-Paint Wheel. For the full guide, see the [User Guide](DOCS.md).
 
 - [General](#general)
 - [Installation and compatibility](#installation-and-compatibility)
