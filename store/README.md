@@ -15,6 +15,14 @@ Superhive's description and documentation editors don't accept `<head>`, `<style
 
 `docs.html` is generated: edit `DOCS.md`, then run `python store/superhive/build_docs.py` (needs `pip install markdown`).
 
+## Build for the stores
+
+```
+python store/tools/build_release.py
+```
+
+Creates `build/store/spwheel-<version>.zip` (ignored by git) with Blender's own extension builder, from the git-tracked files only, and validates it. Upload that zip as the product file on Superhive and Payhip, and attach it to the GitHub release. Blender is found automatically; pass `--blender PATH` to choose one.
+
 ## Image tools
 
 The graphics are rendered with Pillow from real Blender 5.3 screenshots:

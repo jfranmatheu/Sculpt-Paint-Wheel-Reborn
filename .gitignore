@@ -170,3 +170,7 @@ cython_debug/
 # Blender backup files
 *.blend1
 *.blend2
+
+# Store / release builds (see store/tools/build_release.py)
+build/
+*.zip
