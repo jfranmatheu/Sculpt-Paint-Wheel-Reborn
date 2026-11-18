@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sculpt-Paint Wheel · Docs</title>
+<meta name="description" content="Sculpt-Paint Wheel: a radial brush and tool wheel for Blender's sculpt and paint modes. Free and open source. Interactive documentation.">
+<meta name="theme-color" content="#120e1c">
+<meta property="og:title" content="Sculpt-Paint Wheel">
+<meta property="og:description" content="Your brushes, one keypress away. A radial brush wheel for every paint mode in Blender.">
+<meta property="og:image" content="https://raw.githubusercontent.com/jfran3d/Sculpt-Paint-Wheel-Reborn/main/docs/images/promo/01_hero.png">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='28' fill='none' stroke='%23ff8c28' stroke-width='8'/%3E%3Ccircle cx='32' cy='32' r='9' fill='%23ff8c28'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/site.css">
+<script>
+  // Apply the saved theme before first paint.
+  try { var t = localStorage.getItem("spw-theme"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+</script>
+</head>
+<body>
+<div class="progress" aria-hidden="true"></div>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="nav" id="top">
+  <a class="brand" href="#top" aria-label="Sculpt-Paint Wheel home">
+    <span class="brand-mark" aria-hidden="true"></span>
+    <span>Sculpt-Paint Wheel</span>
+    <span class="badge">v1.1.0</span>
+  </a>
+  <nav class="nav-links" aria-label="Sections">
+    <a href="#demo">Wheel</a>
+    <a href="#features">Features</a>
+    <a href="#modes">Modes</a>
+    <a href="#guide">Guide</a>
+    <a href="#faq">FAQ</a>
+  </nav>
+  <div class="nav-actions">
+    <button class="search-trigger" type="button" data-open-search aria-label="Search the docs">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <span>Search</span><kbd>Ctrl K</kbd>
+    </button>
+    <button class="icon-btn" type="button" id="theme-toggle" aria-label="Toggle light and dark theme">
+      <svg class="i-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+      <svg class="i-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+    </button>
+    <a class="icon-btn" href="https://github.com/jfran3d/Sculpt-Paint-Wheel-Reborn" aria-label="GitHub repository">
+      <svg viewBox="0 0 24 24" aria-hidden="true" class="fill"><path d="M12 .5a11.5 11.5 0 0 0-3.6 22.4c.6.1.8-.3.8-.6v-2c-3.2.7-3.9-1.4-3.9-1.4-.5-1.3-1.3-1.7-1.3-1.7-1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.7 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.3 1.2a11.4 11.4 0 0 1 6 0C17.3 4.7 18.3 5 18.3 5c.6 1.6.2 2.8.1 3.1.8.8 1.2 1.8 1.2 3.1 0 4.4-2.7 5.4-5.3 5.7.4.4.8 1.1.8 2.2v3.2c0 .3.2.7.8.6A11.5 11.5 0 0 0 12 .5z"/></svg>
+    </a>
+    <a class="btn btn-primary btn-sm hide-sm" href="https://superhivemarket.com/products/sculpt-paint-wheel">Get it on Superhive</a>
+  </div>
+</header>
+
+<main id="main">
+
+<!-- ============================ HERO + DEMO ============================ -->
+<section class="hero" id="demo">
+  <div class="hero-bg" aria-hidden="true"></div>
+  <div class="hero-copy reveal">
+    <p class="eyebrow">Blender add-on · Available on Superhive</p>
+    <h1>Your brushes,<br><span class="grad">one keypress away.</span></h1>
+    <p class="lead">A radial wheel that pops up under your cursor in every sculpt and paint mode. Hold <kbd>Space</kbd>, flick, keep working.</p>
+    <div class="cta-row">
+      <a class="btn btn-primary" href="https://superhivemarket.com/products/sculpt-paint-wheel">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6h15l-1.5 9h-12zM6 6 5 3H2M9 20a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm9 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg>
+        Available on Superhive
+      </a>
+      <a class="btn btn-ghost" href="#guide">Read the guide</a>
+    </div>
+    <p class="free-note">Can't afford it, or want to try it before buying? <a href="https://github.com/jfran3d/Sculpt-Paint-Wheel-Reborn/releases/latest">Get it free on GitHub</a>. Every purchase supports an independent developer.</p>
+    <ul class="hero-meta">
+      <li>Blender 5.1+</li><li>Tested on 5.3</li><li>9 paint modes</li><li>GPL-2.0</li>
+    </ul>
+  </div>
+
+  <div class="demo reveal" aria-label="The wheel in every mode">
+    <div class="viewer-tabs" role="tablist" aria-label="Paint mode" id="viewer-tabs"></div>
+    <div class="viewer" id="viewer">
+      <img class="viewer-img show" id="viewer-a" src="images/wheels/sculpt.webp" alt="The wheel in Sculpt mode" width="760" height="570">
+      <img class="viewer-img" id="viewer-b" alt="" width="760" height="570">
+    </div>
+    <div class="viewer-caption" aria-live="polite">
+      <strong id="viewer-title">Sculpt</strong>
+      <span id="viewer-sub">18 brushes · 8 buttons</span>
+      <span class="viewer-hint"><kbd>←</kbd><kbd>→</kbd> switch mode</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ FEATURES ============================ -->
+<section class="section" id="features">
+  <header class="section-head reveal">
+    <p class="eyebrow">Why artists love it</p>
+    <h2>Built for flow</h2>
+    <p>Everything you reach for, arranged around your cursor.</p>
+  </header>
+  <div class="feature-grid">
+    <article class="feature reveal" data-tilt><div class="f-icon">⚡</div><h3>Blazing fast</h3><p>One gesture instead of three clicks. Seconds saved on every brush switch add up to hours.</p></article>
+    <article class="feature reveal" data-tilt><div class="f-icon">✋</div><h3>Muscle memory</h3><p>Brushes keep their place on the ring, so your hand learns where they are.</p></article>
+    <article class="feature reveal" data-tilt><div class="f-icon">◎</div><h3>Every paint mode</h3><p>Sculpt, Texture, Vertex and Weight Paint, hair curves, and all Grease Pencil modes.</p></article>
+    <article class="feature reveal" data-tilt><div class="f-icon">⚙</div><h3>Your setup</h3><p>Brush sets and custom buttons for any workflow. Switch sets in a click.</p></article>
+    <article class="feature reveal" data-tilt><div class="f-icon">✔</div><h3>Feels native</h3><p>Uses Blender's own brush assets, panels and operators. Nothing to relearn.</p></article>
+    <article class="feature reveal" data-tilt><div class="f-icon">★</div><h3>Blender 5.x ready</h3><p>A modern extension, tested on Blender 5.3 and 5.2.</p></article>
+  </div>
+
+  <div class="gallery reveal" aria-label="Screenshots">
+    <button class="shot" data-lightbox="images/promo/03_modes.png" data-caption="Sculpt, Texture Paint, Grease Pencil Draw and Weight Paint wheels">
+      <img src="images/promo/03_modes.png" alt="Wheels in four paint modes" loading="lazy">
+    </button>
+    <button class="shot" data-lightbox="images/promo/04_customize.png" data-caption="Brush sets and custom buttons in the Wheel tab">
+      <img src="images/promo/04_customize.png" alt="Customizing brush sets and buttons" loading="lazy">
+    </button>
+    <button class="shot" data-lightbox="images/promo/02_how_it_works.png" data-caption="Hold Space, flick and click, keep working">
+      <img src="images/promo/02_how_it_works.png" alt="How it works" loading="lazy">
+    </button>
+  </div>
+</section>
+
+<!-- ============================ MODES ============================ -->
+<section class="section" id="modes">
+  <header class="section-head reveal">
+    <p class="eyebrow">Out of the box</p>
+    <h2>A wheel for every mode</h2>
+    <p>Each mode gets its own wheel with Blender's Essentials brushes and the settings that matter there. Click a mode to explore it.</p>
+  </header>
+  <div class="modes reveal">
+    <div class="mode-tabs" role="tablist" aria-label="Paint modes" id="mode-tabs"></div>
+    <div class="mode-panel" role="tabpanel" id="mode-panel" aria-live="polite"></div>
+  </div>
+</section>
+
+<!-- ============================ GUIDE ============================ -->
+<section class="section guide" id="guide">
+  <header class="section-head reveal">
+    <p class="eyebrow">User guide</p>
+    <h2>Everything, in detail</h2>
+  </header>
+
+  <div class="guide-layout">
+    <aside class="toc" aria-label="Guide contents">
+      <p class="toc-title">On this page</p>
+      <ol id="toc">
+        <li><a href="#getting-started">Getting started</a></li>
+        <li><a href="#at-a-glance">The wheel at a glance</a></li>
+        <li><a href="#controls">Controls</a></li>
+        <li><a href="#brush-sets">Brush sets</a></li>
+        <li><a href="#custom-buttons">Custom buttons</a></li>
+        <li><a href="#preferences">Preferences</a></li>
+        <li><a href="#data">Your data</a></li>
+        <li><a href="#keymap">Hotkeys &amp; keymap</a></li>
+        <li><a href="#troubleshooting">Troubleshooting</a></li>
+      </ol>
+    </aside>
+
+    <div class="prose">
+
+      <article id="getting-started" data-search="Getting started install update requirements download zip">
+        <h3><span class="num">1</span>Getting started</h3>
+        <div class="steps">
+          <div class="step"><span>1</span><h4>Get it</h4><p>Buy it on <a href="https://superhivemarket.com/products/sculpt-paint-wheel">Superhive</a>, or get <code>spwheel-&lt;version&gt;.zip</code> free from <a href="https://github.com/jfran3d/Sculpt-Paint-Wheel-Reborn/releases/latest">GitHub</a>. Don't unzip it.</p></div>
+          <div class="step"><span>2</span><h4>Install</h4><p><b>Edit › Preferences › Get Extensions</b>, open the <b>v</b> menu and choose <b>Install from Disk…</b> Or drag &amp; drop the zip into Blender.</p></div>
+          <div class="step"><span>3</span><h4>Hold Space</h4><p>Select a mesh, enter <b>Sculpt Mode</b>, hover the viewport and hold <kbd>Space</kbd>.</p></div>
+        </div>
+        <div class="callout">
+          <b>Requirements:</b> Blender 5.1 or newer (tested on 5.3 and 5.2). No internet access needed.
+          <b>Updating</b> is the same as installing; your brush sets, buttons and preferences are kept.
+        </div>
+      </article>
+
+      <article id="at-a-glance" data-search="wheel at a glance anatomy set name brush ring custom buttons page indicator color picker weight dial">
+        <h3><span class="num">2</span>The wheel at a glance</h3>
+        <div class="anatomy">
+          <button class="shot" data-lightbox="images/site/12_anatomy.png" data-caption="Know your wheel">
+            <img src="images/site/12_anatomy.png" alt="The parts of the wheel" loading="lazy">
+          </button>
+          <dl class="parts">
+            <div><dt>Set name</dt><dd>The active brush set, shown at the top.</dd></div>
+            <div><dt>Brush ring</dt><dd>Brushes of the active set with their Blender previews. The active one is highlighted.</dd></div>
+            <div><dt>Custom buttons</dt><dd>The center pie: settings popups, menus and one-click operators.</dd></div>
+            <div><dt>Page indicator</dt><dd>Shows <code>1 / 2</code> when a set has more brushes than fit. Scroll to switch.</dd></div>
+            <div><dt>Color picker ring</dt><dd>Optional per brush set: pick the color without leaving the wheel.</dd></div>
+            <div><dt>Weight dial</dt><dd>Weight Paint modes: set any weight from 0.0 to 1.0 in one gesture.</dd></div>
+          </dl>
+        </div>
+      </article>
+
+      <article id="controls" data-search="controls space left click mouse wheel esc right click select on release keep open">
+        <h3><span class="num">3</span>Controls</h3>
+        <ul class="keys">
+          <li><span class="kbd-group"><kbd>Hold</kbd><kbd>Space</kbd></span><span>Open the wheel under the cursor</span></li>
+          <li><span class="kbd-group"><kbd>Left Click</kbd></span><span>Pick a brush or run a button</span></li>
+          <li><span class="kbd-group"><kbd>Mouse Wheel</kbd></span><span>Switch brush pages</span></li>
+          <li><span class="kbd-group"><kbd>Release</kbd><kbd>Space</kbd></span><span>Close the wheel</span></li>
+          <li><span class="kbd-group"><kbd>Esc</kbd><kbd>Right Click</kbd></span><span>Cancel and close</span></li>
+        </ul>
+        <p>Two preferences change this: <b>Select on Release</b> picks what's under the cursor when you release <kbd>Space</kbd>; <b>Keep Open</b> keeps the wheel open until you press <kbd>Space</kbd> again.</p>
+      </article>
+
+      <article id="brush-sets" data-search="brush sets outer ring add active brush remove reorder color picker rename">
+        <h3><span class="num">4</span>Brush sets</h3>
+        <p>Brush sets control the <b>outer ring</b>. Open the sidebar with <kbd>N</kbd> in the 3D Viewport, go to the <b>Wheel</b> tab, and use <b>Brush Sets</b>. Each mode has its own sets.</p>
+        <div class="split">
+          <ol class="checklist">
+            <li>Activate a brush from the toolbar or asset shelf.</li>
+            <li>Click <b>+</b> to add the <b>active brush</b> to the set.</li>
+            <li>Select a brush and use <b>−</b> to remove it, or the arrows to reorder. List order is ring order.</li>
+            <li>Use the options button to <b>rename</b>, toggle <b>Show Color Picker</b>, or <b>remove</b> the set.</li>
+          </ol>
+          <button class="shot" data-lightbox="images/promo/04_customize.png" data-caption="Brush sets and custom buttons">
+            <img src="images/promo/04_customize.png" alt="Wheel tab in the sidebar" loading="lazy">
+          </button>
+        </div>
+      </article>
+
+      <article id="custom-buttons" data-search="custom buttons center pie operator popup panel menu preset custom id python tooltips">
+        <h3><span class="num">5</span>Custom buttons</h3>
+        <p>Custom buttons fill the <b>center pie</b>. Manage them under <b>Custom Button Sets</b> in the same tab. Click <b>+</b> and choose:</p>
+        <div class="cards-2">
+          <div class="mini-card"><h4>Operator</h4><p>Runs a Blender operator, e.g. <code>paint.mask_flood_fill#mode='INVERT'</code>.</p></div>
+          <div class="mini-card"><h4>Popup</h4><p>Opens a <b>panel</b> or <b>menu</b> as a popup, e.g. Stroke or Falloff settings.</p></div>
+          <div class="mini-card"><h4>Preset</h4><p>Pick from a curated list of what Blender shows in the current mode.</p></div>
+          <div class="mini-card"><h4>Custom</h4><p>Type any panel, menu or operator ID by hand.</p></div>
+        </div>
+        <div class="callout tip"><b>Finding IDs:</b> enable <b>Preferences › Interface › Developer Extras</b> and <b>Python Tooltips</b>, then hover any item in Blender.</div>
+      </article>
+
+      <article id="preferences" data-search="preferences scale keep open select on release theme color picker lock saturation weight wheel markers direct selection support development backup">
+        <h3><span class="num">6</span>Preferences</h3>
+        <p>In <b>Edit › Preferences › Add-ons › Sculpt-Paint Wheel</b>.</p>
+        <div class="pref-table" role="table">
+          <div role="row" class="pref-head"><span role="columnheader">Setting</span><span role="columnheader">Default</span><span role="columnheader">What it does</span></div>
+          <div role="row"><b role="cell">Scale</b><span role="cell" class="pill">1.00</span><span role="cell">Overall size of the wheel (0.1–10).</span></div>
+          <div role="row"><b role="cell">Keep Open</b><span role="cell" class="pill off">Off</span><span role="cell">Releasing the hotkey doesn't close the wheel.</span></div>
+          <div role="row"><b role="cell">Select on Release</b><span role="cell" class="pill off">Off</span><span role="cell">Releasing the hotkey picks what's under the cursor.</span></div>
+          <div role="row"><b role="cell">Theme</b><span role="cell" class="pill">—</span><span role="cell">Colors for the wheel, pie and buttons (idle, hovered, active).</span></div>
+          <div role="row"><b role="cell">Lock Saturation/Lightness</b><span role="cell" class="pill off">Off</span><span role="cell">The color ring only changes the hue.</span></div>
+          <div role="row"><b role="cell">Show Markers</b><span role="cell" class="pill on">On</span><span role="cell">0.0–1.0 markers around the weight dial.</span></div>
+          <div role="row"><b role="cell">Interactable Markers</b><span role="cell" class="pill on">On</span><span role="cell">Click a marker to set that exact weight.</span></div>
+          <div role="row"><b role="cell">Direct Selection Weight</b><span role="cell" class="pill on">On</span><span role="cell">Changing the weight also updates the selection mask.</span></div>
+        </div>
+        <button class="shot wide" data-lightbox="images/site/15_preferences.png" data-caption="The add-on preferences">
+          <img src="images/site/15_preferences.png" alt="Add-on preferences" loading="lazy">
+        </button>
+      </article>
+
+      <article id="data" data-search="data backup preferences json saved restore reset defaults">
+        <h3><span class="num">7</span>Your data</h3>
+        <p>Preferences, brush sets and custom buttons live in <code>preferences.json</code>, in an <code>spwheel</code> folder inside Blender's user configuration directory.</p>
+        <ul class="checklist">
+          <li>Saved automatically when Blender closes, or right away with <b>Save/Backup Addon Preferences</b>.</li>
+          <li>Restored after updating or reinstalling the extension.</li>
+          <li>Back it up or move it to another computer by copying the file.</li>
+          <li>To reset a mode, remove its sets in the <b>Wheel</b> tab; the <b>Default Set</b> comes back on the next start.</li>
+        </ul>
+      </article>
+
+      <article id="keymap" data-search="hotkey keymap space rebind play animation">
+        <h3><span class="num">8</span>Hotkeys &amp; keymap</h3>
+        <p><kbd>Space</kbd> is bound in Sculpt, Sculpt Curves, Vertex Paint, Weight Paint, Image Paint and the four Grease Pencil paint modes. There it replaces Blender's play-animation shortcut; playback still works from the Timeline.</p>
+        <div class="callout">To change it: <b>Edit › Preferences › Keymap</b>, search for <code>Sculpt-Paint Wheel Modal</code> <button class="copy" data-copy="Sculpt-Paint Wheel Modal" aria-label="Copy keymap name">Copy</button></div>
+      </article>
+
+      <article id="troubleshooting" data-search="troubleshooting space does nothing button does nothing falloff shape panel bug report">
+        <h3><span class="num">9</span>Troubleshooting</h3>
+        <div class="trouble">
+          <details><summary><kbd>Space</kbd> does nothing</summary><p>Hover the <b>3D Viewport</b>, be in a <b>supported mode</b> (not Object or Edit Mode) with an <b>active object</b>, and check that no other add-on uses <kbd>Space</kbd> there.</p></details>
+          <details><summary>A button does nothing</summary><p>Some operators need context, such as a Multires modifier or an existing keyframe. The system console shows the reason.</p></details>
+          <details><summary><i>Falloff</i> opens a "Shape" panel</summary><p>Expected on Blender 5.3: falloff moved into the new <b>Shape</b> panel for mesh modes.</p></details>
+          <details><summary>Brushes are missing from the ring</summary><p>The set has more brushes than fit: scroll the mouse wheel to change pages.</p></details>
+        </div>
+        <p>Still stuck? <a href="https://github.com/jfran3d/Sculpt-Paint-Wheel-Reborn/issues">Open an issue</a> with your Blender version, the mode, steps to reproduce, and any console error.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ FAQ ============================ -->
+<section class="section" id="faq">
+  <header class="section-head reveal">
+    <p class="eyebrow">Questions</p>
+    <h2>FAQ</h2>
+  </header>
+  <div class="faq reveal">
+    <label class="faq-filter">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input type="search" id="faq-filter" placeholder="Filter questions…" aria-label="Filter questions">
+    </label>
+    <div id="faq-list">
+      <details data-search="free open source license gpl try"><summary>Can I get it for free?</summary><p>Yes. Sculpt-Paint Wheel is open source (GPL-2.0-or-later, like Blender). If you can't afford it, or want to try it before buying, get it free from the <a href="https://github.com/jfran3d/Sculpt-Paint-Wheel-Reborn/releases/latest">releases page</a>. If it earns a place in your workflow, please buy it on <a href="https://superhivemarket.com/products/sculpt-paint-wheel">Superhive</a>.</p></details>
+      <details data-search="blender versions 4.x 5.1 5.2 5.3 compatible"><summary>Which Blender versions are supported?</summary><p>Blender 5.1 and newer; 1.1.0 is tested on 5.3 and 5.2. For Blender 4.x, use the <a href="https://github.com/jfranmatheu/Sculpt-Paint-Wheel">original Sculpt-Paint Wheel</a>.</p></details>
+      <details data-search="windows macos linux platform"><summary>Does it work on Windows, macOS and Linux?</summary><p>It only uses Blender's own Python and drawing APIs, so it's available everywhere Blender runs. Testing so far has been on Windows; please report anything odd on other platforms.</p></details>
+      <details data-search="space play animation shortcut"><summary>Space used to play the animation. What happened?</summary><p>In sculpt and paint modes, <kbd>Space</kbd> opens the wheel instead. Playback still works from the Timeline and with <kbd>Space</kbd> in other modes. You can rebind the wheel in the Keymap preferences.</p></details>
+      <details data-search="weight paint brushes dial"><summary>Why doesn't Weight Paint show brushes?</summary><p>Weight Paint wheels show a weight dial instead: pick any weight from 0.0 to 1.0 in one gesture. Brushes and weight tools are in the center buttons.</p></details>
+      <details data-search="reset default set"><summary>Can I go back to the default setup?</summary><p>Yes. Remove your sets for that mode in the Wheel tab; the Default Set is recreated the next time Blender starts.</p></details>
+      <details data-search="buy superhive why sale support years"><summary>Why buy it if there's a free version?</summary><p>Buying it on <a href="https://superhivemarket.com/products/sculpt-paint-wheel">Superhive</a> supports an independent developer. Sculpt-Paint Wheel has been around for about 6 years thanks to the people who support it: every purchase pays for porting, testing and fixing it for each new Blender release, and keeps it available to everyone.</p></details>
+      <details data-search="buyers different version features"><summary>Do buyers get a different version?</summary><p>No. Everyone gets the same add-on. Buying it is a way of saying thanks and keeping the project alive.</p></details>
+    </div>
+    <p class="faq-empty" id="faq-empty" hidden>No questions match. Try the <a href="#" data-open-search>full search</a>.</p>
+  </div>
+</section>
+
+<!-- ============================ SUPPORT ============================ -->
+<section class="support reveal" id="support">
+  <div class="support-card">
+    <div class="heart" aria-hidden="true">♥</div>
+    <p class="eyebrow">Available on Superhive</p>
+    <h2>Keep the wheel turning</h2>
+    <p>Sculpt-Paint Wheel has been around for <b>about 6 years</b>, thanks to the people who support it. Buying it on Superhive supports an independent developer and funds updates for every new Blender version, fixes and new features.</p>
+    <p class="support-free">Can't afford it, or want to try it first? It's open source, just like Blender: <a href="https://github.com/jfran3d/Sculpt-Paint-Wheel-Reborn/releases/latest">get it free on GitHub</a>.</p>
+    <div class="cta-row center">
+      <a class="btn btn-primary" href="https://superhivemarket.com/products/sculpt-paint-wheel">Get it on Superhive ♥</a>
+      <a class="btn btn-ghost" href="https://github.com/jfran3d/Sculpt-Paint-Wheel-Reborn">⭐ Star on GitHub</a>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer class="footer">
+  <p>Sculpt-Paint Wheel · GPL-2.0-or-later · Made for <a href="https://www.blender.org">Blender</a> artists ♥</p>
+  <p><a href="https://github.com/jfran3d/Sculpt-Paint-Wheel-Reborn">GitHub</a> · <a href="https://github.com/jfran3d/Sculpt-Paint-Wheel-Reborn/issues">Issues</a> · <a href="https://github.com/jfran3d/Sculpt-Paint-Wheel-Reborn/blob/main/DOCS.md">DOCS.md</a> · <a href="https://superhivemarket.com/products/sculpt-paint-wheel">Superhive</a></p>
+</footer>
+
+<!-- Search palette -->
+<div class="palette" id="palette" hidden>
+  <div class="palette-backdrop" data-close-search></div>
+  <div class="palette-box" role="dialog" aria-modal="true" aria-label="Search the docs">
+    <label class="palette-input">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input type="text" id="palette-input" placeholder="Search docs, modes, FAQ…" autocomplete="off" aria-controls="palette-results">
+      <kbd>Esc</kbd>
+    </label>
+    <ul class="palette-results" id="palette-results" role="listbox"></ul>
+    <p class="palette-foot"><kbd>↑</kbd><kbd>↓</kbd> navigate <kbd>Enter</kbd> open</p>
+  </div>
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" hidden>
+  <button class="lightbox-close" type="button" aria-label="Close">✕</button>
+  <figure><img id="lightbox-img" alt=""><figcaption id="lightbox-cap"></figcaption></figure>
+</div>
+
+<script src="assets/site.js" defer></script>
+</body>
+</html>
