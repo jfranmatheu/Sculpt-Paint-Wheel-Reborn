@@ -5,6 +5,7 @@ from ..widgets.brush_set_ring import BrushSetRing
 from ..widgets.tarta_ring import TartaRing
 from ..pg.pg_wheel_storage import SculptPaintWheelStorage, WheelStorage
 from ..widgets.color_picker import ColorPickerWidget
+from ..utils.ups import has_brush_color_capabilities
 
 
 class SculptPaintWheel(Wheel):
@@ -32,7 +33,9 @@ class SculptPaintWheel(Wheel):
 
     def activate(self, context: Context, prefs: WheelPrefs, storage: SculptPaintWheelStorage) -> None:
         active_brush_set = WheelStorage.get_by_mode(context).active_brush_set
-        use_colorpk = active_brush_set.use_color_picker if active_brush_set else False
+        # Shown when the brush set asks for it, or when the active brush paints color (Paint brush in Sculpt
+        # Mode, texture / vertex paint brushes): default sets never set ``use_color_picker``.
+        use_colorpk = (active_brush_set is not None and active_brush_set.use_color_picker)             or has_brush_color_capabilities(context)
         self.radius = self.default_radius if use_colorpk else self.reduced_radius
 
         self.brush_set_ring.set_transform_thickness(0.97, -1 * (prefs.brush_set_ring.slot_size + prefs.brush_set_ring.ring_padding * 2.0))
