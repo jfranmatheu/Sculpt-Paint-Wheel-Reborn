@@ -175,14 +175,14 @@ def icon_falloff_2():
 
 
 def icon_grid():
+    """A 3x3 grid of lines, no outer frame."""
     a = new_layer()
-    rrect(a, BOX, BOX_R)
     x0, y0, x1, y1 = BOX
-    for k in (1, 2):
-        t = x0 + (x1 - x0) * k / 3
-        stroke(a, [(t, y0), (t, y1)], width=W * 0.75)
-        t = y0 + (y1 - y0) * k / 3
-        stroke(a, [(x0, t), (x1, t)], width=W * 0.75)
+    for k in (1, 3, 5):
+        t = x0 + (x1 - x0) * k / 6
+        stroke(a, [(t, y0), (t, y1)])
+        t = y0 + (y1 - y0) * k / 6
+        stroke(a, [(x0, t), (x1, t)])
     return a
 
 
@@ -235,13 +235,19 @@ def icon_mask_sharp():
 
 
 def icon_mask_smooth():
+    """Like the sharp one, but light: a thin ring and a soft, translucent fade from the centre out to it."""
     a = new_layer()
-    circle(a, C, C, (HI - LO) / 2 - W / 2)
-    # Soft disc: same footprint as the sharp one, blurred edge.
+    thin = W * 0.5
+    r_ring = (HI - LO) / 2 - thin / 2
+    circle(a, C, C, r_ring, width=thin)
     soft = new_layer()
-    circle(soft, C, C, 15 * SS, fill=True)
-    soft = soft.filter(ImageFilter.GaussianBlur(7 * SS))
-    soft = soft.point(lambda v: min(255, int(v * 1.5)))
+    px = soft.load()
+    r_end = r_ring - thin / 2 - 2 * SS  # Fade out just inside the ring.
+    peak = 0.8                           # Translucent even at the centre.
+    for y in range(int(C - r_end) - 1, int(C + r_end) + 2):
+        for x in range(int(C - r_end) - 1, int(C + r_end) + 2):
+            t = min(math.hypot(x + 0.5 - C, y + 0.5 - C) / r_end, 1.0)
+            px[x, y] = int(255 * peak * (1.0 - t) ** 2 + 0.5)  # Soft, gradual falloff.
     return union(a, soft)
 
 
