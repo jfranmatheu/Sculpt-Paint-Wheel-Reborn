@@ -22,10 +22,11 @@ SEG_ROUND = 3.0          # Corner rounding of the segments.
 
 
 def segment_angles(k: int, n: int) -> tuple[float, float]:
-    """(a0, a1) of segment ``k`` of ``n``: radians CCW from +x; segment 0 centred on the top, then clockwise."""
+    """(a0, a1) of segment ``k`` of ``n``: radians CCW from +x; segment 0 starts at the left (180 deg), then
+    clockwise."""
     step = TAU / n
-    am = PI * 0.5 - k * step
-    return am - step * 0.5, am + step * 0.5
+    a1 = PI - k * step
+    return a1 - step, a1
 
 
 def segment_from_point(dx: float, dy: float, n: int) -> int:
@@ -33,7 +34,7 @@ def segment_from_point(dx: float, dy: float, n: int) -> int:
     if n <= 0:
         return -1
     step = TAU / n
-    return int(round((PI * 0.5 - math.atan2(dy, dx)) / step)) % n
+    return int(math.floor(((PI - math.atan2(dy, dx)) % TAU) / step)) % n
 
 
 def _shade(c, k: float) -> tuple:
