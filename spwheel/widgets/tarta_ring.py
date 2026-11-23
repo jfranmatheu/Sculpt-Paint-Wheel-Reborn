@@ -8,9 +8,10 @@ from ..pg.pg_wheel_theme import WheelTheme
 from ..pg.pg_wheel_storage import WheelTartaSetStorage
 from ..gpu.button_texture import get_custom_button_texture
 from ..gpu.draw import COL_PIE_TARTA, COL_PIE_TARTA_OP, draw_pie_split_ring, draw_textured_quad, draw_text
-from ..gpu.utils import compute_custom_button_layout_count, compute_slot_positions_in_single_ring, compute_slot_radius_in_single_ring, draw_circle_fill, map_custom_layout_indices
+from ..gpu.utils import compute_slot_positions_in_single_ring, compute_slot_radius_in_single_ring, draw_circle_fill
 from .widget import WidgetRing, WheelPrefs
 from ..pg.pg_tarta_button import WheelTartaButton
+from ..pg.pg_tarta_set import MAX_TARTA_BUTTONS
 
 
 def layout_sector_from_pointer(mx: float, my: float, cx: float, cy: float, n: int) -> int:
@@ -55,12 +56,14 @@ class TartaRing(WidgetRing):
             self.tarta_outer_radius = 0.0
             return
         cx, cy = self.center
-        self.layout_n = compute_custom_button_layout_count(n)
-        self.custom_layout_map = map_custom_layout_indices(self.layout_n, n)
+        # One sector per button, no empty padding sectors.
+        self.layout_n = min(n, MAX_TARTA_BUTTONS)
+        self.custom_layout_map = list(range(self.layout_n))
         self.tarta_outer_radius = self.radius_outer
         self.tarta_inner_ratio = min(0.92, 42.0 / max(self.tarta_outer_radius, 1.0))
         self.icon_ring_radius = self.tarta_outer_radius * 0.95
-        self.custom_radius = compute_slot_radius_in_single_ring(self.icon_ring_radius, self.layout_n) * 0.7
+        # With few buttons, keep icons at the size of the old 4-sector minimum so they stay inside the ring.
+        self.custom_radius = compute_slot_radius_in_single_ring(self.icon_ring_radius, max(self.layout_n, 4)) * 0.7
         self.custom_positions = compute_slot_positions_in_single_ring(cx, cy, self.icon_ring_radius, self.layout_n, self.custom_radius)
 
     def draw(self, context: Context, theme: WheelTheme) -> None:

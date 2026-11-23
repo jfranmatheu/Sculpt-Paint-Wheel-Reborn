@@ -416,7 +416,7 @@ def compute_slot_positions_in_single_ring(
     if count <= 0:
         return []
     if count == 1:
-        return [(cx - ring_radius, cy)]
+        return [(cx - (ring_radius - slot_radius), cy)]
     positions: list[Tuple[float, float]] = []
     angle_step = 2.0 * pi / count
     for i in range(count):
