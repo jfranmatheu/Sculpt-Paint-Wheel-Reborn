@@ -6,6 +6,10 @@ from ..core.bl_types import PropertyGroup
 from .pg_tarta_button import WheelTartaButton
 
 
+# Most buttons a set can hold (the pie menu has one segment per button).
+MAX_TARTA_BUTTONS = 10
+
+
 
 class WheelTartaSet(PropertyGroup):
     pg_parent = None

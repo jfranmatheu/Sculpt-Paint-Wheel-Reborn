@@ -9,9 +9,9 @@ from ..pg.pg_wheel_storage import WheelTartaSetStorage
 from ..gpu.button_texture import get_custom_button_texture
 from ..gpu.draw import draw_textured_quad, draw_text
 from ..gpu.ring_prims import sector
-from ..gpu.utils import compute_custom_button_layout_count, map_custom_layout_indices
 from .widget import WidgetRing, WheelPrefs
 from ..pg.pg_tarta_button import WheelTartaButton
+from ..pg.pg_tarta_set import MAX_TARTA_BUTTONS
 
 
 # Proportions (of the ring's outer radius) and spacing (wheel-local units).
@@ -77,8 +77,9 @@ class TartaRing(WidgetRing):
             # No buttons: the centre takes the whole ring.
             self.core_radius = self.radius_outer
             return
-        self.layout_n = compute_custom_button_layout_count(n)
-        self.custom_layout_map = map_custom_layout_indices(self.layout_n, n)
+        # One segment per button, no empty padding slots.
+        self.layout_n = min(n, MAX_TARTA_BUTTONS)
+        self.custom_layout_map = list(range(self.layout_n))
 
     # ----- DRAWING --------------------------------
 
@@ -106,7 +107,7 @@ class TartaRing(WidgetRing):
         # Icons (or the name when the button has no image), centred in their segment.
         if n:
             rm = (self.seg_inner + self.seg_outer) * 0.5
-            half = min((self.seg_outer - self.seg_inner) * 0.3, rm * math.sin(PI / n) * 0.55)
+            half = min((self.seg_outer - self.seg_inner) * 0.3, rm * math.sin(min(PI / n, PI * 0.5)) * 0.55)
             col_text = tuple(theme.text_color)
             for k in range(n):
                 bid = self.custom_layout_map[k]
@@ -114,7 +115,7 @@ class TartaRing(WidgetRing):
                     continue
                 btn = self._tarta_buttons[bid]
                 a0, a1 = segment_angles(k, n)
-                am = (a0 + a1) * 0.5
+                am = (a0 + a1) * 0.5 if n > 1 else PI * 0.5  # A single button fills the ring: icon on top.
                 sx, sy = cx + rm * math.cos(am), cy + rm * math.sin(am)
                 hovered = k == self.hover_layout_slot
                 tex = get_custom_button_texture(btn.image_path)

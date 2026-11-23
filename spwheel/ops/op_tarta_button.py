@@ -6,6 +6,7 @@ from bpy.props import EnumProperty, IntProperty, StringProperty
 
 from ..core.bl_types import OperatorAction
 from ..pg.pg_wheel_storage import WheelStorage, WheelTartaSetStorage
+from ..pg.pg_tarta_set import MAX_TARTA_BUTTONS
 from ..utils import button_scripts
 from ..wheels.presets import preset_type_per_mode
 
@@ -89,6 +90,15 @@ def _resolve_preset_operator_expr(context, preset_key: str) -> str:
 class OpTartaButtonAdd(OperatorAction, OpPollActiveSet):
     """Create a new button in the active custom-button set."""
     bl_label = "Add Button"
+
+    @classmethod
+    def poll_operator(cls, context) -> bool | str:
+        is_valid = super().poll_operator(context)
+        if is_valid is not True:
+            return is_valid
+        if len(WheelStorage.get_by_mode(context).active_tarta_set.buttons) >= MAX_TARTA_BUTTONS:
+            return f"A set can have up to {MAX_TARTA_BUTTONS} buttons"
+        return True
 
     def enum_preset_menus(self, context):
         if context is not None and (presets := preset_type_per_mode.get(context.mode, None)):
