@@ -59,12 +59,42 @@ void main() {
 }
 """
 
-_TEXTURED_CIRCLE_FRAG = """
+# Minification-aware texture fetch: when a texture is drawn smaller than its size (icons, previews), average up to
+# 4x4 samples spread over the pixel footprint instead of a single bilinear tap, which skips texels and aliases.
+# textureGrad keeps each sample's mip level matched to its sub-footprint, so mipmaps are used when present.
+_TEX_SAMPLE_SS = """
+vec4 sample_minified(vec2 uv) {
+    vec2 dx = dFdx(uv);
+    vec2 dy = dFdy(uv);
+    vec2 size = vec2(textureSize(image, 0));
+    float texels = max(length(dx * size), length(dy * size));
+    int n = int(clamp(ceil(texels), 1.0, 4.0));
+    if (n == 1) {
+        return texture(image, uv);
+    }
+    float inv = 1.0 / float(n);
+    vec2 gdx = dx * inv;
+    vec2 gdy = dy * inv;
+    vec3 rgb = vec3(0.0);
+    float a = 0.0;
+    for (int j = 0; j < n; j++) {
+        for (int i = 0; i < n; i++) {
+            vec2 o = (vec2(float(i), float(j)) + 0.5) * inv - 0.5;
+            vec4 t = textureGrad(image, uv + dx * o.x + dy * o.y, gdx, gdy);
+            rgb += t.rgb * t.a;  /* Alpha-weighted, so transparent texels don't tint the edges. */
+            a += t.a;
+        }
+    }
+    return vec4(a > 0.0 ? rgb / a : vec3(0.0), a * inv * inv);
+}
+"""
+
+_TEXTURED_CIRCLE_FRAG = _TEX_SAMPLE_SS + """
 void main() {
     float d = length(v_uv - vec2(0.5));
     float r = 0.5;
     float mask = smoothstep(r, r - softness, d);
-    vec4 tex = texture(image, v_uv);
+    vec4 tex = sample_minified(v_uv);
     fragColor = vec4(pow(tex.rgb, vec3(2.2)), tex.a * mask * opacity);
 }
 """
@@ -88,9 +118,9 @@ void main() {
 }
 """
 
-_TEXTURED_QUAD_FRAG = """
+_TEXTURED_QUAD_FRAG = _TEX_SAMPLE_SS + """
 void main() {
-    vec4 tex = texture(image, v_uv);
+    vec4 tex = sample_minified(v_uv);
     fragColor = vec4(pow(tex.rgb, vec3(2.2)), tex.a * opacity);
 }
 """
