@@ -182,7 +182,7 @@ class BrushMetadata(PropertyGroup):
                 return None
             if data := read_essential_preview(essentials_mode_id, self.name):
                 return data[2]
-            return None
+            # No bundled preview (a brush newer than the bundled set): the one cached from the brush itself.
 
         if self.hash_id == "" or self.preview_size == (0, 0):
             return None
@@ -197,9 +197,10 @@ class BrushMetadata(PropertyGroup):
         """
         if self.asset_library_type == "ESSENTIALS":
             essentials_mode_id = self.get_essentials_blend_id()
-            if self.name == "" or essentials_mode_id is None:
-                return None
-            return get_essential_brush_gputex(essentials_mode_id, self.name)
+            if self.name != "" and essentials_mode_id is not None:
+                if tex := get_essential_brush_gputex(essentials_mode_id, self.name):
+                    return tex
+            # No bundled preview (a brush newer than the bundled set): the one cached from the brush itself.
 
         if self.hash_id == "" or self.preview_size == (0, 0):
             return None
