@@ -61,8 +61,9 @@ class WheelTartaSet(PropertyGroup):
             button.popup_type = "NONE"
             return button
 
-        # SCRIPT (currently unused for defaults)
+        # SCRIPT: bundled defaults carry their source inline.
         button.popup_type = "NONE"
-        button.operator_id = metadata.get("operator_id", "")
-        button.attr = metadata.get("attr", "")
+        button.operator_id = ""
+        button.attr = ""
+        button.script_inline = metadata.get("script", "")
         return button

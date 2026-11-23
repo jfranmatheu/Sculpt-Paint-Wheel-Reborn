@@ -6,7 +6,7 @@ from ...pg.pg_tarta_set import WheelTartaSet
 from ...pg.pg_wm import PG_WM
 from ...ui.lists.ul_tarta_button_list import TartaButtonList
 from ...ops.op_tarta_set_list import OpTartaSetListAdd, OpTartaSetListRemove
-from ...ops.op_tarta_button import OpTartaButtonAdd, OpTartaButtonMove, OpTartaButtonRemove
+from ...ops.op_tarta_button import OpTartaButtonAdd, OpTartaButtonMove, OpTartaButtonRemove, OpTartaButtonScriptEdit
 
 
 class WheelTartaSetOptionsPopover(PanelTypes.POPOVER):
@@ -55,6 +55,10 @@ class WheelTartaButtonsPanel(PanelTypes.VIEW_3D_SIDEBAR):
         col.separator()
         col.operator(OpTartaButtonMove.bl_idname, text="", icon='TRIA_UP').direction = 1
         col.operator(OpTartaButtonMove.bl_idname, text="", icon='TRIA_DOWN').direction = -1
+
+        idx = active_tarta_set.active_button_index
+        if 0 <= idx < len(active_tarta_set.buttons) and active_tarta_set.buttons[idx].is_script:
+            layout.operator(OpTartaButtonScriptEdit.bl_idname, text="Edit Script", icon='TEXT')
 
     def draw_ui(self, context: Context, layout: UILayout):
         wheel_storage: WheelTartaSetStorage = WheelStorage.get_by_mode(context)

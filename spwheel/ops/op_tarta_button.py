@@ -1,10 +1,12 @@
-import bpy
 """Operators for tarta button CRUD actions."""
+from pathlib import Path
 
+import bpy
 from bpy.props import EnumProperty, IntProperty, StringProperty
 
 from ..core.bl_types import OperatorAction
 from ..pg.pg_wheel_storage import WheelStorage, WheelTartaSetStorage
+from ..utils import button_scripts
 from ..wheels.presets import preset_type_per_mode
 
 
@@ -28,6 +30,22 @@ class OpPollActiveButton(OpPollActiveSet):
         if idx < 0 or idx >= len(active_set.buttons):
             return "No active button"
         return True
+
+
+class OpPollActiveScriptButton(OpPollActiveButton):
+    @classmethod
+    def poll_operator(cls, context) -> bool | str:
+        is_valid = super().poll_operator(context)
+        if is_valid is not True:
+            return is_valid
+        if not _get_active_button(context).is_script:
+            return "Active button is not a script button"
+        return True
+
+
+def _get_active_button(context):
+    active_set = WheelStorage.get_by_mode(context).active_tarta_set
+    return active_set.buttons[active_set.active_button_index]
 
 
 def _split_operator_expr(expr: str) -> tuple[str, str]:
@@ -96,9 +114,22 @@ class OpTartaButtonAdd(OperatorAction, OpPollActiveSet):
         items=(
             ("OPERATOR", "Operator", ""),
             ("POPUP", "Popup", ""),
+            ("SCRIPT", "Script", "Run a Python script, saved in the add-on user data"),
         ),
         default="OPERATOR",
     )
+
+    script_source: EnumProperty(
+        name="Script Source",
+        items=(
+            ("NEW", "New", "Start from a template and open it in the Text Editor"),
+            ("TEXT", "Text", "Copy an existing Text datablock"),
+            ("FILE", "File", "Copy a .py file from disk"),
+        ),
+        default="NEW",
+    )
+    script_text: StringProperty(name="Text", default="")
+    script_file: StringProperty(name="File", default="", subtype="FILE_PATH")
 
     operator_type: EnumProperty(
         name="Operator",
@@ -155,7 +186,13 @@ class OpTartaButtonAdd(OperatorAction, OpPollActiveSet):
         layout.prop(self, "image_path")
         layout.prop(self, "type")
 
-        if self.type == "POPUP":
+        if self.type == "SCRIPT":
+            layout.prop(self, "script_source", text="Use")
+            if self.script_source == "TEXT":
+                layout.prop_search(self, "script_text", bpy.data, "texts")
+            elif self.script_source == "FILE":
+                layout.prop(self, "script_file")
+        elif self.type == "POPUP":
             layout.prop(self, "popup_type")
             if self.popup_type == "MENU":
                 layout.prop(self, "menu_source", text="Use")
@@ -191,7 +228,26 @@ class OpTartaButtonAdd(OperatorAction, OpPollActiveSet):
         button.image_path = self.image_path
         button.type = self.type
 
-        if self.type == "OPERATOR":
+        if self.type == "SCRIPT":
+            button.popup_type = "NONE"
+            button.operator_id = ""
+            button.attr = ""
+            source = self._get_script_source()
+            if isinstance(source, Exception):
+                active_set.buttons.remove(len(active_set.buttons) - 1)
+                self.report({"ERROR"}, str(source))
+                return self.OpReturn.CANCEL
+            button.script_id = button_scripts.new_script_id()
+            try:
+                button_scripts.write_script(button.script_id, source)
+            except OSError as ex:
+                active_set.buttons.remove(len(active_set.buttons) - 1)
+                self.report({"ERROR"}, f"Could not save the script: {ex}")
+                return self.OpReturn.CANCEL
+            if self.script_source == "NEW":
+                text = button_scripts.open_text(button.script_id, button.name, source)
+                button_scripts.show_text_in_editor(context, text)
+        elif self.type == "OPERATOR":
             button.popup_type = "NONE"
             if self.operator_type == "PRESET":
                 expr = _resolve_preset_operator_expr(context, self.preset_operator)
@@ -220,6 +276,22 @@ class OpTartaButtonAdd(OperatorAction, OpPollActiveSet):
         active_set.active_button_index = len(active_set.buttons) - 1
         return self.OpReturn.FINISH
 
+    def _get_script_source(self) -> str | Exception:
+        if self.script_source == "TEXT":
+            text = bpy.data.texts.get(self.script_text)
+            if text is None:
+                return ValueError("Pick a Text datablock")
+            return text.as_string()
+        if self.script_source == "FILE":
+            path = Path(bpy.path.abspath(self.script_file)) if self.script_file else None
+            if path is None or not path.is_file():
+                return ValueError("Pick a Python file")
+            try:
+                return path.read_text(encoding="utf-8")
+            except (OSError, UnicodeDecodeError) as ex:
+                return ex
+        return button_scripts.SCRIPT_TEMPLATE
+
 
 class OpTartaButtonRemove(OperatorAction, OpPollActiveButton):
     """Remove active button from the active custom-button set."""
@@ -228,7 +300,11 @@ class OpTartaButtonRemove(OperatorAction, OpPollActiveButton):
     def action(self, context, event):
         active_set = WheelStorage.get_by_mode(context).active_tarta_set
         idx = active_set.active_button_index
+        removed = active_set.buttons[idx]
+        script_id = removed.script_id if removed.is_script else ""
         active_set.buttons.remove(idx)
+        if script_id:
+            button_scripts.delete_script_if_unused(context, script_id)
         if len(active_set.buttons) == 0:
             active_set.active_button_index = -1
         else:
@@ -261,3 +337,52 @@ class OpTartaButtonMove(OperatorAction, OpPollActiveButton):
             return
         active_set.buttons.move(src, dst)
         active_set.active_button_index = dst
+
+
+class OpTartaButtonScriptEdit(OperatorAction, OpPollActiveScriptButton):
+    """Open the active button's script in the Text Editor"""
+    bl_label = "Edit Script"
+
+    def action(self, context, event):
+        button = _get_active_button(context)
+        if not button.script_id:
+            # Bundled default with inline source: give it its own script file.
+            button.script_id = button_scripts.new_script_id()
+            button_scripts.write_script(button.script_id, button.script_inline)
+        text = button_scripts.open_text(button.script_id, button.name, button.script_inline)
+        if not button_scripts.show_text_in_editor(context, text):
+            self.report({"WARNING"}, f"Open '{text.name}' in a Text Editor to edit it")
+        return True
+
+
+class OpTartaButtonScriptSave(OperatorAction):
+    """Save this Text to its custom button script (shared by all projects)"""
+    bl_label = "Save Button Script"
+
+    @classmethod
+    def poll_operator(cls, context) -> bool | str:
+        if button_scripts.get_text_script_id(getattr(context, "edit_text", None)) is None:
+            return "This Text is not linked to a custom button script"
+        return True
+
+    def action(self, context, event):
+        try:
+            path = button_scripts.save_text(context.edit_text)
+        except OSError as ex:
+            return f"Could not save the script: {ex}"
+        self.report({"INFO"}, f"Button script saved: {path}")
+        return True
+
+
+def _draw_text_header(self, context):
+    if button_scripts.get_text_script_id(getattr(context, "edit_text", None)) is None:
+        return
+    self.layout.operator(OpTartaButtonScriptSave.bl_idname, text="Save Button Script", icon="FILE_TICK")
+
+
+def register():
+    bpy.types.TEXT_HT_header.append(_draw_text_header)
+
+
+def unregister():
+    bpy.types.TEXT_HT_header.remove(_draw_text_header)

@@ -1,12 +1,10 @@
-import datetime
 import ast
 import bpy
 from bpy.props import EnumProperty, StringProperty
 from bpy.types import Context
 
-from ..gpu.brush_preview import _cache_root
-
 from ..core.bl_types import PropertyGroup
+from ..utils import button_scripts
 
 
 # Blender 5.3 moved brush falloff into the "Shape" panel for mesh paint modes, and the old
@@ -50,15 +48,9 @@ class WheelTartaButton(PropertyGroup):
     operator_id: StringProperty(name="Operator ID", default="")
     attr: StringProperty(name="Payload", default="", maxlen=4096)
     image_path: StringProperty(name="Icon Path", default="", subtype="FILE_PATH")
-    script_sorce: EnumProperty(
-        name="Script Source",
-        items=(
-            ("INLINE", "Inline", ""),
-            ("FILE", "File", ""),
-        ),
-        default="INLINE",
-    )
+    # Script file in the add-on user data (see utils/button_scripts.py).
     script_id: StringProperty(name="Script ID", default="")
+    # Fallback source stored in the button itself (bundled default sets); unused when script_id is set.
     script_inline: StringProperty(name="Inline Script", default="", maxlen=4096)
 
     @property
@@ -84,19 +76,6 @@ class WheelTartaButton(PropertyGroup):
     @property
     def is_popup_panel(self) -> bool:
         return self.is_popup and self.popup_type in ("PANEL", "CUSTOM_PANEL")
-
-    def load_script(self, text_datablock: bpy.types.Text):
-        script_text = text_datablock.as_string()
-        if len(script_text) < 4096:
-            self.script_inline = script_text
-            self.script_sorce = "INLINE"
-        else:
-            # Save to disk in addon data. Store the script_id to access the script contents.
-            self.script_id = hash(f"{text_datablock.name}|{datetime.datetime.now().timestamp()}")
-            self.script_sorce = "FILE"
-            # Save the script to disk.
-            with open(_cache_root, "w") as f:
-                f.write(script_text)
 
     @staticmethod
     def _resolve_op_call(operator_id: str):
@@ -140,13 +119,8 @@ class WheelTartaButton(PropertyGroup):
             else:
                 op_call()
         elif self.is_script:
-            if self.script_sorce == "INLINE":
-                exec(self.script_inline, {"bpy": bpy})
-            elif self.script_sorce == "FILE":
-                # Load the script from disk.
-                with open(self.script_id, "r") as f:
-                    script_text = f.read()
-                exec(script_text, {"bpy": bpy})
+            if error := button_scripts.run_button_script(self, context):
+                button_scripts.report_script_error(context, f"Script '{self.name}' failed", error)
         elif self.is_popup_menu:
             if self.operator_id:
                 bpy.ops.wm.call_menu(name=self.operator_id)

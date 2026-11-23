@@ -4,6 +4,7 @@ from bpy.props import IntProperty, StringProperty
 from bpy.types import Context
 from ..core.bl_types import OperatorAction
 from ..pg.pg_wheel_storage import WheelStorage, WheelTartaSetStorage
+from ..utils import button_scripts
 
 
 class OpPollActive:
@@ -39,7 +40,12 @@ class OpTartaSetListRemove(OperatorAction, OpPollActive):
     bl_label = "Remove Custom Buttons Set"
     
     def action(self, context, event):
-        WheelStorage.get_by_mode(context).remove_active_tarta_set()
+        storage = WheelStorage.get_by_mode(context)
+        script_ids = {b.script_id for b in storage.active_tarta_set.buttons if b.is_script and b.script_id}
+        storage.remove_active_tarta_set()
+        for script_id in script_ids:
+            button_scripts.delete_script_if_unused(context, script_id)
+        return True
 
 
 class OpTartaSetListMove(OperatorAction, OpPollActive):
