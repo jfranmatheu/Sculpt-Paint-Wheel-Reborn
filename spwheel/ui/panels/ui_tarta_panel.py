@@ -4,6 +4,8 @@ from ...core.bl_types import PanelTypes
 from ...pg.pg_wheel_storage import WheelStorage, WheelTartaSetStorage
 from ...pg.pg_tarta_set import WheelTartaSet
 from ...pg.pg_wm import PG_WM
+from ...core.utils.image_previews import get_image_icon_id
+from ...ops.op_tarta_button_icon import OpTartaButtonSetIcon
 from ...ui.lists.ul_tarta_button_list import TartaButtonList
 from ...ops.op_tarta_set_list import OpTartaSetListAdd, OpTartaSetListRemove
 from ...ops.op_tarta_button import OpTartaButtonAdd, OpTartaButtonMove, OpTartaButtonRemove, OpTartaButtonScriptEdit
@@ -60,6 +62,19 @@ class WheelTartaButtonsPanel(PanelTypes.VIEW_3D_SIDEBAR):
         if 0 <= idx < len(active_tarta_set.buttons) and active_tarta_set.buttons[idx].is_script:
             layout.operator(OpTartaButtonScriptEdit.bl_idname, text="Edit Script", icon='TEXT')
 
+    def draw_button_icon_row(self, active_tarta_set: WheelTartaSet, layout: UILayout):
+        idx = active_tarta_set.active_button_index
+        if not (0 <= idx < len(active_tarta_set.buttons)):
+            return
+        button = active_tarta_set.buttons[idx]
+        row = layout.row(align=True)
+        icon_id = get_image_icon_id(button.image_path)
+        if icon_id:
+            row.operator(OpTartaButtonSetIcon.bl_idname, text="Change Icon", icon_value=icon_id)
+            row.operator(OpTartaButtonSetIcon.bl_idname, text="", icon='X').clear = True
+        else:
+            row.operator(OpTartaButtonSetIcon.bl_idname, text="Load Icon", icon='FILE_IMAGE')
+
     def draw_ui(self, context: Context, layout: UILayout):
         wheel_storage: WheelTartaSetStorage = WheelStorage.get_by_mode(context)
 
@@ -74,5 +89,6 @@ class WheelTartaButtonsPanel(PanelTypes.VIEW_3D_SIDEBAR):
 
         if active_tarta_set := wheel_storage.active_tarta_set:
             self.draw_button_list(active_tarta_set, lists_col)
+            self.draw_button_icon_row(active_tarta_set, main)
         else:
             main.box().label(text="No set selected", icon="INFO")
