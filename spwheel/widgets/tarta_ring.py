@@ -1,5 +1,5 @@
 import math
-from math import pi as PI
+from math import pi as PI, tau as TAU
 
 from mathutils import Vector
 from bpy.types import Context
@@ -7,108 +7,129 @@ from bpy.types import Context
 from ..pg.pg_wheel_theme import WheelTheme
 from ..pg.pg_wheel_storage import WheelTartaSetStorage
 from ..gpu.button_texture import get_custom_button_texture
-from ..gpu.draw import COL_PIE_TARTA, COL_PIE_TARTA_OP, draw_pie_split_ring, draw_textured_quad, draw_text
-from ..gpu.utils import compute_custom_button_layout_count, compute_slot_positions_in_single_ring, compute_slot_radius_in_single_ring, draw_circle_fill, map_custom_layout_indices
+from ..gpu.draw import draw_textured_quad, draw_text
+from ..gpu.ring_prims import sector
+from ..gpu.utils import compute_custom_button_layout_count, map_custom_layout_indices
 from .widget import WidgetRing, WheelPrefs
 from ..pg.pg_tarta_button import WheelTartaButton
 
 
-def layout_sector_from_pointer(mx: float, my: float, cx: float, cy: float, n: int) -> int:
-    """Wedge index 0..n-1 matching ``draw_pie_split_ring`` (first slice at 180 deg, CW)."""
+# Proportions (of the ring's outer radius) and spacing (wheel-local units).
+SEG_INNER_RATIO = 0.58   # Inner edge of the segments.
+CORE_GAP = 4.0           # Between the segments and the core disc.
+SEG_GAP = 3.0            # Between neighbouring segments.
+SEG_ROUND = 3.0          # Corner rounding of the segments.
+
+
+def segment_angles(k: int, n: int) -> tuple[float, float]:
+    """(a0, a1) of segment ``k`` of ``n``: radians CCW from +x; segment 0 centred on the top, then clockwise."""
+    step = TAU / n
+    am = PI * 0.5 - k * step
+    return am - step * 0.5, am + step * 0.5
+
+
+def segment_from_point(dx: float, dy: float, n: int) -> int:
+    """Index of the segment (see ``segment_angles``) under the local offset ``(dx, dy)`` from the centre."""
     if n <= 0:
-        return 0
-    angle = math.atan2(my - cy, mx - cx)
-    step = 2.0 * math.pi / n
-    shifted = (PI - angle + 2.0 * PI) % (2.0 * PI)
-    i = int(math.floor(shifted / step))
-    return i % n
+        return -1
+    step = TAU / n
+    return int(round((PI * 0.5 - math.atan2(dy, dx)) / step)) % n
+
+
+def _shade(c, k: float) -> tuple:
+    """``c`` darkened (k > 0) or lightened (k < 0) by |k|, alpha kept."""
+    t = 0.0 if k > 0 else 1.0
+    k = abs(k)
+    return (c[0] + (t - c[0]) * k, c[1] + (t - c[1]) * k, c[2] + (t - c[2]) * k, c[3])
 
 
 class TartaRing(WidgetRing):
-    """GPU pie ring + icons; hit-test prefers icon discs then sector wedge."""
+    """Pie menu: a ring of rounded segments, one per custom button. The space inside (``core_radius``) is left
+    for the wheel's centre widget."""
     click_on_release = True
     _tarta_buttons: list[WheelTartaButton] = []
 
     def init(self) -> None:
         self.layout_n = 0
         self.custom_layout_map: list[int] = []
-        self.tarta_outer_radius = 0.0
-        self.tarta_inner_ratio = 0.5
-        self.icon_ring_radius = 0.0
-        self.custom_radius = 0.0
-        self.custom_positions: list[tuple[float, float]] = []
+        self.seg_inner = 0.0
+        self.seg_outer = 0.0
+        self.core_radius = 0.0
         self.hover_layout_slot: int = -1
         self.hover_custom_bid: int = -1
-        
+
     def on_wheel_activate(self, context: Context, wheel_prefs: WheelPrefs, storage: WheelTartaSetStorage, wg_prefs = None) -> None:
-        # storage.active_tarta_set.ensure()
         self._active_tarta_set = storage.active_tarta_set
         self._tarta_buttons = self._active_tarta_set.buttons if self._active_tarta_set else []
+        self.hover_layout_slot = -1
+        self.hover_custom_bid = -1
         self.layout()
 
     def layout(self) -> None:
         n = len(self._tarta_buttons)
+        self.seg_outer = self.radius_outer
+        self.seg_inner = self.radius_outer * SEG_INNER_RATIO
+        self.core_radius = max(self.seg_inner - CORE_GAP, 0.0)
         if n == 0:
             self.layout_n = 0
             self.custom_layout_map = []
-            self.custom_positions = []
-            self.tarta_outer_radius = 0.0
+            # No buttons: the centre takes the whole ring.
+            self.core_radius = self.radius_outer
             return
-        cx, cy = self.center
         self.layout_n = compute_custom_button_layout_count(n)
         self.custom_layout_map = map_custom_layout_indices(self.layout_n, n)
-        self.tarta_outer_radius = self.radius_outer
-        self.tarta_inner_ratio = min(0.92, 42.0 / max(self.tarta_outer_radius, 1.0))
-        self.icon_ring_radius = self.tarta_outer_radius * 0.95
-        self.custom_radius = compute_slot_radius_in_single_ring(self.icon_ring_radius, self.layout_n) * 0.7
-        self.custom_positions = compute_slot_positions_in_single_ring(cx, cy, self.icon_ring_radius, self.layout_n, self.custom_radius)
+
+    # ----- DRAWING --------------------------------
 
     def draw(self, context: Context, theme: WheelTheme) -> None:
         cx, cy = self.center
-        if self.layout_n <= 0 or self.tarta_outer_radius <= 0.0:
-            draw_circle_fill(
-                cx,
-                cy,
-                self.radius_outer,
-                COL_PIE_TARTA,
-            )
-            return
-        kinds2: list[int] = []
-        for si in range(self.layout_n):
-            bid = self.custom_layout_map[si]
+        seg_fill = tuple(theme.tarta_color)  # (Empty slots; buttons: theme.get_tarta_fill.)
+        border = tuple(theme.tarta_outline_color)
+        accent = tuple(theme.tarta_accent_color)
+        n = self.layout_n
+
+        # Segments.
+        for k in range(n):
+            a0, a1 = segment_angles(k, n)
+            bid = self.custom_layout_map[k]
             if bid < 0:
-                kinds2.append(0)
-            else:
-                kinds2.append(1 if self._tarta_buttons[bid].is_operator else 0)
-        draw_pie_split_ring(
-            cx,
-            cy,
-            self.tarta_outer_radius,
-            self.tarta_inner_ratio,
-            self.layout_n,
-            self.hover_layout_slot,
-            COL_PIE_TARTA,
-            COL_PIE_TARTA_OP,
-            kinds2,
-            inner_soft=0.025,
-            outer_soft=0.025,
-        )
-        col_text = (0.70, 0.72, 0.76, 0.98)
-        half = self.custom_radius * 0.85
-        for i, (sx, sy) in enumerate(self.custom_positions):
-            if i >= len(self.custom_layout_map):
-                break
-            bid = self.custom_layout_map[i]
-            if bid < 0:
+                fill = (seg_fill[0], seg_fill[1], seg_fill[2], seg_fill[3] * 0.45)
+                sector(cx, cy, self.seg_inner, self.seg_outer, a0, a1, fill=fill, gap=SEG_GAP, round_=SEG_ROUND)
                 continue
-            btn = self._tarta_buttons[bid]
-            is_hov = bid == self.hover_custom_bid
-            tex = get_custom_button_texture(btn.image_path)
-            if tex is not None:
-                h = half * (1.08 if is_hov else 1.0)
-                draw_textured_quad(sx, sy, h, tex, opacity=1.0 if is_hov else 0.94)
-            elif btn.name:
-                draw_text(btn.name[:10], sx, sy, size=9.0, color=col_text, align="CENTER", shadow=True)
+            hovered = k == self.hover_layout_slot
+            sector(cx, cy, self.seg_inner, self.seg_outer, a0, a1,
+                   fill=accent if hovered else theme.get_tarta_fill(self._tarta_buttons[bid]),
+                   border=_shade(accent, -0.25) if hovered else border, border_w=1.0,
+                   gap=SEG_GAP, round_=SEG_ROUND)
+
+        # Icons (or the name when the button has no image), centred in their segment.
+        if n:
+            rm = (self.seg_inner + self.seg_outer) * 0.5
+            half = min((self.seg_outer - self.seg_inner) * 0.3, rm * math.sin(PI / n) * 0.55)
+            col_text = tuple(theme.text_color)
+            for k in range(n):
+                bid = self.custom_layout_map[k]
+                if bid < 0:
+                    continue
+                btn = self._tarta_buttons[bid]
+                a0, a1 = segment_angles(k, n)
+                am = (a0 + a1) * 0.5
+                sx, sy = cx + rm * math.cos(am), cy + rm * math.sin(am)
+                hovered = k == self.hover_layout_slot
+                tex = get_custom_button_texture(btn.image_path)
+                if tex is not None:
+                    draw_textured_quad(sx, sy, half * (1.08 if hovered else 1.0), tex, opacity=1.0 if hovered else 0.9)
+                elif btn.name:
+                    draw_text(btn.name[:10], sx, sy, size=9.0, color=col_text, align='CENTER', valign='MIDDLE', shadow=True)
+
+    # ----- INTERACTION --------------------------------
+
+    @property
+    def hover_label(self) -> str | None:
+        """Name of the hovered button (shown by the wheel's centre widget), None when nothing is hovered."""
+        if self.hover_custom_bid < 0:
+            return None
+        return self._tarta_buttons[self.hover_custom_bid].name
 
     def on_left_press(self, context: Context, event) -> bool:
         # Arm click on press; actual action is executed on release.
@@ -122,37 +143,21 @@ class TartaRing(WidgetRing):
         return True
 
     def sync_hover(self, context: Context, mx: float, my: float) -> None:
+        prev = self.hover_layout_slot
         self.hover_layout_slot = -1
         self.hover_custom_bid = -1
-        if self.layout_n <= 0:
-            return
-        cx, cy = self.center
-        inner_r = self.tarta_outer_radius * self.tarta_inner_ratio
-
-        for i, (sx, sy) in enumerate(self.custom_positions):
-            if i >= len(self.custom_layout_map):
-                break
-            bid = self.custom_layout_map[i]
-            if bid < 0:
-                continue
-            if math.hypot(mx - sx, my - sy) <= self.custom_radius:
-                self.hover_custom_bid = bid
-                self.hover_layout_slot = i
-                context.region.tag_redraw()
-                return
-
-        r_pt = math.hypot(mx - cx, my - cy)
-        if r_pt >= inner_r - 1.0 and r_pt <= self.tarta_outer_radius + 3.0:
-            si = layout_sector_from_pointer(mx, my, cx, cy, self.layout_n)
-            if 0 <= si < len(self.custom_layout_map):
-                bid = self.custom_layout_map[si]
+        if self.layout_n > 0:
+            cx, cy = self.center
+            dx, dy = mx - cx, my - cy
+            if self.seg_inner - 1.0 <= math.hypot(dx, dy) <= self.seg_outer + 2.0:
+                k = segment_from_point(dx, dy, self.layout_n)
+                bid = self.custom_layout_map[k]
                 if bid >= 0:
                     self.hover_custom_bid = bid
-                    self.hover_layout_slot = si
-                    context.region.tag_redraw()
+                    self.hover_layout_slot = k
+        if prev != self.hover_layout_slot:
+            context.region.tag_redraw()
 
     def test_hit(self, context: Context, p: Vector) -> bool:
         self.sync_hover(context, p.x, p.y)
-        if self.hover_custom_bid >= 0:
-            return True
-        return False
+        return self.hover_custom_bid >= 0
