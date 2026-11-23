@@ -35,6 +35,8 @@ def get_active_brush_mode(context: Optional[Context] = None) -> str | None:
 
 def has_brush_color_capabilities(context: Context | Brush | None) -> bool:
     act_brush = context if isinstance(context, Brush) else get_active_brush(context)
+    if act_brush is None:
+        return False
     if act_brush.use_paint_image or act_brush.use_paint_grease_pencil:
         return act_brush.image_paint_capabilities.has_color
     elif act_brush.use_paint_sculpt:
