@@ -21,6 +21,11 @@ class PickerBrushButton(ButtonCircle):
         self.icon_gputex = brush_metadata.gputex
         self.label = brush_metadata.name if show_label else ''
 
+    @property
+    def hover_label(self) -> str | None:
+        """Brush name, shown by the wheel's centre widget while hovered."""
+        return self._brush_metadata.name if self._brush_metadata is not None else None
+
     def clear_brush_metadata(self) -> None:
         self.interactable = False
         self._brush_metadata = None

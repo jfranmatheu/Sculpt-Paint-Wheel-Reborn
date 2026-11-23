@@ -53,6 +53,14 @@ class WheelPrefs(PropertyGroup):
         default=False,
     )
 
+    center_text_max_lines: IntProperty(
+        name="Center Text Lines",
+        description="Maximum number of lines of the name shown in the centre of the wheel",
+        default=2,
+        min=1,
+        max=3,
+    )
+
     # Wheel Widgets Settings.
     # -----------------------------------------------------------------------
 
@@ -69,6 +77,7 @@ class WheelPrefs(PropertyGroup):
         content.prop(self, 'scale')
         content.prop(self, 'keep_open')
         content.prop(self, 'select_on_release')
+        content.prop(self, 'center_text_max_lines')
 
         _, content = self.draw_section(layout, "Theme", icon='COLOR')
         self.theme.draw_ui(context, content)

@@ -3,6 +3,7 @@ from ..pg.pg_wheel_prefs import WheelPrefs
 from .wheel import Wheel
 from ..widgets.brush_set_ring import BrushSetRing
 from ..widgets.tarta_ring import TartaRing
+from ..widgets.wheel_core import WheelCore
 from ..pg.pg_wheel_storage import SculptPaintWheelStorage, WheelStorage
 from ..widgets.color_picker import ColorPickerWidget
 
@@ -18,6 +19,8 @@ class SculptPaintWheel(Wheel):
         tarta_ring = TartaRing()
         tarta_ring.set_parent(self)
         self.tarta_ring = tarta_ring
+
+        WheelCore(tarta_ring).set_parent(self)
         
         color_picker = ColorPickerWidget()
         color_picker.set_parent(self)

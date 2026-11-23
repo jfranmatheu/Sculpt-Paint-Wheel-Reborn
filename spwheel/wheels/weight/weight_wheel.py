@@ -2,6 +2,7 @@ from bpy.types import Context
 
 from ..wheel import Wheel
 from ...widgets.tarta_ring import TartaRing
+from ...widgets.wheel_core import WheelCore
 from ...widgets.weight_picker import WeightPickerWidget
 from ...widgets.weight_toolbar import WeightToolbarWidget
 
@@ -18,6 +19,8 @@ class _WeightWheelBase(Wheel):
         tarta_ring.set_parent(self)
         tarta_ring.set_transform(0, 0, 0.08, 0.48)
         self.tarta_ring = tarta_ring
+
+        WheelCore(tarta_ring).set_parent(self)
 
         weight_picker = WeightPickerWidget()
         weight_picker.set_parent(self)
