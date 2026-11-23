@@ -37,6 +37,7 @@ class Wheel:
     def __init__(self, context: Context) -> None:
         self.center = Vector((0.0, 0.0))
         self.radius = self.default_radius
+        self.scale = 1.0
         self._widgets: list["Widget"] = []
         self.hovered_widget: "Widget" | None = None
         self._pressed_widget: "Widget" | None = None
@@ -63,19 +64,23 @@ class Wheel:
         if center:
             self.center = center
         prefs = WheelPrefs.get(context)
+        # Fix #1: Cache the scale once per activation so drawing and hit-testing share it.
+        self.scale = prefs.scale if prefs.scale > 0.0 else 1.0
         storage = WheelStorage.get_by_mode(context)
         self.activate(context, prefs, storage)
         for widget in self._widgets:
             widget._on_wheel_activate(context, prefs, storage)
 
     def to_region(self, lx: float, ly: float) -> tuple[float, float]:
-        return (self.center.x + lx, self.center.y + ly)
+        s = self.scale
+        return (self.center.x + lx * s, self.center.y + ly * s)
 
     def to_local(self, rx: float, ry: float) -> tuple[float, float]:
-        return (rx - self.center.x, ry - self.center.y)
+        s = self.scale
+        return ((rx - self.center.x) / s, (ry - self.center.y) / s)
 
     def contains_point(self, p: Vector) -> bool:
-        return point_inside_circle(p, self.center, self.radius)
+        return point_inside_circle(p, self.center, self.radius * self.scale)
 
     def add_widget(self, widget: "Widget") -> None:
         self._widgets.append(widget)
@@ -139,7 +144,7 @@ class Wheel:
         theme = prefs.theme
         with gpu.matrix.push_pop():
             gpu.matrix.translate(self.center)
-            gpu.matrix.scale((prefs.scale, prefs.scale))
+            gpu.matrix.scale((self.scale, self.scale))
             self.draw(context, theme)
             for widget in self._widgets:
                 widget._draw(context, theme)
