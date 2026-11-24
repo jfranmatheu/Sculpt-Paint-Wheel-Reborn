@@ -1,4 +1,4 @@
-"""Build store/superhive/docs.html from DOCS.md.
+"""Build store/superhive/docs.html (the Superhive "Documentation" tab) from DOCS.md.
 
 Run from anywhere:  python store/superhive/build_docs.py
 Requires:           pip install markdown
@@ -9,9 +9,10 @@ ready to paste as a whole: headings, paragraphs, lists, links and images only.
 What it does:
 - Converts DOCS.md to HTML.
 - Turns tables into lists (tables look broken without styles) and quotes into plain paragraphs.
-- Points images at the rounded store images on GitHub (store/superhive/images/), falling back to docs/images/promo/.
-- Makes relative links (FAQ.md, README.md, ...) absolute GitHub links.
-- Rewrites the "Supporting the project" section for the Superhive page: buy it here, no link to other stores.
+- Store page: the V2 store graphics instead of the README images, a banner per chapter and a graphic or two per
+  chapter; no links to the repository, the FAQ or the issue tracker (help goes through Superhive), and a sales
+  "Supporting the project" section.
+- Images load from store/superhive/images/ in the repository's ``BRANCH``.
 """
 import pathlib
 import re
@@ -20,21 +21,35 @@ import markdown
 
 HERE = pathlib.Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
-REPO = "https://github.com/jfran3d/Sculpt-Paint-Wheel-Reborn"
-RAW = "https://raw.githubusercontent.com/jfran3d/Sculpt-Paint-Wheel-Reborn/main"
+BRANCH = "main"
+RAW = f"https://raw.githubusercontent.com/jfran3d/Sculpt-Paint-Wheel-Reborn/{BRANCH}/store/superhive"
 
 md = (ROOT / "DOCS.md").read_text(encoding="utf-8")
 
-# Superhive-specific support section.
+# ----- Store-only wording -------------------------------------------------------------------------------------------
+md = re.sub(r" ?For quick answers, see the \[FAQ\]\(FAQ\.md\)\.", "", md)
+md = re.sub(r"See the \[FAQ\]\(FAQ\.md\) or \[open an issue\]\([^)]*\) with",
+            "Message the developer from this product page on Superhive with", md)
+md = re.sub(r"\[([^\]]+)\]\((?:FAQ|README|DOCS)\.md[^)]*\)", r"\1", md)  # Any other link to the repository's files.
 support_start = md.index("## Supporting the project")
 md = md[:support_start] + """## Supporting the project
 
-![Your purchase supports the developer](docs/images/promo/06_support_store.png)
+![Made by an independent developer](docs/images/promo/06_support_store.png)
 
-Sculpt-Paint Wheel is **free and open source**, just like Blender. It's maintained by one independent developer, and every new Blender version needs porting, testing and fixing.
+Sculpt-Paint Wheel is made by one independent developer, and it has kept growing for about six years thanks to the artists who support it. Every new Blender version needs porting, testing and fixing.
 
-By buying it here on Superhive, you fund that work, so the add-on keeps improving and stays available to everyone, including students and artists who can't afford to buy it. **Thank you!** ♥
+Your purchase goes straight into that work: updates for new Blender releases, fixes driven by your feedback, and new features like everything in 2.0. **Thank you!** ♥
 """
+
+# Images of the README / GitHub docs -> store graphics (None: left out of the store page).
+STORE_IMAGES = {
+    "01_hero.png": "v2_01_hero.png",
+    "02_how_it_works.png": None,
+    "03_modes.png": None,
+    "04_customize.png": None,
+    "06_support_github.png": "v2_13_support.png",
+    "06_support_store.png": "v2_13_support.png",
+}
 
 html = markdown.markdown(md, extensions=["tables", "toc", "sane_lists"])
 
@@ -57,41 +72,46 @@ def table_to_list(match):
     return "<ul>\n" + "\n".join(items) + "\n</ul>"
 
 
-def image_url(match):
-    name = match.group(1)
-    path = f"store/superhive/images/{name}" if (HERE / "images" / name).exists() else f"docs/images/promo/{name}"
-    return f'src="{RAW}/{path}" width="100%"'
+def image(match):
+    name = match.group(2)
+    store = STORE_IMAGES.get(name, name)
+    if store is None:
+        return ""
+    return f'<p><img alt="{match.group(1)}" src="{RAW}/images/{store}" width="100%" /></p>'
 
 
 html = re.sub(r"<table>.*?</table>", table_to_list, html, flags=re.S)
 html = re.sub(r"<blockquote>\s*(.*?)\s*</blockquote>", r"\1", html, flags=re.S)
-html = re.sub(r'src="docs/images/promo/([^"]+)"', image_url, html)
-html = re.sub(r'href="(FAQ\.md|README\.md|DOCS\.md)(#[^"]*)?"',
-              lambda m: f'href="{REPO}/blob/main/{m.group(1)}{m.group(2) or ""}"', html)
+html = re.sub(r'<p><img alt="([^"]*)" src="docs/images/promo/([^"]+)" ?/?></p>', image, html)
 
-# Graphics: numbered chapter headings become banner images (anchors kept), plus a graphic per chapter.
+# Graphics: numbered chapter headings become banner images (anchors kept), plus graphics per chapter.
 CHAPTER_GRAPHICS = {
-    1: ("14_requirements.png", "Requirements and install"),
-    2: ("12_anatomy.png", "The wheel at a glance"),
-    3: ("11_controls.png", "Controls"),
-    4: ("13_modes_reference.png", "A wheel for every mode"),
-    7: ("15_preferences.png", "Preferences"),
+    1: [("images/v2_12_install.png", "Requirements and install")],
+    2: [("images/v2_14_anatomy.png", "The wheel at a glance")],
+    3: [("images/v2_11_controls.png", "Controls"), ("images/v2_03_centre.png", "Smart centre: brush radius and strength")],
+    4: [("images/v2_04_modes.png", "A wheel for every mode"), ("images/v2_05_color.png", "Color picker")],
+    5: [("images/v2_07_double_ring.png", "Double ring")],
+    6: [("images/v2_10_yours.png", "Make it yours")],
+    7: [("images/v2_08_settings.png", "Settings"), ("images/v2_09_theme_tab.png", "Theme tab"),
+        ("images/v2_06_themes.png", "Built-in themes"), ("videos/v2_tint_modes.webp", "Tint modes, changed live")],
 }
 
 
 def chapter_banner(match):
     anchor, num, title = match.group(1), int(match.group(2)), match.group(3)
-    out = f'<h2 id="{anchor}"><img src="{RAW}/store/superhive/images/ch{num:02d}.png" alt="{num}. {title}" width="100%"></h2>'
-    if num in CHAPTER_GRAPHICS:
-        name, alt = CHAPTER_GRAPHICS[num]
-        out += f'\n<p><img src="{RAW}/store/superhive/images/{name}" alt="{alt}" width="100%"></p>'
+    out = f'<h2 id="{anchor}"><img src="{RAW}/images/v2_ch{num:02d}.png" alt="{num}. {title}" width="100%"></h2>'
+    for path, alt in CHAPTER_GRAPHICS.get(num, ()):
+        out += f'\n<p><img src="{RAW}/{path}" alt="{alt}" width="100%"></p>'
     return out
 
 
 html = re.sub(r'<h2 id="([^"]+)">(\d+)\. ([^<]+)</h2>', chapter_banner, html)
+html = re.sub(r"\n{3,}", "\n\n", html)
 
-for forbidden in ("<table", "<style", "<!--", "<head", "<div", "style="):
+for forbidden in ("<table", "<style", "<!--", "<head", "<div", "style=", "github.com/", "FAQ.md", "free and open"):
     assert forbidden not in html, forbidden
+for path in re.findall(rf'{re.escape(RAW)}/([^"]+)"', html):
+    assert (HERE / path).exists(), f"missing {path}"
 
 (HERE / "docs.html").write_text(html.strip() + "\n", encoding="utf-8")
 print("wrote", HERE / "docs.html")
