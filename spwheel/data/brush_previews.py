@@ -13,15 +13,23 @@ from .common import get_cache_path
 
 
 
-_texture_cache: dict[str, GPUTexture] = {}
+# Texture per preview key; None: no preview for it (looked up once, not on every redraw). Writing a preview
+# drops its entry, so the new image is loaded.
+_texture_cache: dict[str, GPUTexture | None] = {}
 _fallback_texture: GPUTexture | None = None
 
 
 def _sha1(s: str) -> str:
     return hashlib.sha1(s.encode("utf-8")).hexdigest()
 
-def generate_preview_hash(library_name: str, blend_stem: str, brush_name: str, is_essential: bool = False) -> str:
-    return _sha1(f"{'E' if is_essential else 'C'}|{library_name}|{blend_stem}|{brush_name}")
+def generate_preview_hash(library_name: str, blend_stem: str, brush_name: str, is_essential: bool = False,
+                          library_id: str = "") -> str:
+    """Cache key of a brush preview. ``library_id`` tells apart libraries (or files) holding a brush at the same
+    path: without it two custom libraries with the same ``brushes.blend/Brush/X`` shared one preview."""
+    key = f"{'E' if is_essential else 'C'}|{library_name}|{blend_stem}|{brush_name}"
+    if library_id:
+        key += f"|{library_id}"
+    return _sha1(key)
 
 
 def _preview_rel(hash_id: str) -> str:
@@ -64,6 +72,7 @@ def write_preview(hash_id: str, w: int, h: int, pixels_float) -> str:
     compressed = zlib.compress(data, 6)
     full = get_preview_path(hash_id)
     full.parent.mkdir(parents=True, exist_ok=True)
+    _texture_cache.pop(hash_id, None)  # (A new image: reload it.)
     with full.open("wb") as f:
         f.write(w.to_bytes(4, "little"))
         f.write(h.to_bytes(4, "little"))
@@ -76,6 +85,7 @@ def write_essential_preview(mode_id: str, brush_name: str, w: int, h: int, pixel
     compressed = zlib.compress(data, 6)
     full = get_essential_preview_path(mode_id, brush_name)
     full.parent.mkdir(parents=True, exist_ok=True)
+    _texture_cache.pop(f"ESSENTIALS|{mode_id}|{brush_name}", None)
     with full.open("wb") as f:
         f.write(w.to_bytes(4, "little"))
         f.write(h.to_bytes(4, "little"))
@@ -186,6 +196,7 @@ def get_brush_gputex(brush_id_key: str) -> GPUTexture | None:
 
     preview_data = read_preview(brush_id_key)
     if preview_data is None:
+        _texture_cache[cache_key] = None
         return None
     w, h, data = preview_data
     if w is None:
@@ -214,6 +225,7 @@ def get_essential_brush_gputex(mode_id: str, brush_name: str) -> GPUTexture | No
 
     preview_data = read_essential_preview(mode_id, brush_name)
     if preview_data is None:
+        _texture_cache[cache_key] = None
         return None
     w, h, data = preview_data
     if w is None:

@@ -266,7 +266,13 @@ class BrushMetadata(PropertyGroup):
         pixels = preview.image_pixels_float
         if len(pixels) == 0:
             return False
-        self.hash_id = generate_preview_hash(self.asset_library_type, self.relative_asset_identifier, self.name, is_essential=self.asset_library_type == "ESSENTIALS")
+        # Tell apart libraries (or, for brushes local to a file, files) holding a brush at the same path.
+        library_id = self.asset_library_identifier
+        if not library_id and self.asset_library_type == "LOCAL":
+            library_id = bpy.data.filepath
+        self.hash_id = generate_preview_hash(self.asset_library_type, self.relative_asset_identifier, self.name,
+                                             is_essential=self.asset_library_type == "ESSENTIALS",
+                                             library_id=library_id)
         self.preview_size = (x, y)
         write_preview(self.hash_id, x, y, pixels)
         return True
