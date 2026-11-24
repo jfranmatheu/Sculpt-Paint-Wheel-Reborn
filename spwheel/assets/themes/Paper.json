@@ -1,0 +1,134 @@
+{
+  "_note": "Warm light: cream paper and ink, terracotta accent.",
+  "text_color": [
+    0.165,
+    0.145,
+    0.125,
+    1.0
+  ],
+  "icon_color": [
+    0.227,
+    0.2,
+    0.173,
+    1.0
+  ],
+  "base_color": [
+    0.937,
+    0.914,
+    0.875,
+    1.0
+  ],
+  "base_outline_color": [
+    0.541,
+    0.498,
+    0.439,
+    1.0
+  ],
+  "tarta_color": [
+    0.98,
+    0.965,
+    0.937,
+    1.0
+  ],
+  "tarta_outline_color": [
+    0.788,
+    0.749,
+    0.69,
+    1.0
+  ],
+  "tarta_accent_color": [
+    0.227,
+    0.2,
+    0.173,
+    0.85
+  ],
+  "tarta_pressed_color": [
+    0.769,
+    0.416,
+    0.184,
+    1.0
+  ],
+  "core_color": [
+    1.0,
+    0.992,
+    0.976,
+    1.0
+  ],
+  "shadow_opacity": 0.5,
+  "button": {
+    "label_color": [
+      0.165,
+      0.145,
+      0.125,
+      0.95
+    ],
+    "color": [
+      0.867,
+      0.831,
+      0.776,
+      1.0
+    ],
+    "hovered_color": [
+      0.82,
+      0.776,
+      0.714,
+      1.0
+    ],
+    "active_color": [
+      0.925,
+      0.776,
+      0.651,
+      1.0
+    ],
+    "outline_color": [
+      0.659,
+      0.612,
+      0.545,
+      1.0
+    ],
+    "active_outline_color": [
+      0.769,
+      0.416,
+      0.184,
+      1.0
+    ]
+  },
+  "brush_picker_button": {
+    "label_color": [
+      0.165,
+      0.145,
+      0.125,
+      0.95
+    ],
+    "color": [
+      0.867,
+      0.831,
+      0.776,
+      1.0
+    ],
+    "hovered_color": [
+      0.82,
+      0.776,
+      0.714,
+      1.0
+    ],
+    "active_color": [
+      0.925,
+      0.776,
+      0.651,
+      1.0
+    ],
+    "outline_color": [
+      0.659,
+      0.612,
+      0.545,
+      1.0
+    ],
+    "active_outline_color": [
+      0.769,
+      0.416,
+      0.184,
+      1.0
+    ]
+  }
+}

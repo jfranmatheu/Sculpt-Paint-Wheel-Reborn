@@ -20,14 +20,18 @@ def _redraw(context) -> None:
 _preset_items: list = []  # (Blender needs the enum item strings kept alive.)
 
 
+def _icon(name: str, dark_icon: str) -> str:
+    return 'LIGHT_SUN' if theme_presets.is_light_preset(name) else dark_icon
+
+
 def _preset_enum_items(self, context):
     _preset_items.clear()
     builtins = theme_presets.builtin_names()
     users = theme_presets.user_names()
     for i, name in enumerate(builtins):
-        _preset_items.append((name, name, f"Built-in theme: {name}", 'LIGHT_SUN' if name == "Light" else 'COLOR', i))
+        _preset_items.append((name, name, f"Built-in theme: {name}", _icon(name, 'COLOR'), i))
     for j, name in enumerate(users):
-        _preset_items.append((name, name, f"Your theme: {name}", 'USER', len(builtins) + j))
+        _preset_items.append((name, name, f"Your theme: {name}", _icon(name, 'USER'), len(builtins) + j))
     return _preset_items
 
 

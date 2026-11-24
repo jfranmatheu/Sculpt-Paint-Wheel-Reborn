@@ -68,6 +68,14 @@ def load(name: str) -> dict | None:
     return _read(user_dir() / f"{_safe_file_name(name)}.json")
 
 
+def is_light_preset(name: str) -> bool:
+    """A light theme (its wheel background is bright; a preset without one is the dark default)."""
+    base = (load(name) or {}).get("base_color")
+    if not isinstance(base, (list, tuple)) or len(base) < 3:
+        return False
+    return 0.2126 * base[0] + 0.7152 * base[1] + 0.0722 * base[2] > 0.5
+
+
 # ----- Theme <-> dict -----------------------------------------------------------------------------------------
 
 def _props(data):
