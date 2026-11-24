@@ -131,11 +131,4 @@ Sculpt-Paint Wheel stays **free and open source** here on GitHub. If it saves yo
 
 ### Changelog
 
-#### 1.1.0
-- Support for **Blender 5.3** (still compatible with 5.1 / 5.2).
-- New wheels for **Vertex Paint**, **Sculpt Curves** and every **Grease Pencil** paint mode (Draw, Sculpt, Weight, Vertex), each with default brushes, default buttons and preset lists.
-- Grease Pencil and Sculpt Curves wheels now open with `Space`.
-- Updated Sculpt presets to the Blender 5.3 operators (Mask Extract / Slice, Mask from Cavity, Hide Masked, Show All, Invert Visible).
-- **Falloff** buttons open the new **Shape** panel in mesh paint modes on Blender 5.3.
-- Fixed sidebar panels that failed to register on Blender 5.2+.
-- Fixed a draw callback leak when the wheel failed to open.
+See [CHANGELOG.md](CHANGELOG.md) for what changed in each version. Downloads are on the [releases page](https://github.com/jfran3d/Sculpt-Paint-Wheel-Reborn/releases).
