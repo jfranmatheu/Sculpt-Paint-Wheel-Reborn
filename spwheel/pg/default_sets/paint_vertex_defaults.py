@@ -1,4 +1,8 @@
 from os.path import dirname, join
+from ._buttons import (
+    AUTO_NORMALIZE, FACE_SELECTION_MASKING, GP_MULTI_FRAME, GP_ONION_SKIN, MIRROR_X, VERTEX_SELECTION_MASKING,
+    operator, toggle,
+)
 
 icons_dir = join(dirname(dirname(dirname(__file__))), "assets", "images", "custom_buttons")
 
@@ -57,5 +61,9 @@ def_paint_vertex_buttons = (
     _panel("TEXTURE_SETTINGS", "Texture", "texture.png", "VIEW3D_PT_tools_brush_texture"),
     _panel("MIRROR", "Symmetry", "mirror.png", "VIEW3D_PT_tools_vertexpaint_symmetry_for_topbar"),
     _menu("PAINT_MENU", "Paint", "brush.png", "VIEW3D_MT_paint_vertex"),
-    _operator("VC_SMOOTH", "Smooth Colors", "mask_smooth.png", "paint.vertex_color_smooth"),
+    _operator("VC_SMOOTH", "Smooth Colors", "smooth.png", "paint.vertex_color_smooth"),
+    MIRROR_X,
+    FACE_SELECTION_MASKING,
+    operator("Dirty Colors", "dirt.png", "paint.vertex_color_dirt"),
+    operator("Invert Colors", "invert.png", "paint.vertex_color_invert"),
 )

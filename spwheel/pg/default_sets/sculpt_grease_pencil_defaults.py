@@ -1,4 +1,8 @@
 from os.path import dirname, join
+from ._buttons import (
+    AUTO_NORMALIZE, FACE_SELECTION_MASKING, GP_MULTI_FRAME, GP_ONION_SKIN, MIRROR_X, VERTEX_SELECTION_MASKING,
+    operator, toggle,
+)
 
 icons_dir = join(dirname(dirname(dirname(__file__))), "assets", "images", "custom_buttons")
 
@@ -57,4 +61,6 @@ def_sculpt_grease_pencil_buttons = (
     _panel("AUTO_MASKING", "Auto-Masking", "mask.png", "VIEW3D_PT_grease_pencil_sculpt_automasking"),
     _panel("MULTI_FRAME", "Multi Frame", "options.png", "VIEW3D_PT_grease_pencil_multi_frame"),
     _panel("LAYERS", "Layers", "grid.png", "TOPBAR_PT_grease_pencil_layers"),
+    GP_MULTI_FRAME,
+    GP_ONION_SKIN,
 )

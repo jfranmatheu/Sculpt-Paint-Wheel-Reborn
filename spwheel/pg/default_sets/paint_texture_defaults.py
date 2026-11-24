@@ -1,4 +1,8 @@
 from os.path import dirname, join
+from ._buttons import (
+    AUTO_NORMALIZE, FACE_SELECTION_MASKING, GP_MULTI_FRAME, GP_ONION_SKIN, MIRROR_X, VERTEX_SELECTION_MASKING,
+    operator, toggle,
+)
 
 icons_dir = join(dirname(dirname(dirname(__file__))), "assets", 'images', "custom_buttons")
 
@@ -56,4 +60,8 @@ def_paint_texture_buttons = (
         'as_attribute' : 'PRESET',
         'preset_panel' : 'VIEW3D_PT_tools_brush_texture'
     },
+    MIRROR_X,
+    FACE_SELECTION_MASKING,
+    operator("Save All Images", "save.png", "image.save_all_modified"),
+    operator("Add Simple UVs", "uv.png", "paint.add_simple_uvs"),
 )

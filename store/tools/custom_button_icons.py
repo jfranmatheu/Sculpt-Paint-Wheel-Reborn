@@ -336,6 +336,311 @@ def icon_weights():
     return a
 
 
+# ---------------------------------------------------------------------------
+# Icons for the "Tools" default sets (operators and toggles).
+# ---------------------------------------------------------------------------
+
+U = SS  # 1 px at 128.
+
+
+def _arrow_head(layer, tip, direction, size=11 * SS, width=W):
+    """Chevron with its tip at ``tip``, pointing along ``direction`` (unit vector)."""
+    dx, dy = direction
+    px, py = -dy, dx
+    back = (tip[0] - dx * size, tip[1] - dy * size)
+    stroke(layer, [(back[0] + px * size, back[1] + py * size), tip, (back[0] - px * size, back[1] - py * size)],
+           width=width)
+
+
+def icon_dyntopo():
+    """Dynamic topology: a triangle subdivided into triangles, with vertex dots."""
+    a = new_layer()
+    top, bl, br = (C, LO + 8 * U), (LO + 2 * U, HI - 12 * U), (HI - 2 * U, HI - 12 * U)
+
+    def mid(p, q):
+        return ((p[0] + q[0]) / 2, (p[1] + q[1]) / 2)
+
+    m0, m1, m2 = mid(top, bl), mid(bl, br), mid(br, top)
+    stroke(a, [top, bl, br], closed=True)
+    stroke(a, [m0, m1, m2], closed=True, width=W * 0.75)
+    for p in (top, bl, br, m0, m1, m2):
+        circle(a, p[0], p[1], W * 0.95, fill=True)
+    return a
+
+
+def icon_symmetrize():
+    """Symmetrize: a filled half copied as an outlined half across a dashed axis."""
+    a = new_layer()
+    r = 34 * U
+    gap = 6 * U
+    ImageDraw.Draw(a).pieslice((C - gap - r, C - r, C - gap + r, C + r), 90, 270, fill=255)
+    ImageDraw.Draw(a).arc((C + gap - r, C - r, C + gap + r, C + r), 270, 90, fill=255, width=int(W))
+    stroke(a, [(C + gap, C - r), (C + gap, C + r)])
+    for y in range(int(LO), int(HI), int(16 * U)):
+        stroke(a, [(C, y + 2 * U), (C, y + 8 * U)], width=W * 0.5)
+    return a
+
+
+def icon_face_sets():
+    """Face sets: four patches, two of them filled."""
+    a = new_layer()
+    x0, y0, x1, y1 = BOX
+    g = 5 * U
+    w = (x1 - x0 - g) / 2
+    for i in range(2):
+        for j in range(2):
+            box = (x0 + i * (w + g), y0 + j * (w + g), x0 + i * (w + g) + w, y0 + j * (w + g) + w)
+            if (i + j) % 2 == 0:
+                rrect(a, box, 10 * U, fill=True)
+            else:
+                inset = W / 2
+                rrect(a, (box[0] + inset, box[1] + inset, box[2] - inset, box[3] - inset), 8 * U)
+    return a
+
+
+def _mask_grow_shrink(outwards: bool):
+    a = new_layer()
+    circle(a, C, C, 15 * U, fill=True)
+    for k in range(4):
+        ang = math.radians(45 + 90 * k)
+        d = (math.cos(ang), math.sin(ang))
+        if outwards:
+            _arrow_head(a, (C + d[0] * 44 * U, C + d[1] * 44 * U), d)
+        else:
+            _arrow_head(a, (C + d[0] * 26 * U, C + d[1] * 26 * U), (-d[0], -d[1]))
+    return a
+
+
+def icon_mask_grow():
+    """Grow mask: a disc with chevrons pointing out."""
+    return _mask_grow_shrink(True)
+
+
+def icon_mask_shrink():
+    """Shrink mask: a disc with chevrons pointing in."""
+    return _mask_grow_shrink(False)
+
+
+def _eye(layer):
+    left, right = (LO + 2 * U, C), (HI - 2 * U, C)
+    upper = bezier(left, (C - 24 * U, C - 34 * U), (C + 24 * U, C - 34 * U), right)
+    lower = bezier(right, (C + 24 * U, C + 34 * U), (C - 24 * U, C + 34 * U), left)
+    stroke(layer, upper + lower[1:], width=W)
+    circle(layer, C, C, 12 * U, fill=True)
+
+
+def icon_show():
+    """Show: an eye."""
+    a = new_layer()
+    _eye(a)
+    return a
+
+
+def icon_hide():
+    """Hide: an eye crossed out."""
+    a = new_layer()
+    _eye(a)
+    p0, p1 = (LO + 10 * U, HI - 10 * U), (HI - 10 * U, LO + 10 * U)
+    gap = new_layer()
+    stroke(gap, [p0, p1], width=W * 2.6)
+    a = subtract(a, gap)
+    stroke(a, [p0, p1])
+    return a
+
+
+def icon_wireframe():
+    """Wireframe: a wire globe."""
+    a = new_layer()
+    r = (HI - LO) / 2 - W / 2
+    circle(a, C, C, r)
+    d = ImageDraw.Draw(a)
+    d.ellipse((C - r * 0.42, C - r, C + r * 0.42, C + r), outline=255, width=int(W * 0.75))
+    d.ellipse((C - r, C - r * 0.42, C + r, C + r * 0.42), outline=255, width=int(W * 0.75))
+    return a
+
+
+def icon_face_mask():
+    """Face selection masking: a quad grid with one face filled."""
+    a = new_layer()
+    x0, y0, x1, y1 = BOX
+    xm, ym = (x0 + x1) / 2, (y0 + y1) / 2
+    ImageDraw.Draw(a).rectangle((x0, y0, xm, ym), fill=255)
+    stroke(a, [(x0, y0), (x1, y0), (x1, y1), (x0, y1)], closed=True)
+    stroke(a, [(xm, y0), (xm, y1)], width=W * 0.75)
+    stroke(a, [(x0, ym), (x1, ym)], width=W * 0.75)
+    return a
+
+
+def icon_vertex_mask():
+    """Vertex selection masking: a quad grid with vertex dots."""
+    a = new_layer()
+    x0, y0, x1, y1 = BOX
+    xm, ym = (x0 + x1) / 2, (y0 + y1) / 2
+    stroke(a, [(x0, y0), (x1, y0), (x1, y1), (x0, y1)], closed=True, width=W * 0.6)
+    stroke(a, [(xm, y0), (xm, y1)], width=W * 0.6)
+    stroke(a, [(x0, ym), (x1, ym)], width=W * 0.6)
+    for x in (x0, xm, x1):
+        for y in (y0, ym, y1):
+            circle(a, x, y, W * 1.05, fill=True)
+    return a
+
+
+def icon_smooth():
+    """Smooth: a gentle wave between two guide lines."""
+    a = new_layer()
+    pts = []
+    for i in range(121):
+        u = i / 120
+        x = LO + 4 * U + (HI - LO - 8 * U) * u
+        pts.append((x, C - 18 * U * math.sin(u * math.tau)))
+    stroke(a, pts)
+    stroke(a, [(LO + 10 * U, C + 34 * U), (HI - 10 * U, C + 34 * U)], width=W * 0.6)
+    stroke(a, [(LO + 10 * U, C - 34 * U), (HI - 10 * U, C - 34 * U)], width=W * 0.6)
+    return a
+
+
+def icon_dirt():
+    """Dirty vertex colors: a cavity with grime gathering at its bottom."""
+    a = new_layer()
+    left, right = (LO + 2 * U, LO + 26 * U), (HI - 2 * U, LO + 26 * U)
+    stroke(a, bezier(left, (LO + 20 * U, HI + 10 * U), (HI - 20 * U, HI + 10 * U), right))
+    for x, y, r in ((C, HI - 22 * U, 7), (C - 16 * U, HI - 26 * U, 5), (C + 16 * U, HI - 26 * U, 5),
+                    (C - 28 * U, HI - 34 * U, 3.5), (C + 28 * U, HI - 34 * U, 3.5), (C, HI - 40 * U, 3.5)):
+        circle(a, x, y, r * U, fill=True)
+    return a
+
+
+def icon_invert():
+    """Invert: a disc, half filled."""
+    a = new_layer()
+    r = (HI - LO) / 2 - W / 2
+    circle(a, C, C, r)
+    ImageDraw.Draw(a).pieslice((C - r, C - r, C + r, C + r), 90, 270, fill=255)
+    return a
+
+
+def icon_save():
+    """Save: a floppy disk."""
+    a = new_layer()
+    x0, y0, x1, y1 = BOX
+    notch = 22 * U
+    stroke(a, [(x0, y0), (x1 - notch, y0), (x1, y0 + notch), (x1, y1), (x0, y1)], closed=True)
+    rrect(a, (x0 + 16 * U, y0 - W / 2, x1 - notch - 8 * U, y0 + 26 * U), 3 * U, fill=True)
+    rrect(a, (x0 + 14 * U, C + 6 * U, x1 - 14 * U, y1 - 12 * U), 5 * U)
+    return a
+
+
+def icon_uv():
+    """UVs: an unfolded cube, its front face filled."""
+    a = new_layer()
+    s = 24 * U
+    x0 = C - s * 2
+    y0 = C - s * 1.5
+    d = ImageDraw.Draw(a)
+    for i, j in ((1, 0), (0, 1), (1, 1), (2, 1), (3, 1), (1, 2)):
+        d.rectangle((x0 + i * s, y0 + j * s, x0 + (i + 1) * s, y0 + (j + 1) * s), outline=255, width=int(W * 0.7))
+    d.rectangle((x0 + s, y0 + s, x0 + 2 * s, y0 + 2 * s), fill=255)
+    return a
+
+
+def icon_normalize():
+    """Normalize: bars and the common top line they are scaled to."""
+    a = new_layer()
+    x0, y0, x1, y1 = BOX
+    top = y0 + 10 * U
+    stroke(a, [(x0, top), (x1, top)], width=W * 0.6)
+    bw = 16 * U
+    for k, h in enumerate((0.45, 0.8, 0.6)):
+        bx = x0 + 10 * U + k * (bw + 14 * U)
+        filled_top = y1 - (y1 - top - 8 * U) * h
+        rrect(a, (bx, filled_top, bx + bw, y1), 4 * U, fill=True)
+        stroke(a, [(bx + bw / 2, top + 8 * U), (bx + bw / 2, filled_top - 6 * U)], width=W * 0.35)
+    return a
+
+
+def icon_clean():
+    """Clean: an eraser."""
+    a = new_layer()
+    rrect(a, (C - 22 * U, C - 44 * U, C + 22 * U, C + 44 * U), 9 * U)
+    rrect(a, (C - 22 * U, C + 6 * U, C + 22 * U, C + 44 * U), 9 * U, fill=True)
+    a = a.rotate(-45, resample=Image.Resampling.BICUBIC, center=(C, C - 6 * U))
+    stroke(a, [(LO + 20 * U, HI - 4 * U), (HI - 4 * U, HI - 4 * U)], width=W * 0.6)
+    return a
+
+
+def icon_frames():
+    """Multi-frame editing: a stack of frames, the front one filled."""
+    a = new_layer()
+    s = 52 * U
+    for k in (2, 1):
+        o = k * 13 * U
+        rrect(a, (LO + 2 * U + o, LO + 2 * U + (2 - k) * 13 * U, LO + 2 * U + o + s, LO + 2 * U + (2 - k) * 13 * U + s),
+              10 * U, width=W * 0.8)
+    rrect(a, (LO + 2 * U, LO + 2 * U + 26 * U, LO + 2 * U + s, LO + 2 * U + 26 * U + s), 10 * U, fill=True)
+    return a
+
+
+def icon_onion():
+    """Onion skin: the current shape, with fading copies before and after it."""
+    a = new_layer()
+    r = 22 * U
+    circle(a, C, C, r, fill=True)
+    for dx, width in ((-30 * U, 0.6), (30 * U, 0.6)):
+        ring = new_layer()
+        circle(ring, C + dx, C, r, width=W * width)
+        cut = new_layer()
+        circle(cut, C, C, r + W * 0.9, fill=True)
+        a = union(a, subtract(ring, cut))
+    for dx in (-46 * U, 46 * U):
+        ring = new_layer()
+        circle(ring, C + dx, C, r * 0.8, width=W * 0.45)
+        cut = new_layer()
+        circle(cut, C + dx * 30 / 46, C, r + W * 0.7, fill=True)
+        a = union(a, subtract(ring, cut).point(lambda v: v * 0.6))
+    return a
+
+
+def icon_draw_back():
+    """Draw on back: a new (filled) shape placed behind an existing (outlined) one."""
+    a = new_layer()
+    front = (C - 8 * U, LO + 4 * U, HI - 4 * U, C + 8 * U)
+    back = (LO + 4 * U, C - 8 * U, C + 8 * U, HI - 4 * U)
+    fill = new_layer()
+    rrect(fill, back, 12 * U, fill=True)
+    cut = new_layer()
+    rrect(cut, (front[0] - W, front[1] - W, front[2] + W, front[3] + W), 14 * U, fill=True)
+    a = union(a, subtract(fill, cut))
+    rrect(a, front, 12 * U)
+    return a
+
+
+def icon_frame_add():
+    """Insert keyframe: a frame with a plus."""
+    a = new_layer()
+    rrect(a, BOX, BOX_R)
+    stroke(a, [(C, C - 22 * U), (C, C + 22 * U)])
+    stroke(a, [(C - 22 * U, C), (C + 22 * U, C)])
+    return a
+
+
+def icon_snap():
+    """Snap to surface: a magnet."""
+    a = new_layer()
+    r_out, r_in = 36 * U, 14 * U
+    cy = C - 4 * U
+    arc = new_layer()
+    ImageDraw.Draw(arc).pieslice((C - r_out, cy - r_out, C + r_out, cy + r_out), 180, 360, fill=255)
+    hole = new_layer()
+    ImageDraw.Draw(hole).ellipse((C - r_in, cy - r_in, C + r_in, cy + r_in), fill=255)
+    a = union(a, subtract(arc, hole))
+    # Legs, with tips separated by a gap.
+    leg_w = r_out - r_in
+    for x0 in (C - r_out, C + r_in):
+        ImageDraw.Draw(a).rectangle((x0, cy, x0 + leg_w, HI - 22 * U), fill=255)
+        rrect(a, (x0, HI - 18 * U, x0 + leg_w, HI - 2 * U), 3 * U, fill=True)
+    return a
+
+
 ICONS = {
     "brush": icon_brush,
     "falloff": icon_falloff,
@@ -353,6 +658,30 @@ ICONS = {
     "texture": icon_texture,
     "voxels": icon_voxels,
     "weights": icon_weights,
+    # "Tools" sets.
+    "dyntopo": icon_dyntopo,
+    "symmetrize": icon_symmetrize,
+    "face_sets": icon_face_sets,
+    "mask_grow": icon_mask_grow,
+    "mask_shrink": icon_mask_shrink,
+    "show": icon_show,
+    "hide": icon_hide,
+    "wireframe": icon_wireframe,
+    "face_mask": icon_face_mask,
+    "vertex_mask": icon_vertex_mask,
+    "smooth": icon_smooth,
+    "dirt": icon_dirt,
+    "invert": icon_invert,
+    "save": icon_save,
+    "uv": icon_uv,
+    "normalize": icon_normalize,
+    "clean": icon_clean,
+    # Grease Pencil / curves.
+    "frames": icon_frames,
+    "onion": icon_onion,
+    "draw_back": icon_draw_back,
+    "frame_add": icon_frame_add,
+    "snap": icon_snap,
 }
 
 

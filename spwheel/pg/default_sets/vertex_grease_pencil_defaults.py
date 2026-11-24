@@ -1,4 +1,8 @@
 from os.path import dirname, join
+from ._buttons import (
+    AUTO_NORMALIZE, FACE_SELECTION_MASKING, GP_MULTI_FRAME, GP_ONION_SKIN, MIRROR_X, VERTEX_SELECTION_MASKING,
+    operator, toggle,
+)
 
 icons_dir = join(dirname(dirname(dirname(__file__))), "assets", "images", "custom_buttons")
 
@@ -54,5 +58,7 @@ def_vertex_grease_pencil_buttons = (
     _panel("MULTI_FRAME", "Multi Frame", "options.png", "VIEW3D_PT_grease_pencil_multi_frame"),
     _menu("PAINT_MENU", "Paint", "brush.png", "VIEW3D_MT_paint_vertex_grease_pencil"),
     _operator("RESET_VERTEX_COLOR", "Reset Vertex Color", "mask_clear.png", "grease_pencil.stroke_reset_vertex_color"),
-    _operator("VC_INVERT", "Invert Colors", "mask_invert.png", "grease_pencil.vertex_color_invert"),
+    _operator("VC_INVERT", "Invert Colors", "invert.png", "grease_pencil.vertex_color_invert"),
+    GP_MULTI_FRAME,
+    GP_ONION_SKIN,
 )

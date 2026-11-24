@@ -9,6 +9,7 @@ from .paint_texture_defaults import def_paint_texture_buttons, def_paint_texture
 from .paint_vertex_defaults import def_paint_vertex_buttons, def_paint_vertex_tools
 from .paint_grease_pencil_defaults import def_paint_grease_pencil_buttons, def_paint_grease_pencil_tools
 from .vertex_grease_pencil_defaults import def_vertex_grease_pencil_buttons, def_vertex_grease_pencil_tools
+from .masking_defaults import MASKING_SET_NAME, def_sculpt_masking_buttons
 
 # Keys are `context.mode` values.
 _tarta_sets = {
@@ -21,6 +22,11 @@ _tarta_sets = {
     'PAINT_VERTEX': def_paint_vertex_buttons,
     'PAINT_GREASE_PENCIL': def_paint_grease_pencil_buttons,
     'VERTEX_GREASE_PENCIL': def_vertex_grease_pencil_buttons,
+}
+
+# Second default set ("Masking"), Sculpt only.
+_masking_sets = {
+    'SCULPT': def_sculpt_masking_buttons,
 }
 
 _brush_sets = {
@@ -38,6 +44,10 @@ _brush_sets = {
 
 def get_tarta_set(mode: str):
     return _tarta_sets.get(mode)
+
+
+def get_masking_set(mode: str):
+    return _masking_sets.get(mode)
 
 
 def get_brush_set(mode: str):

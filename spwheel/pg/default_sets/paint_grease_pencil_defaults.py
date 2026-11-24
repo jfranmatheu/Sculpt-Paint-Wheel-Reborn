@@ -1,4 +1,8 @@
 from os.path import dirname, join
+from ._buttons import (
+    AUTO_NORMALIZE, FACE_SELECTION_MASKING, GP_MULTI_FRAME, GP_ONION_SKIN, MIRROR_X, VERTEX_SELECTION_MASKING,
+    operator, toggle,
+)
 
 icons_dir = join(dirname(dirname(dirname(__file__))), "assets", "images", "custom_buttons")
 
@@ -63,5 +67,7 @@ def_paint_grease_pencil_buttons = (
     _panel("STROKE_SETTINGS", "Stroke", "stroke.png", "VIEW3D_PT_tools_grease_pencil_v3_brush_stroke"),
     _panel("STABILIZER", "Stabilize Stroke", "falloff_2.png", "VIEW3D_PT_tools_grease_pencil_v3_brush_stabilizer"),
     _panel("ADVANCED", "Advanced", "brush.png", "VIEW3D_PT_tools_grease_pencil_v3_brush_advanced"),
-    _operator("INSERT_BLANK_FRAME", "Insert Blank Keyframe", "options.png", "grease_pencil.insert_blank_frame"),
+    _operator("INSERT_BLANK_FRAME", "Insert Blank Keyframe", "frame_add.png", "grease_pencil.insert_blank_frame"),
+    GP_ONION_SKIN,
+    toggle("Draw on Back", "draw_back.png", "tool_settings.use_gpencil_draw_onback"),
 )

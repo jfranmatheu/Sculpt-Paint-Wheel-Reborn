@@ -1,4 +1,8 @@
 from os.path import dirname, join
+from ._buttons import (
+    AUTO_NORMALIZE, FACE_SELECTION_MASKING, GP_MULTI_FRAME, GP_ONION_SKIN, MIRROR_X, VERTEX_SELECTION_MASKING,
+    operator, toggle,
+)
 
 import bpy
 
@@ -65,4 +69,6 @@ def_sculpt_curves_buttons = (
     _panel("FALLOFF_SETTINGS", "Falloff", "falloff.png", "VIEW3D_PT_tools_brush_falloff"),
     _panel("MIRROR", "Symmetry", "mirror.png", "VIEW3D_PT_curves_sculpt_symmetry"),
     _menu("CURVES_MENU", "Curves", "grid.png", "VIEW3D_MT_sculpt_curves"),
+    MIRROR_X,
+    operator("Snap to Surface", "snap.png", "curves.snap_curves_to_surface#attach_mode='NEAREST'"),
 )
