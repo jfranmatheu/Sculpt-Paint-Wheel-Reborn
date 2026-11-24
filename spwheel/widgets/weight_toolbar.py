@@ -44,6 +44,8 @@ _TOOLS: tuple[_ToolSpec, ...] = (
     _ToolSpec("Sample Vertex Group", "sample_vertex_group", False, "Paint_Sample_Vertex_Group.png", offset=(0.0, -10.0)),
     _ToolSpec("Select Box", "select_box", False, "Select_Box.png", always_trigger=True)
 )
+# Grease Pencil weight paint has the brushes only (no gradient, sample or select tools).
+_GP_TOOLS: tuple[_ToolSpec, ...] = _TOOLS[:4]
 
 
 class WeightToolbarWidget(Widget):
@@ -53,8 +55,9 @@ class WeightToolbarWidget(Widget):
     def init(self) -> None:
         self.item_size = 28.0
         self.spacing = Vector((6.0, 5.0))
+        self._tools: tuple[_ToolSpec, ...] = _TOOLS
         self.rows = 2
-        self.items_per_row = max(1, int(ceil(len(_TOOLS) / max(1, self.rows))))
+        self.items_per_row = max(1, int(ceil(len(self._tools) / max(1, self.rows))))
         self._positions: list[Vector] = []
         self._centers: list[Vector] = []
         self._hover_idx = -1
@@ -75,7 +78,7 @@ class WeightToolbarWidget(Widget):
     def _sync_active_index(self, context: "Context") -> None:
         aid = self._active_tool_idname(context)
         self._active_idx = -1
-        for i, spec in enumerate(_TOOLS):
+        for i, spec in enumerate(self._tools):
             if aid == spec.identifier:
                 self._active_idx = i
                 break
@@ -88,7 +91,7 @@ class WeightToolbarWidget(Widget):
         y0 = self.offset.y + self._base_y
         row_col = 0
         row_idx = 0
-        for spec in _TOOLS:
+        for spec in self._tools:
             px = x0 + row_col * (self.item_size + self.spacing.x) + spec.offset[0]
             py = y0 - row_idx * (self.item_size + self.spacing.y) + spec.offset[1]
             p = Vector((px, py))
@@ -99,7 +102,15 @@ class WeightToolbarWidget(Widget):
                 row_col = 0
                 row_idx += 1
 
+    @property
+    def hover_label(self) -> str | None:
+        """Name of the hovered tool (shown by the wheel's centre widget)."""
+        return self._tools[self._hover_idx].label if 0 <= self._hover_idx < len(self._tools) else None
+
     def on_wheel_activate(self, context: "Context", wheel_prefs, storage, wg_prefs=None) -> None:
+        self._tools = _GP_TOOLS if context.mode == 'WEIGHT_GREASE_PENCIL' else _TOOLS
+        self.rows = 1 if len(self._tools) <= 4 else 2
+        self.items_per_row = max(1, int(ceil(len(self._tools) / self.rows)))
         wr = self.wheel.radius
         self.item_size = max(32.0, min(36.0, wr * 0.17))
         # Place the toolbar closer to the lower outer edge of the wheel.
@@ -107,7 +118,7 @@ class WeightToolbarWidget(Widget):
         assets_tools_dir = Path(__file__).resolve().parents[1] / "assets" / "images" / "tools"
         self._icon_paths = [
             str(assets_tools_dir / s.icon_relpath)
-            for s in _TOOLS
+            for s in self._tools
         ]
         self._layout()
         self._sync_active_index(context)
@@ -127,7 +138,7 @@ class WeightToolbarWidget(Widget):
     def on_left_press(self, context: "Context", event: "Event") -> bool:
         if self._hover_idx < 0:
             return False
-        spec = _TOOLS[self._hover_idx]
+        spec = self._tools[self._hover_idx]
         current_id = self._active_tool_idname(context)
         if current_id != spec.identifier or spec.always_trigger:
             bpy.ops.wm.tool_set_by_id(name=spec.identifier)
@@ -166,4 +177,4 @@ class WeightToolbarWidget(Widget):
             if tex is not None:
                 draw_textured_circle(c.x, c.y, icon_half * (1.06 if is_hover else 1.0), tex, opacity=1.0 if is_hover else 0.90, softness=0.2)
             else:
-                draw_text(_TOOLS[i].label[:8], c.x, c.y, size=8.5, color=(0.9, 0.9, 0.9, 0.9), align="CENTER", shadow=True)
+                draw_text(self._tools[i].label[:8], c.x, c.y, size=8.5, color=(0.9, 0.9, 0.9, 0.9), align="CENTER", shadow=True)

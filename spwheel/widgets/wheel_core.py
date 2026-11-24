@@ -49,6 +49,9 @@ class WheelCore(Widget):
         self.max_lines = max(1, min(3, wheel_prefs.center_text_max_lines))
 
     def get_text(self, context: Context) -> str:
+        for widget in self.wheel._widgets:
+            if text := getattr(widget, 'center_text', None):
+                return text
         label = getattr(self.wheel.hovered_widget, 'hover_label', None)
         if label:
             return label

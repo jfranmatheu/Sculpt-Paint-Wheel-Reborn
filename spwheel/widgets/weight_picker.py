@@ -49,6 +49,19 @@ class WeightPickerWidget(WidgetRing):
         self._pad_axis = None  # "h" | "v"
         self._drag_start_mouse = Vector((0.0, 0.0))
         self._drag_prev_mouse = Vector((0.0, 0.0))
+        self._center_text: str | None = None  # Shown in the wheel's centre while dragging.
+
+    @property
+    def center_text(self) -> str | None:
+        """While dragging, what the drag is changing (it overrides any hover text in the wheel's centre)."""
+        return self._center_text if self._drag_mode is not None else None
+
+    @property
+    def hover_label(self) -> str | None:
+        """The hovered weight marker."""
+        if self.hover_marker_index < 0 or not self.marker_buttons:
+            return None
+        return f"Weight {self.hover_marker_index / max(1, len(self.marker_buttons) - 1):.1f}"
 
     @staticmethod
     def _clamp(v: float, lo: float, hi: float) -> float:
@@ -58,6 +71,7 @@ class WeightPickerWidget(WidgetRing):
         return float(get_ups_weight(context) or 0.0)
 
     def _set_weight_value(self, context: "Context", value: float) -> None:
+        self._center_text = f"{self._clamp(value, 0.0, 1.0):.2f}"
         value = self._clamp(value, 0.0, 1.0)
         set_ups_weight(context, value)
         if getattr(self.wg_prefs, "set_weight_of_selection_directly", True) and context.mode == "PAINT_WEIGHT":
@@ -143,6 +157,7 @@ class WeightPickerWidget(WidgetRing):
 
         if hypot(p.x - self.center.x, p.y - self.center.y) <= self.center_pad_radius:
             self._drag_mode = "pad"
+            self._center_text = None
             return True
 
         self._drag_mode = "weight"
@@ -167,11 +182,15 @@ class WeightPickerWidget(WidgetRing):
                 if self._pad_axis == "v":
                     size = float(get_ups_size(context) or 35.0)
                     speed = 1.0 * (0.25 if event.shift else 1.0) * (2.0 if event.ctrl else 1.0)
-                    set_ups_size(context, int(self._clamp(size + diff.y * speed, 1.0, 500.0)))
+                    new_size = int(self._clamp(size + diff.y * speed, 1.0, 500.0))
+                    set_ups_size(context, new_size)
+                    self._center_text = f"Radius {new_size}"
                 elif self._pad_axis == "h":
                     strength = float(get_ups_strength(context) or 0.5)
                     speed = 0.01 * (0.25 if event.shift else 1.0) * (2.0 if event.ctrl else 1.0)
-                    set_ups_strength(context, self._clamp(strength + diff.x * speed, 0.01, 2.0))
+                    new_strength = self._clamp(strength + diff.x * speed, 0.01, 2.0)
+                    set_ups_strength(context, new_strength)
+                    self._center_text = f"Strength {new_strength:.2f}"
             self._drag_prev_mouse = p
             context.region.tag_redraw()
             return True
@@ -216,9 +235,5 @@ class WeightPickerWidget(WidgetRing):
             self._weight_value(context),
         )
 
-        pad_col = (0.12, 0.12, 0.13, 0.92)
-        draw_circle_fill(cx, cy, self.center_pad_radius, pad_col, softness=0.10)
-        draw_ring(cx, cy, self.center_pad_radius, (0.40, 0.40, 0.42, 0.8), thickness=1.0, softness=0.05)
-
-        w = self._weight_value(context)
-        draw_text(f"{w:.2f}", cx, cy, size=14.0, color=theme.text_color, align="CENTER", valign='MIDDLE', shadow=True, font_id=1)
+        # (The centre pad, the size / strength drag area, is not drawn: the wheel's centre shows the hovered item,
+        # and the value being dragged.)
