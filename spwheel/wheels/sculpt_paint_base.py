@@ -34,11 +34,21 @@ class SculptPaintWheel(Wheel):
     def on_brush_set_change(self, context: Context) -> None:
         self._activate(context)
 
-    def activate(self, context: Context, prefs: WheelPrefs, storage: SculptPaintWheelStorage) -> None:
-        active_brush_set = WheelStorage.get_by_mode(context).active_brush_set
+    def on_brush_change(self, context: Context) -> None:
+        """A brush was picked while the wheel stays open (Keep Open, or the trigger key still held): show / hide the
+        color picker when the new brush needs it and the old one didn't (or the other way round)."""
+        if self.wants_color_picker(context) != self.color_picker.enabled:
+            self._activate(context)
+
+    @staticmethod
+    def wants_color_picker(context: Context) -> bool:
         # Shown when the brush set asks for it, or when the active brush paints color (Paint brush in Sculpt
         # Mode, texture / vertex paint brushes): default sets never set ``use_color_picker``.
-        use_colorpk = (active_brush_set is not None and active_brush_set.use_color_picker)             or has_brush_color_capabilities(context)
+        active_brush_set = WheelStorage.get_by_mode(context).active_brush_set
+        return (active_brush_set is not None and active_brush_set.use_color_picker) or has_brush_color_capabilities(context)
+
+    def activate(self, context: Context, prefs: WheelPrefs, storage: SculptPaintWheelStorage) -> None:
+        use_colorpk = self.wants_color_picker(context)
         self.radius = self.default_radius if use_colorpk else self.reduced_radius
 
         self.brush_set_ring.set_transform_thickness(0.97, -1 * (prefs.brush_set_ring.slot_size + prefs.brush_set_ring.ring_padding * 2.0))

@@ -34,6 +34,7 @@ class PickerBrushButton(ButtonCircle):
         self._brush_metadata = None
         self.icon_gputex = None
         self.label = ''
+        self.active = False
 
     def on_left_press(self, context: Context, event: Event) -> bool:
         if not self.interactable or self._brush_metadata is None:
@@ -47,6 +48,10 @@ class PickerBrushButton(ButtonCircle):
         if self.parent is not None:
             self.parent.deactivate_all_pickers()
         self.active = True
+        if self.parent is not None:
+            wheel = self.wheel
+            if hasattr(wheel, "on_brush_change"):
+                wheel.on_brush_change(context)
         return True
 
     def draw_icon(self, context: Context, button_theme: ButtonTheme) -> None:

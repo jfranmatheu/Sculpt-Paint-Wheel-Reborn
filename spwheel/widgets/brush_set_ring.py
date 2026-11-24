@@ -15,6 +15,7 @@ from .widget import WidgetRing
 from ..gpu.draw import draw_circle_fill, draw_ring, draw_text
 from ..core.gpu.imm_2d import draw_lines
 from ..core.globals import GLOBALS
+from ..utils.ups import get_tool_settings
 
 
 USE_DEBUG = GLOBALS.IN_DEVELOPMENT  # (Rebuild logs: development builds only.)
@@ -241,13 +242,21 @@ class BrushSetRing(WidgetRing):
             self.active_brush_set.page_index = max_page_index
         brushes_metadata = self.get_page_brushes_metadata()
         self._layout_visible_pickers(len(brushes_metadata))
+        # The slots are new: the active brush's slot is highlighted again (it would otherwise be only after a click,
+        # and lost when the wheel re-lays out, e.g. showing the color picker for a painting brush).
+        ts = get_tool_settings(context)
+        ref = getattr(ts, "brush_asset_reference", None) if ts is not None else None
+        active_key = (ref.asset_library_type, ref.asset_library_identifier, ref.relative_asset_identifier) if ref else None
         # Set brush metadata for each picker.
         for i, pb in enumerate(self._pickers):
             if i < len(brushes_metadata):
                 if USE_DEBUG:
                     print(f"Setting brush metadata for picker {i}: {brushes_metadata[i].name}")
                 pb.enabled = True
-                pb.set_brush_metadata(brushes_metadata[i], show_label=False)
+                meta = brushes_metadata[i]
+                pb.set_brush_metadata(meta, show_label=False)
+                pb.active = active_key == (meta.asset_library_type, meta.asset_library_identifier,
+                                           meta.relative_asset_identifier)
             else:
                 # If no brush metadata, clear the picker data.
                 if USE_DEBUG:
