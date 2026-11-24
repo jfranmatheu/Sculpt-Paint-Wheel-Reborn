@@ -1,3 +1,4 @@
+import traceback
 from typing import Callable, Set
 from bpy.types import Context, Event
 
@@ -45,6 +46,20 @@ class WheelModal(bl_types.OperatorModal):
         if ts := get_tool_settings(context):
             if ts.brush:
                 ts.show_brush = True
+
+    def modal(self, context: Context, event: Event) -> Set[str]:
+        try:
+            return super().modal(context, event)
+        except Exception as ex:
+            # Without this, the error escapes the modal and the wheel is never closed: its drawing stays and the
+            # brush cursor stays hidden.
+            traceback.print_exc()
+            self.report({'ERROR'}, f"Sculpt-Paint Wheel: {ex}")
+            try:
+                return self._modal_end(context, cancel=True)
+            except Exception:
+                traceback.print_exc()
+                return OpReturn.CANCEL
 
     def modal_step_move(self, context: Context, event: Event, mouse: ModalMouse, **kw) -> bool:
         self.wheel_is_hovered = self.wheel.update_hover(context, mouse.current)
@@ -105,4 +120,9 @@ class WheelModal(bl_types.OperatorModal):
     def draw_2d(self, context: Context) -> None:
         if not hasattr(self, 'wheel'):
             return
-        self.wheel._draw(context, self.prefs)
+        try:
+            self.wheel._draw(context, self.prefs)
+        except Exception:
+            if not getattr(self, "_draw_error_reported", False):  # (Once: it would repeat on every redraw.)
+                self._draw_error_reported = True
+                traceback.print_exc()

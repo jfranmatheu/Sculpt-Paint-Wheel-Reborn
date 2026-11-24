@@ -7,6 +7,7 @@ from bpy.types import Context
 from ..gpu.brush_preview import _cache_root
 
 from ..core.bl_types import PropertyGroup
+from ..utils.report import report_error
 
 
 # Blender 5.3 moved brush falloff into the "Shape" panel for mesh paint modes, and the old
@@ -130,6 +131,14 @@ class WheelTartaButton(PropertyGroup):
         return kwargs
 
     def __call__(self, context: Context) -> None:
+        try:
+            self._run(context)
+        except Exception as ex:
+            # E.g. an operator whose poll fails here (no vertex groups...), a wrong operator / menu / panel id.
+            message = str(ex).strip().removeprefix("Error: ") or type(ex).__name__
+            report_error(context, f"Can't run '{self.name}'", message)
+
+    def _run(self, context: Context) -> None:
         if self.is_operator:
             op_call = self._resolve_op_call(self.operator_id)
             if op_call is None:

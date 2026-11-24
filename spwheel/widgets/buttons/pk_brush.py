@@ -30,8 +30,14 @@ class PickerBrushButton(ButtonCircle):
     def on_left_press(self, context: Context, event: Event) -> bool:
         if not self.interactable or self._brush_metadata is None:
             return False
-        self._brush_metadata.activate()
-        self.parent.deactivate_all_pickers()
+        try:
+            self._brush_metadata.activate()
+        except Exception as ex:
+            from ...utils.report import report_error
+            report_error(context, f"Can't use brush '{self._brush_metadata.name}'", str(ex).strip())
+            return False
+        if self.parent is not None:
+            self.parent.deactivate_all_pickers()
         self.active = True
         return True
 
