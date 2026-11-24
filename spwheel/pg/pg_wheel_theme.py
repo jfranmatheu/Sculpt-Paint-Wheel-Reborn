@@ -46,27 +46,34 @@ class WheelTheme(PropertyGroup):
     tarta_outline_color: FloatVectorProperty(
         subtype='COLOR', name="Pie Outline Color", min=0, max=1, size=4, default=(.164, .164, .164, .9))
     tarta_accent_color: FloatVectorProperty(
-        subtype='COLOR', name="Pie Hover Color", min=0, max=1, size=4, default=(.17, .36, .72, 1.0))
+        subtype='COLOR', name="Pie Accent Color", min=0, max=1, size=4, default=(.17, .36, .72, 1.0),
+        description="Outline of the hovered button and fill of pressed (toggled on) buttons")
     use_tarta_type_tint: BoolProperty(
         name="Tint by Button Type",
-        description="Tint the pie segments by the type of their custom button (operator / popup)",
+        description="Tint the pie segments by the type of their custom button (operator / script, popup, toggle)",
         default=True)
     tarta_operator_tint: FloatVectorProperty(
-        subtype='COLOR', name="Operator Tint", min=0, max=1, size=4, default=(.2, .35, .7, .25),
-        description="Tint of operator buttons, mixed over the pie color (alpha: tint strength)")
+        subtype='COLOR', name="Operator / Script Tint", min=0, max=1, size=4, default=(.2, .35, .7, .25),
+        description="Tint of operator and script buttons, mixed over the pie color (alpha: tint strength)")
     tarta_popup_tint: FloatVectorProperty(
         subtype='COLOR', name="Popup Tint", min=0, max=1, size=4, default=(.6, .4, .8, .15),
         description="Tint of popup (menu / panel) buttons, mixed over the pie color (alpha: tint strength)")
+    tarta_toggle_tint: FloatVectorProperty(
+        subtype='COLOR', name="Toggle Tint", min=0, max=1, size=4, default=(.25, .6, .45, .2),
+        description="Tint of toggle buttons while off, mixed over the pie color (alpha: tint strength). "
+                    "When on, they are filled with the accent color")
 
     def get_tarta_fill(self, button) -> Tuple[float, float, float, float]:
         """Segment fill for a custom button: the pie color, tinted by the button type when enabled."""
         base = self.tarta_color
         if not self.use_tarta_type_tint or button is None:
             return tuple(base)
-        if button.is_operator:
+        if button.is_operator or button.is_script:
             tint = self.tarta_operator_tint
         elif button.is_popup:
             tint = self.tarta_popup_tint
+        elif button.is_toggle:
+            tint = self.tarta_toggle_tint
         else:
             return tuple(base)
         k = tint[3]
@@ -95,6 +102,7 @@ class WheelTheme(PropertyGroup):
         tint_col.active = self.use_tarta_type_tint
         tint_col.prop(self, 'tarta_operator_tint')
         tint_col.prop(self, 'tarta_popup_tint')
+        tint_col.prop(self, 'tarta_toggle_tint')
 
         h, content = self.draw_section(layout, "Brush Slot Colors", icon='BRUSH_DATA', align_content=True, content_layout_type='COLUMN')
 

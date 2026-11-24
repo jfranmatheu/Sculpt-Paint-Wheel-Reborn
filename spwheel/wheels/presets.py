@@ -23,6 +23,28 @@ preset_type_per_mode = {
 }
 
 
+# Toggle buttons: (data path from the context, name, description). Mesh / curves symmetry for the modes that use it.
+_MIRROR_TOGGLES = (
+    ("object.data.use_mirror_x", "Mirror X", "Symmetry along X"),
+    ("object.data.use_mirror_y", "Mirror Y", "Symmetry along Y"),
+    ("object.data.use_mirror_z", "Mirror Z", "Symmetry along Z"),
+)
+preset_toggles_per_mode = {
+    "SCULPT": _MIRROR_TOGGLES,
+    "SCULPT_CURVES": _MIRROR_TOGGLES,
+    "PAINT_TEXTURE": _MIRROR_TOGGLES,
+    "PAINT_VERTEX": _MIRROR_TOGGLES,
+    "PAINT_WEIGHT": _MIRROR_TOGGLES,
+}
+
+# Pressed state for preset operators that switch something on/off: operator id -> boolean data path.
+preset_operator_states = {
+    "sculpt.dynamic_topology_toggle": "object.use_dynamic_topology_sculpting",
+}
+
+
 __all__ = [
     "preset_type_per_mode",
+    "preset_toggles_per_mode",
+    "preset_operator_states",
 ]

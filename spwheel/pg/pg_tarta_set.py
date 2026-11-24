@@ -41,7 +41,8 @@ class WheelTartaSet(PropertyGroup):
         button.image_path = metadata.get("image_path", "")
 
         button_type = metadata.get("type", "OPERATOR")
-        button.type = button_type if button_type in {"OPERATOR", "POPUP", "SCRIPT"} else "OPERATOR"
+        button.type = button_type if button_type in {"OPERATOR", "POPUP", "SCRIPT", "PROPERTY"} else "OPERATOR"
+        button.state_path = metadata.get("state_path", "")
 
         if button.type == "POPUP":
             popup_type = metadata.get("popup_type", "PANEL")
@@ -55,6 +56,11 @@ class WheelTartaSet(PropertyGroup):
             else:
                 button.operator_id = metadata.get("custom_identifier", "")
             button.attr = ""
+            return button
+
+        if button.type == "PROPERTY":
+            button.popup_type = "NONE"
+            button.data_path = metadata.get("data_path", "")
             return button
 
         if button.type == "OPERATOR":

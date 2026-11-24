@@ -8,7 +8,7 @@ from ..core.bl_types import OperatorAction
 from ..pg.pg_wheel_storage import WheelStorage, WheelTartaSetStorage
 from ..pg.pg_tarta_set import MAX_TARTA_BUTTONS
 from ..utils import button_scripts
-from ..wheels.presets import preset_type_per_mode
+from ..wheels.presets import preset_operator_states, preset_toggles_per_mode, preset_type_per_mode
 
 
 class OpPollActiveSet:
@@ -116,6 +116,11 @@ class OpTartaButtonAdd(OperatorAction, OpPollActiveSet):
             return [(a, b, c or "") for a, b, c in presets[2]]
         return [("_MASK_INVERT", "Invert Mask", "")]
 
+    def enum_preset_toggles(self, context):
+        if context is not None and (toggles := preset_toggles_per_mode.get(context.mode)):
+            return [(a, b, c or "") for a, b, c in toggles]
+        return [("NONE", "No presets for this mode", "")]
+
     name: StringProperty(name="Name", default="Button")
     image_path: StringProperty(name="Icon Image", default="", subtype="FILE_PATH")
 
@@ -125,8 +130,32 @@ class OpTartaButtonAdd(OperatorAction, OpPollActiveSet):
             ("OPERATOR", "Operator", ""),
             ("POPUP", "Popup", ""),
             ("SCRIPT", "Script", "Run a Python script, saved in the add-on user data"),
+            ("PROPERTY", "Toggle", "Toggle a boolean property; the button shows its state"),
         ),
         default="OPERATOR",
+    )
+
+    toggle_source: EnumProperty(
+        name="Toggle",
+        items=(
+            ("PRESET", "Preset", ""),
+            ("CUSTOM", "Custom", ""),
+        ),
+        default="PRESET",
+    )
+    preset_toggle: EnumProperty(name="Preset Toggle", items=enum_preset_toggles)
+    custom_toggle: StringProperty(
+        name="Property",
+        description="Boolean property as a data path from the context (e.g. object.data.use_mirror_x)",
+        default="object.data.use_mirror_x",
+        maxlen=1024,
+    )
+    state_path: StringProperty(
+        name="Pressed When",
+        description="Optional boolean data path from the context; the button is drawn pressed while it is True "
+                    "(e.g. object.use_dynamic_topology_sculpting). Left empty for presets that know their state",
+        default="",
+        maxlen=1024,
     )
 
     script_source: EnumProperty(
@@ -196,12 +225,20 @@ class OpTartaButtonAdd(OperatorAction, OpPollActiveSet):
         layout.prop(self, "image_path")
         layout.prop(self, "type")
 
+        if self.type == "PROPERTY":
+            layout.prop(self, "toggle_source", text="Use")
+            if self.toggle_source == "PRESET":
+                layout.prop(self, "preset_toggle")
+            else:
+                layout.prop(self, "custom_toggle")
+            return
         if self.type == "SCRIPT":
             layout.prop(self, "script_source", text="Use")
             if self.script_source == "TEXT":
                 layout.prop_search(self, "script_text", bpy.data, "texts")
             elif self.script_source == "FILE":
                 layout.prop(self, "script_file")
+            layout.prop(self, "state_path")
         elif self.type == "POPUP":
             layout.prop(self, "popup_type")
             if self.popup_type == "MENU":
@@ -222,6 +259,7 @@ class OpTartaButtonAdd(OperatorAction, OpPollActiveSet):
                 layout.prop(self, "preset_operator")
             else:
                 layout.prop(self, "custom_operator")
+            layout.prop(self, "state_path")
 
     def invoke(self, context, event):
         return context.window_manager.invoke_props_dialog(self)
@@ -237,8 +275,29 @@ class OpTartaButtonAdd(OperatorAction, OpPollActiveSet):
         button.name = self.name.strip() or "Button"
         button.image_path = self.image_path
         button.type = self.type
+        button.state_path = self.state_path.strip() if self.type in {"OPERATOR", "SCRIPT"} else ""
 
-        if self.type == "SCRIPT":
+        if self.type == "PROPERTY":
+            button.popup_type = "NONE"
+            button.operator_id = ""
+            button.attr = ""
+            path = self.preset_toggle if self.toggle_source == "PRESET" else self.custom_toggle.strip()
+            if path.startswith("bpy.context."):
+                path = path[len("bpy.context."):]
+            elif path.startswith("context."):
+                path = path[len("context."):]
+            if not path or path == "NONE":
+                active_set.buttons.remove(len(active_set.buttons) - 1)
+                self.report({"ERROR"}, "Pick a property to toggle")
+                return self.OpReturn.CANCEL
+            button.data_path = path
+            if self.toggle_source == "PRESET" and self.name.strip() in {"", "Button"}:
+                labels = {p: label for p, label, _d in preset_toggles_per_mode.get(context.mode, ())}
+                button.name = labels.get(path, button.name)
+            if button.get_state(context) is None:
+                self.report({"WARNING"}, f"'{path}' is not a boolean in the current context; the button will "
+                                         "do nothing until it is")
+        elif self.type == "SCRIPT":
             button.popup_type = "NONE"
             button.operator_id = ""
             button.attr = ""
@@ -271,6 +330,8 @@ class OpTartaButtonAdd(OperatorAction, OpPollActiveSet):
                 return self.OpReturn.CANCEL
             button.operator_id = op_id
             button.attr = payload
+            if not button.state_path:
+                button.state_path = preset_operator_states.get(op_id, "")
         elif self.type == "POPUP":
             button.attr = ""
             button.popup_type = self.popup_type

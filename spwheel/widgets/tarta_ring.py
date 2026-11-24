@@ -98,10 +98,16 @@ class TartaRing(WidgetRing):
                 fill = (seg_fill[0], seg_fill[1], seg_fill[2], seg_fill[3] * 0.45)
                 sector(cx, cy, self.seg_inner, self.seg_outer, a0, a1, fill=fill, gap=SEG_GAP, round_=SEG_ROUND)
                 continue
-            hovered = k == self.hover_layout_slot
+            btn = self._tarta_buttons[bid]
+            # Fill = state (pressed toggles / operators), outline = hover.
+            pressed = btn.get_state(context) is True
+            if k == self.hover_layout_slot:
+                seg_border, seg_border_w = (_shade(accent, -0.6) if pressed else _shade(accent, -0.3)), 2.0
+            else:
+                seg_border, seg_border_w = border, 1.0
             sector(cx, cy, self.seg_inner, self.seg_outer, a0, a1,
-                   fill=accent if hovered else theme.get_tarta_fill(self._tarta_buttons[bid]),
-                   border=_shade(accent, -0.25) if hovered else border, border_w=1.0,
+                   fill=accent if pressed else theme.get_tarta_fill(btn),
+                   border=seg_border, border_w=seg_border_w,
                    gap=SEG_GAP, round_=SEG_ROUND)
 
         # Icons (or the name when the button has no image), centred in their segment.

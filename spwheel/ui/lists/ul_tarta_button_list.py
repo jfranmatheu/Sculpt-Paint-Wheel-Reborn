@@ -66,7 +66,7 @@ class TartaButtonList(UIList):
         _row = row.row(align=False)
         _row.alignment = 'RIGHT'
         _row.active = False
-        _row.label(text="", icon={'OPERATOR': 'FILE_SCRIPT', 'SCRIPT': 'SCRIPT'}.get(item.type, 'TOPBAR'))
+        _row.label(text="", icon={'OPERATOR': 'FILE_SCRIPT', 'SCRIPT': 'SCRIPT', 'PROPERTY': 'CHECKBOX_HLT'}.get(item.type, 'TOPBAR'))
         # sub = row.row(align=True)
         # sub.operator() # move up/down
         # sub.operator() # delete

@@ -54,4 +54,5 @@ preset_operators_sculpt = (
     ("_PIVOT_ACTIVE", "Pivot to active vertex", "sculpt.set_pivot_position#mode='ACTIVE'"),
     ("_PIVOT_SURFACE", "Pivot to surface under cursor", "sculpt.set_pivot_position#mode='SURFACE'"),
     ('sculpt.optimize', "Optimize", ""),
+    ('sculpt.dynamic_topology_toggle', "Dyntopo", ""),
 )

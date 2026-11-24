@@ -62,6 +62,16 @@ class WheelTartaButtonsPanel(PanelTypes.VIEW_3D_SIDEBAR):
         if 0 <= idx < len(active_tarta_set.buttons) and active_tarta_set.buttons[idx].is_script:
             layout.operator(OpTartaButtonScriptEdit.bl_idname, text="Edit Script", icon='TEXT')
 
+    def draw_button_state_row(self, active_tarta_set: WheelTartaSet, layout: UILayout):
+        idx = active_tarta_set.active_button_index
+        if not (0 <= idx < len(active_tarta_set.buttons)):
+            return
+        button = active_tarta_set.buttons[idx]
+        if button.is_toggle:
+            layout.prop(button, "data_path", text="", icon='CHECKBOX_HLT')
+        elif button.is_operator or button.is_script:
+            layout.prop(button, "state_path", text="", icon='CHECKBOX_DEHLT', placeholder="Pressed When (optional)")
+
     def draw_button_icon_row(self, active_tarta_set: WheelTartaSet, layout: UILayout):
         idx = active_tarta_set.active_button_index
         if not (0 <= idx < len(active_tarta_set.buttons)):
@@ -90,5 +100,6 @@ class WheelTartaButtonsPanel(PanelTypes.VIEW_3D_SIDEBAR):
         if active_tarta_set := wheel_storage.active_tarta_set:
             self.draw_button_list(active_tarta_set, lists_col)
             self.draw_button_icon_row(active_tarta_set, main)
+            self.draw_button_state_row(active_tarta_set, main)
         else:
             main.box().label(text="No set selected", icon="INFO")
