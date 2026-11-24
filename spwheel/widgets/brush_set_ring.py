@@ -13,8 +13,8 @@ from ..gpu.utils import compute_slot_positions_in_double_ring
 from .buttons.pk_brush import PickerBrushButton
 from .widget import WidgetRing
 from ..gpu.draw import draw_circle_fill, draw_ring, draw_text
-from ..core.gpu.imm_2d import draw_lines, draw_rect_fill
-from ..gpu.ring_prims import sector
+from ..core.gpu.imm_2d import draw_lines
+from ..gpu.ring_prims import capsule
 from ..core.globals import GLOBALS
 from ..utils.ups import get_tool_settings
 
@@ -30,14 +30,8 @@ if TYPE_CHECKING:
 
 
 PAGE_PILL_HOVER = 0.07   # How much a hovered page pill lightens (dark palette) / darkens (light palette).
-
-
-def _capsule(x: float, y: float, w: float, h: float, color) -> None:
-    """A pill (rectangle with round ends), bottom-left corner at (x, y). Round ends: anti-aliased discs."""
-    r = h * 0.5
-    draw_rect_fill(x + r, y, w - h, h, color)
-    sector(x + r, y + r, 0.0, r, fill=color)
-    sector(x + w - r, y + r, 0.0, r, fill=color)
+PAGE_PILL_ALPHA = 0.5    # Idle pill: a translucent, secondary chip...
+PAGE_PILL_ALPHA_HOVER = 0.95  # ...solid while the mouse is over it.
 
 
 def _toward(c, target, k: float):
@@ -474,16 +468,19 @@ class BrushSetRing(WidgetRing):
         light = getattr(theme, 'is_light', False)
         part = self._hover_page_part if self._hover_page_area else None
         base = tuple(theme.base_color)
-        fill = _toward(base, (0.0, 0.0, 0.0, 1.0) if light else (1.0, 1.0, 1.0, 1.0), PAGE_PILL_HOVER) if part is not None else base
+        hovered = part is not None
+        fill = _toward(base, (0.0, 0.0, 0.0, 1.0) if light else (1.0, 1.0, 1.0, 1.0), PAGE_PILL_HOVER) if hovered else base
         border = tuple(theme.base_outline_color)
-        _capsule(x, y, w, h, (border[0], border[1], border[2], 1.0))                  # 1 px outline...
-        _capsule(x + 1.0, y + 1.0, w - 2.0, h - 2.0, (fill[0], fill[1], fill[2], 1.0))  # ...around the fill.
+        a = PAGE_PILL_ALPHA_HOVER if hovered else PAGE_PILL_ALPHA
+        # Secondary until hovered: translucent fill and outline, muted text and arrows.
+        capsule(x, y, w, h, fill=(fill[0], fill[1], fill[2], a),
+                border=(border[0], border[1], border[2], a if hovered else a * 0.8), border_w=1.0)
 
         text_col = tuple(theme.text_color)
-        muted = (text_col[0], text_col[1], text_col[2], text_col[3] * 0.75)
+        muted = (text_col[0], text_col[1], text_col[2], text_col[3] * (0.75 if hovered else 0.6))
         accent = tuple(theme.tarta_pressed_color)
         draw_text(f"{page_index + 1} / {page_count}", 0.0, y + h * 0.5, size=max(10.0, h * 0.48),
-                  color=text_col if part in (None, 0) else muted, align="CENTER", valign='MIDDLE', shadow=False)
+                  color=text_col if part == 0 else muted, align="CENTER", valign='MIDDLE', shadow=False)
 
         k = h * 0.2                      # Caret half-height.
         inset = h * 0.55                 # Carets at the pill's ends, clear of the numbers.
