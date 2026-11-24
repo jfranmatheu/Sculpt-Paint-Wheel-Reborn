@@ -49,10 +49,6 @@ class BrushSetPreferences(PropertyGroup):
     def ring_thickness(self, rows: int = 1) -> float:
         return rows * self.slot_size + (rows - 1) * self.row_gap + self.ring_padding * 2.0
 
-    def extra_radius(self, rows: int = 1) -> float:
-        """How much the wheel grows for the extra ring(s), so everything inside keeps its size."""
-        return (rows - 1) * (self.slot_size + self.row_gap)
-
     thickness_factor: FloatProperty(
         name="Thickness Factor",
         description="Thickness factor for the brush set ring thickness",

@@ -1,7 +1,7 @@
 from bpy.types import Context
 from ..pg.pg_wheel_prefs import WheelPrefs
 from .wheel import Wheel
-from ..widgets.brush_set_ring import BrushSetRing, ring_count_for
+from ..widgets.brush_set_ring import BrushSetRing, RING_OUTER_FACTOR, ring_count_for, wheel_layout
 from ..widgets.tarta_ring import TartaRing
 from ..widgets.wheel_core import WheelCore
 from ..pg.pg_wheel_storage import SculptPaintWheelStorage, WheelStorage
@@ -53,14 +53,15 @@ class SculptPaintWheel(Wheel):
         base_radius = self.default_radius if use_colorpk else self.reduced_radius
         brush_set = storage.active_brush_set
         rows = ring_count_for(ring_prefs, base_radius, len(brush_set.items) if brush_set else 0)
-        self.radius = base_radius + ring_prefs.extra_radius(rows)  # (A second ring grows the wheel by its width.)
+        self.radius, content_scale = wheel_layout(ring_prefs, base_radius, rows)  # (Two rings: a bigger wheel.)
         self.brush_set_ring.row_count = rows
 
-        self.brush_set_ring.set_transform_thickness(0.97, -ring_prefs.ring_thickness(rows))
+        self.brush_set_ring.set_transform_thickness(RING_OUTER_FACTOR, -ring_prefs.ring_thickness(rows))
         if use_colorpk:
             self.color_picker.enabled = True
-            # (Sized from the base radius: a double ring's extra row doesn't grow the pie into the color picker.)
-            self.tarta_ring.set_transform(0, 0, base_radius * .1, base_radius * .4)
+            # (From the base radius: with two rings the pie grows with the content, not with the whole wheel.)
+            pie = base_radius * content_scale
+            self.tarta_ring.set_transform(0, 0, pie * .1, pie * .4)
             self.color_picker.set_transform(0, 0, self.tarta_ring.radius_outer+4, self.brush_set_ring.radius_inner-4)
         else:
             self.color_picker.enabled = False

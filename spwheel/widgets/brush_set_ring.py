@@ -63,9 +63,25 @@ def ring_rows(radius_inner: float, radius_outer: float, prefs: BrushSetPreferenc
     return [(c, slot_r, n) for c in centers]
 
 
+DOUBLE_RING_CONTENT_SCALE = 1.25  # What's inside a double brush ring (pie, color picker) is this much bigger.
+RING_OUTER_FACTOR = 0.97          # The brush ring's outer edge, as a fraction of the wheel radius.
+
+
+def wheel_layout(prefs: BrushSetPreferences, base_radius: float, rows: int = 1) -> tuple[float, float]:
+    """(wheel radius, scale of the content inside the brush ring) for a wheel of that base radius.
+
+    With two rings the wheel grows by the second ring and by a bigger inside: the pie and the color picker
+    grow by DOUBLE_RING_CONTENT_SCALE, so they don't look lost in the middle of the bigger wheel."""
+    if rows <= 1:
+        return base_radius, 1.0
+    k = DOUBLE_RING_CONTENT_SCALE
+    inside = base_radius * RING_OUTER_FACTOR - prefs.ring_thickness(1)  # (Single ring: inside the brush ring.)
+    return (inside * k + prefs.ring_thickness(rows)) / RING_OUTER_FACTOR, k
+
+
 def slots_per_page(prefs: BrushSetPreferences, wheel_radius: float, rows: int = 1) -> int:
     """Brush slots per page of a wheel of that (base) radius with that many rings, as the wheel lays them out."""
-    outer = (wheel_radius + prefs.extra_radius(rows)) * 0.97
+    outer = wheel_layout(prefs, wheel_radius, rows)[0] * RING_OUTER_FACTOR
     return sum(n for _c, _r, n in ring_rows(outer - prefs.ring_thickness(rows), outer, prefs, rows))
 
 
