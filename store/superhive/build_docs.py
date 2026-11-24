@@ -118,3 +118,45 @@ for path in re.findall(rf'{re.escape(RAW)}/([^"]+)"', html):
 
 (HERE / "docs.html").write_text(html.strip() + "\n", encoding="utf-8")
 print("wrote", HERE / "docs.html")
+
+
+# ----- FAQ (the store's FAQ section: one question / answer pair per entry) --------------------------------------------
+# From FAQ.md, without the repository-oriented questions; store answers where FAQ.md points to the repository.
+import json  # noqa: E402
+
+FAQ_SKIP = {"Is it really free?", "If it's free, why is it for sale?", "Do buyers get a different version?",
+            "Where can I buy it?", "Can I help without buying it?"}
+FAQ_STORE_ANSWERS = {
+    "Does it work with Blender 4.x?":
+        "Not this version. It's built as a Blender 5.x extension and relies on the brush assets and Grease Pencil "
+        "system that Blender 5 uses.",
+    "How do I install it?":
+        "1. Download `spwheel-<version>.zip` from your Superhive library. Don't unzip it.\n"
+        "2. In Blender, go to **Edit › Preferences › Get Extensions**, open the **v** menu at the top right and choose "
+        "**Install from Disk...**. You can also drag and drop the zip into Blender.\n"
+        "3. Make sure **Sculpt-Paint Wheel** is enabled under **Edit › Preferences › Add-ons**.",
+    "Does it work on Windows, macOS and Linux?":
+        "It's built only on Blender's own Python and drawing APIs, with no platform-specific code, so it's available "
+        "on every platform Blender supports. If something looks wrong on your system, message me here on Superhive.",
+    "I found a bug.":
+        "Message me here on Superhive. Include your Blender version, the mode you were in, the steps to reproduce it, "
+        "and any error from **Window › Toggle System Console** (Windows) or the terminal (macOS/Linux).",
+}
+
+faq_md = (ROOT / "FAQ.md").read_text(encoding="utf-8").replace("\r\n", "\n")
+faq = []
+for block in re.split(r"\n### ", faq_md)[1:]:
+    question, _, answer = block.partition("\n")
+    question = question.strip()
+    if question in FAQ_SKIP:
+        continue
+    answer = FAQ_STORE_ANSWERS.get(question, answer.split("\n---")[0].split("\n## ")[0].strip())
+    answer = re.sub(r"\[([^\]]+)\]\([^)]*\)", r"\1", answer)  # Links: their text only.
+    answer = re.sub(r"\s*See Supported modes for what's on each one\.", "", answer)
+    answer_html = markdown.markdown(answer, extensions=["sane_lists"]).replace("\n", "")
+    for forbidden in ("github", "free", "open source", "README", "DOCS.md", "FAQ.md"):
+        assert forbidden.lower() not in (question + answer_html).lower(), (question, forbidden)
+    faq.append({"question": question, "answer": answer_html})
+
+(HERE / "faq.json").write_text(json.dumps(faq, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
+print("wrote", HERE / "faq.json", f"({len(faq)} questions)")

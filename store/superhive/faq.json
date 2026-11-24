@@ -1,0 +1,102 @@
+[
+ {
+  "question": "What is Sculpt-Paint Wheel?",
+  "answer": "<p>A Blender add-on that shows your brushes and tools on a radial wheel right under your cursor. Hold <code>Space</code> in a sculpt or paint mode, pick a brush or button, and keep working, without reaching for toolbars or the asset shelf.</p>"
+ },
+ {
+  "question": "Which modes does it support?",
+  "answer": "<p>Sculpt, Vertex Paint, Weight Paint, Texture Paint, Sculpt Curves (hair), and the four Grease Pencil modes: Draw, Sculpt, Weight Paint and Vertex Paint. Each mode has its own wheel.</p>"
+ },
+ {
+  "question": "Which Blender versions are supported?",
+  "answer": "<p><strong>Blender 5.1 and newer.</strong></p>"
+ },
+ {
+  "question": "Does it work with Blender 4.x?",
+  "answer": "<p>Not this version. It's built as a Blender 5.x extension and relies on the brush assets and Grease Pencil system that Blender 5 uses.</p>"
+ },
+ {
+  "question": "How do I install it?",
+  "answer": "<ol><li>Download <code>spwheel-&lt;version&gt;.zip</code> from your Superhive library. Don't unzip it.</li><li>In Blender, go to <strong>Edit › Preferences › Get Extensions</strong>, open the <strong>v</strong> menu at the top right and choose <strong>Install from Disk...</strong>. You can also drag and drop the zip into Blender.</li><li>Make sure <strong>Sculpt-Paint Wheel</strong> is enabled under <strong>Edit › Preferences › Add-ons</strong>.</li></ol>"
+ },
+ {
+  "question": "How do I update?",
+  "answer": "<p>Install the newer zip the same way. Your brush sets, custom buttons, scripts, themes and preferences are kept.</p>"
+ },
+ {
+  "question": "Does it work on Windows, macOS and Linux?",
+  "answer": "<p>It's built only on Blender's own Python and drawing APIs, with no platform-specific code, so it's available on every platform Blender supports. If something looks wrong on your system, message me here on Superhive.</p>"
+ },
+ {
+  "question": "Does it need internet access?",
+  "answer": "<p>No. The add-on only reads and writes its own files on your computer: its settings, your custom button scripts and your themes.</p>"
+ },
+ {
+  "question": "How do I open the wheel?",
+  "answer": "<p>Hover the 3D Viewport in a supported mode and <strong>hold <code>Space</code></strong>. Pick a brush or button with a left click, then release <code>Space</code>. <code>Esc</code> or a right click closes the wheel without picking anything.</p>"
+ },
+ {
+  "question": "Space used to play the animation. What happened?",
+  "answer": "<p>In sculpt and paint modes, the add-on binds <code>Space</code> to the wheel, which takes priority over Blender's play shortcut there. Playback still works with <code>Space</code> in other modes and from the Timeline. If you'd rather use a different key, see the next question.</p>"
+ },
+ {
+  "question": "Can I change the hotkey?",
+  "answer": "<p>Yes. Open the add-on preferences and go to the <strong>Keymap</strong> tab, or go to <strong>Edit › Preferences › Keymap</strong>, search for <code>Sculpt-Paint Wheel Modal</code>, and change the key for the modes you want.</p>"
+ },
+ {
+  "question": "Can I pick a brush just by releasing the key?",
+  "answer": "<p>Yes. Turn on <strong>Select on Release</strong> in the add-on preferences: press <code>Space</code>, move toward a brush, release, done. <strong>Keep Open</strong> does the opposite: the wheel stays open after you release the key until you press it again.</p>"
+ },
+ {
+  "question": "Some of my brushes don't fit on the wheel.",
+  "answer": "<p>When a set has more brushes than fit on the ring, the wheel gets pages. Scroll the mouse wheel, or click the arrows of the <code>‹ 1 / 2 ›</code> pill under the wheel, to switch between them.</p><p>You can also turn on <strong>Allow Double Ring</strong> in the add-on preferences (<strong>Settings</strong> tab, <strong>Brush Ring</strong>). Sets that don't fit on one ring then use two rings, and the wheel grows to fit them. <strong>Slots per Page</strong> there shows how many brushes fit.</p>"
+ },
+ {
+  "question": "How do I switch brush sets from the wheel?",
+  "answer": "<p>Drag the set name at the top of the wheel left or right, or use <code>Shift</code> + mouse wheel.</p>"
+ },
+ {
+  "question": "Can I change the brush size from the wheel?",
+  "answer": "<p>Yes. Press in the center of the wheel and drag up or down to change the brush radius, or left and right to change the strength. Hold <code>Shift</code> for finer steps or <code>Ctrl</code> for faster ones. <code>Esc</code> or a right click puts the values back.</p>"
+ },
+ {
+  "question": "Why doesn't Weight Paint show brushes?",
+  "answer": "<p>The Weight Paint wheels (mesh and Grease Pencil) show a <strong>weight dial</strong> instead of a brush list: pick any weight from 0.0 to 1.0 in one gesture. The round buttons under the dial switch weight paint tools, such as Blur or Smear.</p>"
+ },
+ {
+  "question": "How do I change which brushes and buttons appear?",
+  "answer": "<p>Open the sidebar with <code>N</code> in the 3D Viewport and go to the <strong>Wheel</strong> tab while you are in the mode you want to change. <strong>Brush Sets</strong> controls the outer ring and <strong>Custom Button Sets</strong> controls the center. See Customizing brushes and buttons.</p>"
+ },
+ {
+  "question": "What can a custom button do?",
+  "answer": "<p>It can run an operator, for example inverting the mask, or open a panel or menu as a popup, for example Stroke or Falloff settings. It can also toggle a setting such as Mirror X and show whether it's on, or run your own Python script. Each mode offers ready-made presets, and you can enter any panel, menu, operator or property by hand. A set holds up to 10 buttons.</p>"
+ },
+ {
+  "question": "Can I go back to the default setup?",
+  "answer": "<p>Yes. The default set is only created when a mode has no sets at all. Remove your sets for that mode in the <strong>Wheel</strong> tab, and the <strong>Default Set</strong> is recreated the next time Blender starts. In Sculpt Mode, <strong>Default Set (Masking)</strong> is only added once and doesn't come back if you remove it.</p>"
+ },
+ {
+  "question": "Where are my settings saved?",
+  "answer": "<p>In <code>preferences.json</code>, inside an <code>spwheel</code> folder in Blender's user folder for your Blender version, next to its <code>config</code> and <code>scripts</code> folders. It's written automatically when Blender closes, and whenever you press <strong>Save/Backup Addon Preferences</strong> in the add-on preferences. It's restored after you update or reinstall the extension. The same folder holds your custom button scripts (<code>scripts</code>) and your saved themes (<code>themes</code>).</p>"
+ },
+ {
+  "question": "Can I change the wheel's colors?",
+  "answer": "<p>Yes. In the add-on preferences, open the <strong>Theme</strong> tab. Pick one of the 10 built-in themes, such as Dark, Light or High Contrast, or edit the colors and use <strong>Save As</strong> to keep them as your own theme.</p>"
+ },
+ {
+  "question": "Nothing happens when I press Space.",
+  "answer": "<ul><li>Make sure the mouse is over the <strong>3D Viewport</strong> and you are in a <strong>supported mode</strong>: the wheel doesn't open in Object or Edit mode.</li><li>There must be an active object.</li><li>Check <strong>Edit › Preferences › Keymap</strong> for another add-on using <code>Space</code> in the same mode.</li><li>Make sure the extension is enabled under <strong>Edit › Preferences › Add-ons</strong>.</li></ul>"
+ },
+ {
+  "question": "A button doesn't do anything.",
+  "answer": "<p>Some operators only work in the right context. For example, multires buttons need a Multires modifier, and keyframe buttons need an existing keyframe. When an operator can't run, Blender doesn't apply it and may print the reason in the system console.</p>"
+ },
+ {
+  "question": "The Falloff button opens a \"Shape\" panel.",
+  "answer": "<p>That's expected on Blender 5.3. Blender moved brush falloff into the new <strong>Shape</strong> panel for mesh sculpt and paint modes, and the add-on opens it automatically.</p>"
+ },
+ {
+  "question": "I found a bug.",
+  "answer": "<p>Message me here on Superhive. Include your Blender version, the mode you were in, the steps to reproduce it, and any error from <strong>Window › Toggle System Console</strong> (Windows) or the terminal (macOS/Linux).</p>"
+ }
+]
