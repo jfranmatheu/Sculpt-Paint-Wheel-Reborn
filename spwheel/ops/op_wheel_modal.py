@@ -35,6 +35,8 @@ class WheelModal(bl_types.OperatorModal):
         if ts := get_tool_settings(context):
             if ts.brush:
                 ts.show_brush = False
+        # The draw handler runs for every 3D viewport region: draw only in the one the wheel was opened in.
+        self._region_ptr = context.region.as_pointer() if context.region is not None else 0
         self.wheel = Wheel.get(context)
         self.prefs = WheelPrefs.get(context)
         self.wheel._activate(context, modal_mouse.init)
@@ -125,6 +127,9 @@ class WheelModal(bl_types.OperatorModal):
     def draw_2d(self, context: Context) -> None:
         if not hasattr(self, 'wheel'):
             return
+        region = context.region
+        if region is None or region.as_pointer() != getattr(self, "_region_ptr", 0):
+            return  # (Another viewport, or another view of a quad view.)
         try:
             self.wheel._draw(context, self.prefs)
         except Exception:
