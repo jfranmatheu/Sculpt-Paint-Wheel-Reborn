@@ -367,6 +367,10 @@ class BrushSetRing(WidgetRing):
             return True
         return False
 
+    def end_drag(self, context: Context) -> None:
+        self._is_page_dragging = False
+        self._is_set_dragging = False
+
     def modal(self, context: Context, event: Event) -> bool:
         if not self._is_page_dragging and not self._is_set_dragging:
             return False
