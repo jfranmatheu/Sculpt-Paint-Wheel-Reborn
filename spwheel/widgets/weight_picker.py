@@ -1,4 +1,4 @@
-"""Weight picker ring + center gesture pad (size/strength) for weight wheel."""
+"""Weight picker ring for the weight wheel (its centre is the wheel's core: radius / strength drag)."""
 
 from __future__ import annotations
 
@@ -18,11 +18,7 @@ from ..gpu.weight import (
 from ..gpu.draw import draw_text
 from ..gpu.utils import draw_circle_fill, draw_ring
 from ..utils.ups import (
-    get_ups_size,
-    get_ups_strength,
     get_ups_weight,
-    set_ups_size,
-    set_ups_strength,
     set_ups_weight,
 )
 from .widget import WidgetRing
@@ -41,14 +37,10 @@ class WeightPickerWidget(WidgetRing):
         self.marker_buttons: list[tuple[float, float]] = []
         self.marker_button_radius = 6.0
         self.hover_marker_index = -1
-        self.center_pad_radius = 34.0
         self.color_ring_radius = 0.0
         self.color_ring_inner_radius = 0.0
         self.color_ring_outer_radius = 0.0
-        self._drag_mode = None  # "weight" | "pad" | "marker"
-        self._pad_axis = None  # "h" | "v"
-        self._drag_start_mouse = Vector((0.0, 0.0))
-        self._drag_prev_mouse = Vector((0.0, 0.0))
+        self._drag_mode = None  # "weight" | "marker"
         self._center_text: str | None = None  # Shown in the wheel's centre while dragging.
 
     @property
@@ -93,7 +85,6 @@ class WeightPickerWidget(WidgetRing):
         if self._drag_mode in {"weight", "marker"}:
             self._apply_weight_to_selection(context)
         self._drag_mode = None
-        self._pad_axis = None
 
     def _weight_from_pointer(self, p_local: Vector) -> float:
         dx = p_local.x - self.center.x
@@ -139,7 +130,6 @@ class WeightPickerWidget(WidgetRing):
             rebuilt_lines.append((sx, sy))
             rebuilt_lines.append((ex, ey))
         self.marker_lines = rebuilt_lines
-        self.center_pad_radius = max(24.0, self.color_ring_radius * 0.26)
         self.hover_marker_index = -1
 
     def test_hit(self, context: "Context", p: Vector) -> bool:
@@ -150,28 +140,18 @@ class WeightPickerWidget(WidgetRing):
                     self.hover_marker_index = i
                     return True
 
-        if hypot(p.x - self.center.x, p.y - self.center.y) <= self.center_pad_radius:
-            return True
         r = hypot(p.x - self.center.x, p.y - self.center.y)
         return self.color_ring_inner_radius * 0.96 <= r <= self.color_ring_outer_radius * 1.06
 
     def on_left_press(self, context: "Context", event: "Event") -> bool:
         mx, my = self.wheel.to_local(event.mouse_region_x, event.mouse_region_y)
         p = Vector((mx, my))
-        self._drag_start_mouse = p.copy()
-        self._drag_prev_mouse = p.copy()
-        self._pad_axis = None
 
         if self.hover_marker_index != -1:
             marker_count = max(1, len(self.marker_buttons) - 1)
             self._set_weight_value(context, self.hover_marker_index / marker_count)
             context.region.tag_redraw()
             self._drag_mode = "marker"
-            return True
-
-        if hypot(p.x - self.center.x, p.y - self.center.y) <= self.center_pad_radius:
-            self._drag_mode = "pad"
-            self._center_text = None
             return True
 
         self._drag_mode = "weight"
@@ -190,25 +170,6 @@ class WeightPickerWidget(WidgetRing):
             p = Vector((mx, my))
             if self._drag_mode == "weight":
                 self._set_weight_value(context, self._weight_from_pointer(p))
-            elif self._drag_mode == "pad":
-                diff = p - self._drag_prev_mouse
-                if self._pad_axis is None:
-                    d0 = p - self._drag_start_mouse
-                    if abs(d0.x) > 6.0 or abs(d0.y) > 6.0:
-                        self._pad_axis = "v" if abs(d0.y) >= abs(d0.x) else "h"
-                if self._pad_axis == "v":
-                    size = float(get_ups_size(context) or 35.0)
-                    speed = 1.0 * (0.25 if event.shift else 1.0) * (2.0 if event.ctrl else 1.0)
-                    new_size = int(self._clamp(size + diff.y * speed, 1.0, 500.0))
-                    set_ups_size(context, new_size)
-                    self._center_text = f"Radius {new_size}"
-                elif self._pad_axis == "h":
-                    strength = float(get_ups_strength(context) or 0.5)
-                    speed = 0.01 * (0.25 if event.shift else 1.0) * (2.0 if event.ctrl else 1.0)
-                    new_strength = self._clamp(strength + diff.x * speed, 0.01, 2.0)
-                    set_ups_strength(context, new_strength)
-                    self._center_text = f"Strength {new_strength:.2f}"
-            self._drag_prev_mouse = p
             context.region.tag_redraw()
             return True
         if event.type == "LEFTMOUSE" and event.value == "RELEASE":

@@ -53,6 +53,13 @@ class WheelPrefs(PropertyGroup):
         default=False,
     )
 
+    use_center_drag: BoolProperty(
+        name="Drag Center: Radius / Strength",
+        description="Drag in the centre of the wheel to change the brush: up / down its radius, left / right its "
+                    "strength (Shift: finer, Ctrl: faster, Esc / right click: cancel)",
+        default=True,
+    )
+
     center_text_max_lines: IntProperty(
         name="Center Text Lines",
         description="Maximum number of lines of the name shown in the centre of the wheel",
@@ -105,6 +112,7 @@ class WheelPrefs(PropertyGroup):
             col = body.column(heading="Behavior")
             col.prop(self, 'keep_open')
             col.prop(self, 'select_on_release')
+            col.prop(self, 'use_center_drag')
 
         if body := prefs_panel(layout, "spwheel_settings_brush_ring", "Brush Ring", 'BRUSH_DATA'):
             body.prop(self.brush_set_ring, 'slot_size')
