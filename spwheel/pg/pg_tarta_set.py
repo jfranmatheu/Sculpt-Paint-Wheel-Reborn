@@ -36,6 +36,32 @@ class WheelTartaSet(PropertyGroup):
             return op_id.strip(), ""
         return op_id.strip(), payload.strip()
 
+    @classmethod
+    def metadata_key(cls, metadata: dict[str, Any]) -> tuple[str, str]:
+        """(type, target) a default button's metadata creates: what ``button_key`` gives for that button."""
+        button_type = metadata.get("type", "OPERATOR")
+        if button_type == "PROPERTY":
+            return button_type, metadata.get("data_path", "")
+        if button_type == "POPUP":
+            if metadata.get("as_attribute", "CUSTOM") == "PRESET":
+                target = metadata.get("preset_panel", "") or metadata.get("preset_menu", "")
+            else:
+                target = ""
+            return button_type, target or metadata.get("custom_identifier", "")
+        if button_type == "OPERATOR":
+            op_id, _payload = cls._split_operator_expr(metadata.get("custom_identifier", ""))
+            return button_type, op_id or metadata.get("preset_operator", "")
+        return button_type, metadata.get("name", "")
+
+    @staticmethod
+    def button_key(button: WheelTartaButton) -> tuple[str, str]:
+        """(type, target) of a button: its operator / popup id, or its property path."""
+        if button.is_toggle:
+            return button.type, button.data_path
+        if button.is_script:
+            return button.type, button.name
+        return button.type, button.operator_id
+
     def add_tarta_button_from_metadata(self, metadata: dict[str, Any], mode: str = "") -> WheelTartaButton:
         button = self.buttons.add()
         button.name = metadata.get("name", "Button")

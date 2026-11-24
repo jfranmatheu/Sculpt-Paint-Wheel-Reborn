@@ -11,6 +11,9 @@ from .paint_grease_pencil_defaults import def_paint_grease_pencil_buttons, def_p
 from .vertex_grease_pencil_defaults import def_vertex_grease_pencil_buttons, def_vertex_grease_pencil_tools
 from .masking_defaults import MASKING_SET_NAME, def_sculpt_masking_buttons
 
+# Bump when buttons are added to the default sets: existing "Default Set"s get the ones they are missing once.
+DEFAULTS_VERSION = 1
+
 # Keys are `context.mode` values.
 _tarta_sets = {
     'SCULPT': def_sculpt_buttons,

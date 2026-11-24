@@ -64,4 +64,14 @@ def_paint_texture_buttons = (
     FACE_SELECTION_MASKING,
     operator("Save All Images", "save.png", "image.save_all_modified"),
     operator("Add Simple UVs", "uv.png", "paint.add_simple_uvs"),
+    {
+        'id': 'TEXTURE_SLOTS',
+        'name' : "Texture Slots",
+        'image_path' : join(icons_dir, 'frames.png'),
+        'type' : 'POPUP',
+        'popup_type' : 'PANEL',
+        'as_attribute' : 'PRESET',
+        'preset_panel' : 'VIEW3D_PT_slots_projectpaint'
+    },
+    toggle("Cavity Mask", "dirt.png", "tool_settings.image_paint.use_cavity"),
 )

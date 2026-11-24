@@ -4,9 +4,9 @@ from bpy.props import BoolProperty, CollectionProperty, EnumProperty, IntPropert
 from bpy.types import Context
 
 from ..core.bl_types import PropertyGroup
-from .pg_tarta_set import WheelTartaSet
+from .pg_tarta_set import MAX_TARTA_BUTTONS, WheelTartaSet
 from .pg_brush_set import BrushSet
-from .default_sets import MASKING_SET_NAME, get_tarta_set, get_masking_set, get_brush_set
+from .default_sets import DEFAULTS_VERSION, MASKING_SET_NAME, get_tarta_set, get_masking_set, get_brush_set
 from ..utils.tint_palette import default_tint
 
 TARTA_SET_ENUM_ITEMS: list[tuple[str, str, str]] = [("__none__", "No sets", "No custom button sets available")]
@@ -115,6 +115,8 @@ class WheelTartaSetStorage(PropertyGroup):
     tarta_sets: CollectionProperty(type=WheelTartaSet)
     # The "Masking" default set is added once (also to existing data); deleting it doesn't bring it back.
     masking_set_seeded: BoolProperty(default=False)
+    # Version of the default buttons this data has seen (default_sets.DEFAULTS_VERSION).
+    defaults_version: IntProperty(default=0)
     # Bundled buttons created before custom tints get their default color once.
     tints_seeded: BoolProperty(default=False)
     active_tarta_set_index: IntProperty(
@@ -335,6 +337,17 @@ class WheelStorage(PropertyGroup):
                     for button_meta in default_tarta_buttons:
                         if isinstance(button_meta, dict):
                             def_tarta_set.add_tarta_button_from_metadata(button_meta, mode)
+                elif tarta_storage.defaults_version < DEFAULTS_VERSION:
+                    # Existing data: give its "Default Set" the default buttons added since (while there is room).
+                    def_tarta_set = next((s for s in tarta_storage.tarta_sets if s.name == "Default Set"), None)
+                    if def_tarta_set is not None:
+                        have = {WheelTartaSet.button_key(b) for b in def_tarta_set.buttons}
+                        for button_meta in default_tarta_buttons:
+                            if len(def_tarta_set.buttons) >= MAX_TARTA_BUTTONS:
+                                break
+                            if isinstance(button_meta, dict) and WheelTartaSet.metadata_key(button_meta) not in have:
+                                def_tarta_set.add_tarta_button_from_metadata(button_meta, mode)
+                tarta_storage.defaults_version = DEFAULTS_VERSION
 
             if (masking_buttons := get_masking_set(mode)) and not storage.masking_set_seeded:
                 tarta_storage: WheelTartaSetStorage = storage
