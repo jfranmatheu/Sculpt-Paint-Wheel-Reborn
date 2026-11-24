@@ -675,3 +675,22 @@ cards(img, y + 24, [
     ("Per mode", "Every mode keeps its own sets, ready when you switch."),
 ], cols=3, h=205)
 save_slide(img, "g08_yours.png")
+
+# ===== Featured image: 2:1 (2400x1200), the main image's composition for the store's featured slot ================
+FH = 600
+img = canvas(FH, spots=((820, 330, 400), (80, 0, 240)))
+d = ImageDraw.Draw(img)
+chip(img, 72, 112, "NEW  \u00b7  VERSION 2.0", accent=True, f=F_NUM)
+d.text((P(72), P(156)), "Sculpt-Paint", font=F_HERO, fill=TEXT)
+d.text((P(72), P(238)), "Wheel 2", font=F_HERO, fill=ACCENT)
+para(d, 72, 346, "Your brushes, one keypress away. Hold Space, flick, keep working.", F_SUB, MUTED, 440, 1.5)
+y = 424
+for t_ in ("Every sculpt and paint mode", "10 themes, or make your own", "Up to 34 brushes on one page"):
+    d.ellipse((P(74), P(y + 9), P(82), P(y + 17)), fill=ACCENT)
+    d.text((P(96), P(y)), t_, font=F_LABEL, fill=TEXT)
+    y += 34
+place_wheel(img, "modes", "texture", 1022, 160, 262)
+place_wheel(img, "modes", "weight", 1040, 462, 220, with_pill=False)
+place_wheel(img, "modes", "sculpt", 755, 318, 380, glow=True)
+img.convert("RGB").resize((2400, 1200), LANCZOS).save(os.path.join(OUT, "featured_2x1.png"), optimize=True)
+print("saved featured_2x1.png")
