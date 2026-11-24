@@ -326,6 +326,7 @@ class WheelStorage(PropertyGroup):
             if storage is None:
                 continue
 
+            fresh_tarta_sets = len(getattr(storage, "tarta_sets", ())) == 0
             if default_tarta_buttons := get_tarta_set(mode):
                 tarta_storage: WheelTartaSetStorage = storage
                 if len(tarta_storage.tarta_sets) == 0:
@@ -342,8 +343,13 @@ class WheelStorage(PropertyGroup):
                 masking_set.name = MASKING_SET_NAME
                 for button_meta in masking_buttons:
                     masking_set.add_tarta_button_from_metadata(button_meta, mode)
-                # Keep the set the user had active.
-                if active_idx >= 0:
+                if fresh_tarta_sets:
+                    # New data: the masking set is the main default set, first and active.
+                    tarta_storage.tarta_sets.move(len(tarta_storage.tarta_sets) - 1, 0)
+                    tarta_storage.active_tarta_set_index = 0
+                    _sync_tarta_sets_enum(tarta_storage)
+                elif active_idx >= 0:
+                    # Existing data: keep the set the user had active.
                     tarta_storage.active_tarta_set_index = active_idx
                     _sync_tarta_sets_enum(tarta_storage)
                 storage.masking_set_seeded = True

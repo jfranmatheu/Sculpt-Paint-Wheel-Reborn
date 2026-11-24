@@ -1,8 +1,11 @@
-"""Second default custom-button set for Sculpt, "Masking": mask and face-set operators only."""
+"""Main default custom-button set for Sculpt, "Default Set (Masking)": mask and face-set operators only.
+
+On new data it is the first and active set (the older "Default Set" follows it); existing data gets it once, without
+changing the active set."""
 
 from ._buttons import operator as _op
 
-MASKING_SET_NAME = "Masking"
+MASKING_SET_NAME = "Default Set (Masking)"
 
 
 def_sculpt_masking_buttons = (
