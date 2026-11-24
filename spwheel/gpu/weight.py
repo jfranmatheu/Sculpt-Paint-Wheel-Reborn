@@ -40,6 +40,12 @@ def angle_deg_to_weight_value(angle_deg: float) -> float:
     return 0.0 if a < 270.0 else 1.0
 
 
+def angle_in_weight_arc(angle_deg: float) -> bool:
+    """Whether the angle is on the drawn weight arc (not in the open sector at the bottom)."""
+    a = angle_deg % 360.0
+    return a >= 315.0 or a <= 225.0
+
+
 def marker_points(
     cx: float,
     cy: float,

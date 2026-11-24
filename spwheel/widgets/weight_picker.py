@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from math import atan2, hypot
+from math import atan2, degrees, hypot
 from typing import TYPE_CHECKING
 
 import bpy
@@ -10,6 +10,7 @@ from mathutils import Vector
 
 from ..gpu.weight import (
     angle_deg_to_weight_value,
+    angle_in_weight_arc,
     draw_weight_handle,
     draw_weight_hue_ring,
     draw_weight_markers,
@@ -141,7 +142,10 @@ class WeightPickerWidget(WidgetRing):
                     return True
 
         r = hypot(p.x - self.center.x, p.y - self.center.y)
-        return self.color_ring_inner_radius * 0.96 <= r <= self.color_ring_outer_radius * 1.06
+        if not (self.color_ring_inner_radius * 0.96 <= r <= self.color_ring_outer_radius * 1.06):
+            return False
+        # Only the drawn arc: the open sector at the bottom (where the toolbar is) would set the weight to 0 / 1.
+        return angle_in_weight_arc(degrees(atan2(p.y - self.center.y, p.x - self.center.x)))
 
     def on_left_press(self, context: "Context", event: "Event") -> bool:
         mx, my = self.wheel.to_local(event.mouse_region_x, event.mouse_region_y)
