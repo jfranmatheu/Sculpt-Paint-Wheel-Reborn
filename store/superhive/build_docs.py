@@ -22,7 +22,7 @@ import markdown
 HERE = pathlib.Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
 BRANCH = "V2"
-RAW = f"https://raw.githubusercontent.com/jfran3d/Sculpt-Paint-Wheel-Reborn/{BRANCH}/store/media"
+RAW = f"https://raw.githubusercontent.com/jfranmatheu/Sculpt-Paint-Wheel-Reborn/{BRANCH}/store/media"
 MEDIA = ROOT / "store" / "media"
 
 md = (ROOT / "DOCS.md").read_text(encoding="utf-8")
