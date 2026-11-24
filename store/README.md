@@ -6,7 +6,7 @@ Marketing material for the store listings of Sculpt-Paint Wheel. This folder isn
 |---|---|---|
 | [Superhive](superhive/) | https://superhivemarket.com/products/sculpt-paint-wheel | `description.html` (product description), `docs.html` (documentation tab, generated from `DOCS.md` by `build_docs.py`) |
 | [Payhip](payhip/) | | `description.html` (product description; the user guide ships as a PDF with the product) |
-| [media](media/) | | Shared by both: `images/` (page graphics), `gallery/` (16:9 gallery images), `videos/` (mp4 + animated webp) |
+| [media](media/) | | Shared by both: `images/` (page graphics), `gallery/` (2:1 gallery images, as Superhive requires), `videos/` (mp4 + animated webp) |
 
 ## Publishing
 
@@ -34,7 +34,7 @@ Everything is made from the real add-on running in Blender 5.3:
    ```
    blender --factory-startup --enable-event-simulate --window-geometry 0 0 1920 1200 --python store/tools/capture_v2.py -- <captures dir> <part>
    ```
-2. **Graphics**: `python store/tools/v2_graphics.py <captures dir> <output dir>` renders the page images `v2_01_hero.png` ... `v2_14_anatomy.png`, the chapter banners `v2_ch01.png` ... `v2_ch10.png` (1600 px wide, rounded transparent corners) and the gallery slides `g01_cover.png` ... `g08_yours.png` (1920x1080). Copy them to `media/images/` and `media/gallery/`.
+2. **Graphics**: `python store/tools/v2_graphics.py <captures dir> <output dir>` renders the page images `v2_01_hero.png` ... `v2_14_anatomy.png`, the chapter banners `v2_ch01.png` ... `v2_ch10.png` (1600 px wide, rounded transparent corners) and the gallery slides `g01_cover.png` ... `g08_yours.png` (1920x960, 2:1) plus `featured_2x1.png` (2400x1200). Copy them to `media/images/` and `media/gallery/`.
 3. **Videos**: `python store/tools/live_montage.py <captures dir>/themes_live <output dir> themes` and `... /tints_live <output dir> tints` (needs ffmpeg) edit the live recordings into `v2_themes` / `v2_tints`: an animated cursor working the real Preferences, the wheel updating beside it, captions and title cards. `.mp4` (1920x1080) for the galleries, animated `.webp` for the pages. Copy them to `media/videos/`.
 
 ## Builds

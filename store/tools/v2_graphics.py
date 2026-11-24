@@ -570,110 +570,109 @@ for n, title in enumerate(CHAPTERS, 1):
     d.text((P(224), P(66)), title, font=F_H1, fill=TEXT)
     save(img, f"v2_ch{n:02d}.png")
 
-# ===== Gallery: 16:9 slides (1920x1080, square corners) for the stores' image galleries ============================
-GH = 675  # 1200 x 675 layout = 16:9
+# ===== Gallery: 2:1 slides (1920x960, square corners) for the stores' image galleries (Superhive takes 2:1 only) ====
+GH = 600  # 1200 x 600 layout = 2:1
 GALLERY_W = 1920
 
 
 def save_slide(img, name):
-    img.convert("RGB").resize((GALLERY_W, GALLERY_W * 9 // 16), LANCZOS).save(os.path.join(OUT, name), optimize=True)
+    img.convert("RGB").resize((GALLERY_W, GALLERY_W // 2), LANCZOS).save(os.path.join(OUT, name), optimize=True)
     print("saved", name)
 
 
-# 1. Cover
-img = canvas(GH, spots=((850, 360, 420), (80, 0, 240)))
+# 1. Cover (the featured image's composition)
+img = canvas(GH, spots=((820, 330, 400), (80, 0, 240)))
 d = ImageDraw.Draw(img)
-chip(img, 72, 150, "NEW  \u00b7  VERSION 2.0", accent=True, f=F_NUM)
-d.text((P(72), P(196)), "Sculpt-Paint", font=F_HERO, fill=TEXT)
-d.text((P(72), P(278)), "Wheel 2", font=F_HERO, fill=ACCENT)
-para(d, 72, 388, "Your brushes, one keypress away. Hold Space, flick, keep working.", F_SUB, MUTED, 430, 1.5)
-y = 470
+chip(img, 72, 112, "NEW  \u00b7  VERSION 2.0", accent=True, f=F_NUM)
+d.text((P(72), P(156)), "Sculpt-Paint", font=F_HERO, fill=TEXT)
+d.text((P(72), P(238)), "Wheel 2", font=F_HERO, fill=ACCENT)
+para(d, 72, 346, "Your brushes, one keypress away. Hold Space, flick, keep working.", F_SUB, MUTED, 440, 1.5)
+y = 424
 for t_ in ("Every sculpt and paint mode", "10 themes, or make your own", "Up to 34 brushes on one page"):
     d.ellipse((P(74), P(y + 9), P(82), P(y + 17)), fill=ACCENT)
     d.text((P(96), P(y)), t_, font=F_LABEL, fill=TEXT)
-    y += 36
-place_wheel(img, "modes", "texture", 1022, 178, 276)
-place_wheel(img, "modes", "weight", 1040, 506, 228, with_pill=False)
-place_wheel(img, "modes", "sculpt", 752, 368, 388, glow=True)
+    y += 34
+place_wheel(img, "modes", "texture", 1022, 160, 262)
+place_wheel(img, "modes", "weight", 1040, 462, 220, with_pill=False)
+place_wheel(img, "modes", "sculpt", 755, 318, 380, glow=True)
 save_slide(img, "g01_cover.png")
 
 # 2. Modes
-img = canvas(GH, spots=((600, 380, 480),))
-y = header(img, 600, 44, "EVERY PAINT MODE", "Nine wheels, ready out of the box", center=True)
+img = canvas(GH, spots=((600, 340, 440),))
+y = header(img, 600, 34, "EVERY PAINT MODE", "Nine wheels, ready out of the box", center=True)
 d = ImageDraw.Draw(img)
 for i, (mid, name) in enumerate(MODES):
     row, col = divmod(i, 5)
     n_in_row = 5 if row == 0 else 4
     cx = 600 + (col - (n_in_row - 1) / 2) * 214
-    cy = y + 92 + row * 238
+    cy = y + 78 + row * 212
     info = json.load(open(os.path.join(CAP, "modes", f"{mid}.json")))
-    place_wheel(img, "modes", mid, cx, cy, 170 * info["radius"] / 210, with_pill=False)
-    d.text((P(cx), P(cy + 98)), name, font=F_SMALL, fill=TEXT, anchor="ma")
+    place_wheel(img, "modes", mid, cx, cy, 148 * info["radius"] / 210, with_pill=False)
+    d.text((P(cx), P(cy + 86)), name, font=F_SMALL, fill=TEXT, anchor="ma")
 save_slide(img, "g02_modes.png")
 
 # 3. Smart centre
-img = canvas(GH, spots=((600, 380, 420),))
-y = header(img, 600, 56, "NEW  \u00b7  SMART CENTRE", "Tune your brush without leaving the wheel", center=True)
+img = canvas(GH, spots=((600, 340, 400),))
+y = header(img, 600, 42, "NEW  \u00b7  SMART CENTRE", "Tune your brush without leaving the wheel", center=True)
 d = ImageDraw.Draw(img)
 for i, (name, title, sub) in enumerate([("sculpt_hover", "Hover", "The centre names the button under the cursor"),
                                         ("sculpt_drag_radius", "Drag up / down", "Brush radius"),
                                         ("sculpt_drag_strength", "Drag left / right", "Brush strength")]):
     cx = 240 + i * 360
-    zoom_circle(img, "centre", name, cx, y + 150, 290, 118)
-    label(d, cx, y + 320, title, sub)
+    zoom_circle(img, "centre", name, cx, y + 130, 256, 118)
+    label(d, cx, y + 280, title, sub)
 save_slide(img, "g03_centre.png")
 
 # 4. Themes
-img = canvas(GH, spots=((600, 380, 520),))
-y = header(img, 600, 44, "NEW  \u00b7  THEMES", "Ten looks built in. Or make your own.", center=True)
+img = canvas(GH, spots=((600, 340, 480),))
+y = header(img, 600, 34, "NEW  \u00b7  THEMES", "Ten looks built in. Or make your own.", center=True)
 d = ImageDraw.Draw(img)
 for i, n in enumerate(THEMES):
     cx = 156 + (i % 5) * 222
-    cy = y + 92 + (i // 5) * 238
-    place_wheel(img, "themes", "sculpt_" + n.lower().replace(" ", "_"), cx, cy, 178, with_pill=False)
-    d.text((P(cx), P(cy + 100)), n, font=F_SMALL, fill=TEXT, anchor="ma")
+    cy = y + 80 + (i // 5) * 212
+    place_wheel(img, "themes", "sculpt_" + n.lower().replace(" ", "_"), cx, cy, 158, with_pill=False)
+    d.text((P(cx), P(cy + 88)), n, font=F_SMALL, fill=TEXT, anchor="ma")
 save_slide(img, "g04_themes.png")
 
 # 5. Double ring
-img = canvas(GH, spots=((820, 400, 400),))
-y = header(img, 72, 56, "NEW  \u00b7  DOUBLE RING", "Big brush sets, one glance",
+img = canvas(GH, spots=((830, 320, 380),))
+y = header(img, 72, 52, "NEW  \u00b7  DOUBLE RING", "Big brush sets, one glance",
            "A set that doesn't fit on one ring gets a second, staggered ring.", max_w=420)
 d = ImageDraw.Draw(img)
-k = 500 / (2 * two["radius"])
-d.text((P(72), P(y + 20)), "34", font=F_STAT, fill=ACCENT)
-d.text((P(72), P(y + 100)), "brushes on one page", font=F_SUB, fill=TEXT)
-d.text((P(72), P(y + 136)), "instead of 14 with one ring", font=F_SMALL, fill=MUTED)
-place_wheel(img, "double", "big_two_rings", 840, 380, 500, glow=True)
+d.text((P(72), P(y + 10)), "34", font=F_STAT, fill=ACCENT)
+d.text((P(72), P(y + 90)), "brushes on one page", font=F_SUB, fill=TEXT)
+d.text((P(72), P(y + 126)), "instead of 14 with one ring", font=F_SMALL, fill=MUTED)
+place_wheel(img, "double", "big_two_rings", 840, 300, 470, glow=True)
 save_slide(img, "g05_double_ring.png")
 
 # 6. Color
-img = canvas(GH, spots=((330, 400, 300), (870, 400, 300)))
-y = header(img, 600, 56, "COLOR, BUILT IN", "Pick colors without leaving the wheel", center=True)
+img = canvas(GH, spots=((330, 350, 280), (870, 350, 280)))
+y = header(img, 600, 42, "COLOR, BUILT IN", "Pick colors without leaving the wheel", center=True)
 d = ImageDraw.Draw(img)
 for i, (mid, name) in enumerate([("vertex", "Vertex Paint"), ("gp-draw", "Grease Pencil Draw")]):
     cx = 330 + i * 540
-    place_wheel(img, "modes", mid, cx, y + 190, 360, with_pill=False)
-    label(d, cx, y + 392, name)
+    place_wheel(img, "modes", mid, cx, y + 168, 310, with_pill=False)
+    label(d, cx, y + 342, name)
 save_slide(img, "g06_color.png")
 
 # 7. Theme tab
-img = canvas(GH, spots=((980, 420, 360),))
-y = header(img, 72, 48, "THEME TAB", "Every color, edited live")
-framed(img, os.path.join(CAP, "prefs", "prefs_theme_modified.png"), (236, 330, 1574, 1000), 72, y - 6, 700)
-place_wheel(img, "themes", "sculpt_midnight", 960, 400, 400, with_pill=False, glow=True)
+img = canvas(GH, spots=((980, 340, 340),))
+y = header(img, 72, 40, "THEME TAB", "Every color, edited live")
+framed(img, os.path.join(CAP, "prefs", "prefs_theme_modified.png"), (236, 330, 1574, 1000), 72, y - 6, 660)
+place_wheel(img, "themes", "sculpt_midnight", 970, 330, 380, with_pill=False, glow=True)
 save_slide(img, "g07_theme_tab.png")
 
 # 8. Make it yours
-img = canvas(GH, spots=((100, 600, 380),))
-y = header(img, 72, 64, "MAKE IT YOURS", "Your brushes, your buttons, your look")
-cards(img, y + 24, [
+img = canvas(GH, spots=((100, 560, 360),))
+y = header(img, 72, 48, "MAKE IT YOURS", "Your brushes, your buttons, your look")
+cards(img, y + 12, [
     ("Brush sets", "Any brush asset, your own included. Switch sets right from the wheel."),
     ("Custom buttons", "Panels, menus, operators, toggles or your own Python scripts."),
     ("Your icons", "Pick from the bundled icon set or load any image."),
     ("Tints", "Color buttons by type or one by one: fill, outline, icon or a strip."),
     ("Themes", "Ten built in, plus every theme you save."),
     ("Per mode", "Every mode keeps its own sets, ready when you switch."),
-], cols=3, h=205)
+], cols=3, h=178)
 save_slide(img, "g08_yours.png")
 
 # ===== Featured image: 2:1 (2400x1200), the main image's composition for the store's featured slot ================
