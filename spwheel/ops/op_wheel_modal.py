@@ -10,6 +10,10 @@ from ..utils.ups import get_tool_settings
 from ..wheels.wheel import Wheel, WheelPrefs
 
 
+# A second press soon after the first one arrives as DOUBLE_CLICK instead of PRESS: it is still a press (a quick
+# second click on a pie button / brush, the trigger key pressed again quickly to close a kept-open wheel).
+PRESS_VALUES = {'PRESS', 'DOUBLE_CLICK'}
+
 supported_modes = {'SCULPT', 'SCULPT_CURVES', 'PAINT_WEIGHT', 'PAINT_VERTEX', 'PAINT_TEXTURE', 'PAINT_GREASE_PENCIL', 'SCULPT_GREASE_PENCIL', 'WEIGHT_GREASE_PENCIL', 'VERTEX_GREASE_PENCIL' }
 
 
@@ -115,11 +119,11 @@ class WheelModal(bl_types.OperatorModal):
                     if not self.prefs.keep_open:
                         return OpReturn.FINISH
                 return OpReturn.RUN
-            elif event.value == 'PRESS':
+            elif event.value in PRESS_VALUES:
                 if self.trigger_key_released and self.prefs.keep_open:
                     return OpReturn.FINISH
 
-        if event.type == 'LEFTMOUSE' and event.value == 'PRESS':
+        if event.type == 'LEFTMOUSE' and event.value in PRESS_VALUES:
             if not self.wheel_is_hovered:
                 # We clicked outside the wheel, finish the modal loop.
                 return OpReturn.FINISH
