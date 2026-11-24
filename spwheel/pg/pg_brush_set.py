@@ -34,28 +34,24 @@ class BrushSetPreferences(PropertyGroup):
         max=20,
     )
 
-    use_double_ring: BoolProperty(
-        name="Double Ring",
-        description="Two rows of brush slots: more brushes per page (the wheel grows to fit the second row)",
+    allow_double_ring: BoolProperty(
+        name="Allow Double Ring",
+        description="When a brush set has more brushes than one ring holds, show them on two rings (the wheel grows "
+                    "to fit the second one). Sets that fit in one ring keep a single ring",
         default=False,
     )
 
     @property
-    def row_count(self) -> int:
-        return 2 if self.use_double_ring else 1
-
-    @property
     def row_gap(self) -> float:
-        """Space between the two rows of a double ring."""
+        """Space between the two rings of slots."""
         return max(2.0, self.slot_padding * 0.5)
 
-    def ring_thickness(self) -> float:
-        rows = self.row_count
+    def ring_thickness(self, rows: int = 1) -> float:
         return rows * self.slot_size + (rows - 1) * self.row_gap + self.ring_padding * 2.0
 
-    def extra_radius(self) -> float:
-        """How much the wheel grows for the extra row(s), so the rings inside keep their size."""
-        return (self.row_count - 1) * (self.slot_size + self.row_gap)
+    def extra_radius(self, rows: int = 1) -> float:
+        """How much the wheel grows for the extra ring(s), so everything inside keeps its size."""
+        return (rows - 1) * (self.slot_size + self.row_gap)
 
     thickness_factor: FloatProperty(
         name="Thickness Factor",

@@ -118,7 +118,7 @@ class WheelPrefs(PropertyGroup):
             body.prop(self.brush_set_ring, 'slot_size')
             body.prop(self.brush_set_ring, 'slot_padding')
             body.prop(self.brush_set_ring, 'ring_padding')
-            body.prop(self.brush_set_ring, 'use_double_ring')
+            body.prop(self.brush_set_ring, 'allow_double_ring')
             self._draw_slots_per_page(body)
 
         if body := prefs_panel(layout, "spwheel_settings_color_picker", "Color Picker", 'COLORSET_02_VEC'):
@@ -138,15 +138,21 @@ class WheelPrefs(PropertyGroup):
         from ..wheels.sculpt_paint_base import SculptPaintWheel
 
         ring = self.brush_set_ring
-        n = slots_per_page(ring, SculptPaintWheel.reduced_radius)
-        n_picker = slots_per_page(ring, SculptPaintWheel.default_radius)
-        split = layout.split(factor=0.4)
-        left = split.row()
-        left.alignment = 'RIGHT'
-        left.label(text="Slots per Page")
-        right = split.row()
-        right.active = False
-        right.label(text=f"{n}" + (f"   ({n_picker} with the color picker)" if n_picker != n else ""))
+
+        def line(heading: str, rows: int) -> None:
+            n = slots_per_page(ring, SculptPaintWheel.reduced_radius, rows)
+            n_picker = slots_per_page(ring, SculptPaintWheel.default_radius, rows)
+            split = layout.split(factor=0.4)
+            left = split.row()
+            left.alignment = 'RIGHT'
+            left.label(text=heading)
+            right = split.row()
+            right.active = False
+            right.label(text=f"{n}" + (f"   ({n_picker} with the color picker)" if n_picker != n else ""))
+
+        line("Slots per Page", 1)
+        if ring.allow_double_ring:
+            line("With Two Rings", 2)
 
     def _draw_keymap_tab(self, context: Context, layout: UILayout) -> None:
         import rna_keymap_ui

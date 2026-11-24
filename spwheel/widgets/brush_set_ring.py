@@ -47,25 +47,33 @@ def _layout_count(center_radius: float, slot_radius: float, slot_padding: float 
     return max(1, int(pi / angle))
 
 
-def ring_rows(radius_inner: float, radius_outer: float, prefs: BrushSetPreferences) -> list[tuple[float, float, int]]:
-    """The rows of brush slots of a ring: (centre radius, slot radius, slot count) each, the outer row first."""
+def ring_rows(radius_inner: float, radius_outer: float, prefs: BrushSetPreferences,
+              rows: int = 1) -> list[tuple[float, float, int]]:
+    """The rings of brush slots: (centre radius, slot radius, slot count) each, the outer one first.
+
+    Two rings are laid out as radial pairs: every outer slot has an inner slot right under it, so both rings
+    hold as many slots as the inner (shorter) one fits."""
     inner = min(radius_inner, radius_outer) + prefs.ring_padding
     outer = max(radius_inner, radius_outer) - prefs.ring_padding
-    rows = prefs.row_count
     gap = prefs.row_gap if rows > 1 else 0.0
     row_h = max(0.0, (outer - inner - gap * (rows - 1)) / rows)
     slot_r = min(max(0.0, prefs.slot_size * 0.5), row_h * 0.5)
-    out = []
-    for k in range(rows):
-        center = outer - row_h * 0.5 - k * (row_h + gap)
-        out.append((center, slot_r, _layout_count(center, slot_r, prefs.slot_padding)))
-    return out
+    centers = [outer - row_h * 0.5 - k * (row_h + gap) for k in range(rows)]
+    n = _layout_count(centers[-1], slot_r, prefs.slot_padding)
+    return [(c, slot_r, n) for c in centers]
 
 
-def slots_per_page(prefs: BrushSetPreferences, wheel_radius: float) -> int:
-    """Brush slots per page of a wheel of that (base) radius, as the wheel lays them out."""
-    outer = (wheel_radius + prefs.extra_radius()) * 0.97
-    return sum(n for _c, _r, n in ring_rows(outer - prefs.ring_thickness(), outer, prefs))
+def slots_per_page(prefs: BrushSetPreferences, wheel_radius: float, rows: int = 1) -> int:
+    """Brush slots per page of a wheel of that (base) radius with that many rings, as the wheel lays them out."""
+    outer = (wheel_radius + prefs.extra_radius(rows)) * 0.97
+    return sum(n for _c, _r, n in ring_rows(outer - prefs.ring_thickness(rows), outer, prefs, rows))
+
+
+def ring_count_for(prefs: BrushSetPreferences, wheel_radius: float, brush_count: int) -> int:
+    """Rings of slots to show a set of ``brush_count`` brushes: two only when allowed and one isn't enough."""
+    if prefs.allow_double_ring and brush_count > slots_per_page(prefs, wheel_radius, 1):
+        return 2
+    return 1
 
 
 def _toward(c, target, k: float):
@@ -83,15 +91,23 @@ class BrushSetRing(WidgetRing):
     use_modal = True
 
     def _row_positions(self, count: int) -> list[tuple[float, float]]:
-        """Centres of the first *count* slots: the outer row fills first, then the inner one; a row that isn't
-        full spreads its slots evenly around it."""
+        """Centres of the first *count* slots, spread evenly around the ring. On two rings the slots go in radial
+        pairs (outer, then the inner one under it), the pairs spread evenly: a page that isn't full keeps the
+        rings aligned and symmetric (an odd count leaves the last pair without its inner slot)."""
         cx, cy = self.center
+        rows = self._rows
+        if count <= 0 or not rows:
+            return []
+        if len(rows) == 1:
+            return compute_slot_positions_in_single_ring(cx, cy, rows[0][0], min(count, rows[0][2]), 0.0)
+        count = min(count, sum(n for _c, _r, n in rows))
+        pairs = (count + len(rows) - 1) // len(rows)
+        per_row = [compute_slot_positions_in_single_ring(cx, cy, c, pairs, 0.0) for c, _r, _n in rows]
         positions = []
-        for center, _r, n in self._rows:
-            k = min(n, count - len(positions))
-            if k <= 0:
-                break
-            positions += compute_slot_positions_in_single_ring(cx, cy, center, k, 0.0)
+        for j in range(pairs):
+            for row in per_row:
+                if len(positions) < count:
+                    positions.append(row[j])
         return positions
 
     def init(self) -> None:
@@ -100,6 +116,7 @@ class BrushSetRing(WidgetRing):
         self.slot_count = 0
         self._slot_radius = 0.0
         self._rows = []
+        self.row_count = 1  # Rings of slots: set by the wheel when it lays itself out (see ring_count_for).
         self._last_active_index = -1
         self._is_page_dragging = False
         self._page_drag_start_x = 0.0
@@ -203,7 +220,7 @@ class BrushSetRing(WidgetRing):
             self.remove_child(p, free=True)
         self._pickers.clear()
 
-        self._rows = ring_rows(self.radius_inner, self.radius_outer, self.wg_prefs)
+        self._rows = ring_rows(self.radius_inner, self.radius_outer, self.wg_prefs, self.row_count)
         count = sum(n for _c, _r, n in self._rows)
         slot_r = self._rows[0][1] if self._rows else 0.0
         self._slot_radius = slot_r
