@@ -32,8 +32,13 @@ class WheelModal(bl_types.OperatorModal):
         return f'Current mode not in the supported modes: {supported_modes}'
 
     def modal_begin(self, context: Context, event: Event, modal_mouse: ModalMouse, **kw) -> None:
+        # Hide the brush cursor while the wheel is open; remember which settings and their value to restore them
+        # (the user may have it off, and a pie button may switch mode before the wheel closes).
+        self._cursor_ts = None
         if ts := get_tool_settings(context):
             if ts.brush:
+                self._cursor_ts = ts
+                self._cursor_was_shown = ts.show_brush
                 ts.show_brush = False
         # The draw handler runs for every 3D viewport region: draw only in the one the wheel was opened in.
         self._region_ptr = context.region.as_pointer() if context.region is not None else 0
@@ -46,9 +51,13 @@ class WheelModal(bl_types.OperatorModal):
         self._close_after_drag = False
 
     def modal_end(self, context: Context, cancel: bool, mouse: ModalMouse) -> None:
-        if ts := get_tool_settings(context):
-            if ts.brush:
-                ts.show_brush = True
+        ts = getattr(self, "_cursor_ts", None)
+        if ts is not None:
+            try:
+                ts.show_brush = self._cursor_was_shown
+            except ReferenceError:  # (Its scene is gone.)
+                pass
+            self._cursor_ts = None
 
     def modal(self, context: Context, event: Event) -> Set[str]:
         try:
