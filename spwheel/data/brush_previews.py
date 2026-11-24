@@ -1,4 +1,3 @@
-from array import array
 from pathlib import Path
 import traceback
 import zlib
@@ -6,6 +5,7 @@ import hashlib
 import subprocess
 
 import gpu
+import numpy as np
 from gpu.types import GPUTexture
 
 from ..gpu.button_texture import get_custom_button_texture
@@ -158,6 +158,22 @@ def read_essential_preview(mode_id: str, brush_name: str) -> tuple[int, int, byt
     return None
 
 
+# sRGB byte -> linear float. The texture shaders take linear colors (as gpu.texture.from_image gives them).
+_SRGB_TO_LINEAR = np.array(
+    [(c / 255.0) / 12.92 if c / 255.0 <= 0.04045 else ((c / 255.0 + 0.055) / 1.055) ** 2.4 for c in range(256)],
+    dtype=np.float32,
+)
+
+
+def _rgba8_srgb_to_linear_floats(data: bytes) -> np.ndarray:
+    """RGBA8 sRGB bytes -> flat float32 RGBA with linear rgb (alpha kept)."""
+    px = np.frombuffer(data, dtype=np.uint8).reshape(-1, 4)
+    out = np.empty(px.shape, dtype=np.float32)
+    out[:, :3] = _SRGB_TO_LINEAR[px[:, :3]]
+    out[:, 3] = px[:, 3] / np.float32(255.0)
+    return out.ravel()
+
+
 def get_brush_gputex(brush_id_key: str) -> GPUTexture | None:
     """Lazy-load a GPU texture from a cached .bin preview.
 
@@ -176,9 +192,8 @@ def get_brush_gputex(brush_id_key: str) -> GPUTexture | None:
         return None
 
     try:
-        # Blender requires FLOAT buffers.
-        # Convert cached RGBA8 bytes [0..255] to normalized float32 [0..1].
-        float_data = array("f", (ch / 255.0 for ch in data))
+        # Blender requires FLOAT buffers: the cached RGBA8 sRGB bytes as float32, rgb made linear.
+        float_data = _rgba8_srgb_to_linear_floats(data)
         buf = gpu.types.Buffer("FLOAT", len(float_data), float_data)
         tex = GPUTexture((w, h), format="RGBA16F", data=buf)
         _texture_cache[cache_key] = tex
@@ -205,7 +220,7 @@ def get_essential_brush_gputex(mode_id: str, brush_name: str) -> GPUTexture | No
         return None
 
     try:
-        float_data = array("f", (ch / 255.0 for ch in data))
+        float_data = _rgba8_srgb_to_linear_floats(data)
         buf = gpu.types.Buffer("FLOAT", len(float_data), float_data)
         tex = GPUTexture((w, h), format="RGBA16F", data=buf)
         _texture_cache[cache_key] = tex

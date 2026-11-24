@@ -104,7 +104,8 @@ void main() {
     float r = 0.5;
     float mask = smoothstep(r, r - softness, d);
     vec4 tex = sample_minified(v_uv);
-    fragColor = vec4(pow(tex.rgb, vec3(2.2)), tex.a * mask * opacity);
+    /* Textures are linear already (from_image decodes sRGB images; previews are uploaded linear). */
+    fragColor = vec4(tex.rgb, tex.a * mask * opacity);
 }
 """
 
@@ -138,7 +139,7 @@ vec3 srgb_to_lin(vec3 c) {
 void main() {
     vec4 tex = sample_minified(v_uv);
     /* tint: an sRGB color the icon is multiplied by (white: unchanged). */
-    fragColor = vec4(pow(tex.rgb, vec3(2.2)) * srgb_to_lin(tint.rgb), tex.a * opacity * tint.a);
+    fragColor = vec4(tex.rgb * srgb_to_lin(tint.rgb), tex.a * opacity * tint.a);
 }
 """
 
