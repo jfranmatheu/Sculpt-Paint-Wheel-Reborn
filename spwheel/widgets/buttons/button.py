@@ -70,6 +70,8 @@ class ButtonBase:
 
     def draw(self, context: Context, theme: WheelTheme) -> None:
         button_theme = self._get_button_theme(theme)
+        # Hover uses the wheel's accent color, the same one as the pie menu.
+        self._accent_color = theme.tarta_accent_color
         self.draw_base(context, button_theme)
         self.draw_icon(context, button_theme)
         self.draw_outline(context, button_theme)
@@ -112,7 +114,11 @@ class ButtonCircle(ButtonBase, WidgetCircle):
 
     def draw_outline(self, context: Context, button_theme: ButtonTheme) -> None:
         base_color, outline_color = button_theme.get_color(self.hovered, self.active)
-        draw_ring(0.0, 0.0, self.radius, outline_color, thickness=2.0 if self.active else 1.5 if self.hovered else 1.0, softness=0.012)
+        if self.hovered and not self.active:
+            outline_color = getattr(self, "_accent_color", outline_color)
+        # draw_ring's thickness is half the stroke width.
+        half_width = button_theme.highlight_outline_width * 0.5 if (self.active or self.hovered) else 0.5  # Idle: 1 px.
+        draw_ring(0.0, 0.0, self.radius, outline_color, thickness=half_width, softness=0.012)
 
 class ButtonRect(ButtonBase, WidgetRect):
     def draw_base(self, context: Context, button_theme: ButtonTheme) -> None:

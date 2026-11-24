@@ -44,7 +44,8 @@ _RING_FRAG = """
 void main() {
     float d = length(v_uv - vec2(0.5));
     float band = max(outerRadius - innerRadius, 1e-5);
-    float s = min(max(softness, 1e-5), band * 0.48);
+    /* Anti-alias over ~1 screen pixel (fwidth) whatever the scale; softness can only widen it. */
+    float s = min(max(max(softness, fwidth(d) * 0.5), 1e-5), band * 0.48);
     float aOuter = 1.0 - smoothstep(outerRadius - s, outerRadius + s, d);
     float aInner = smoothstep(innerRadius - s, innerRadius + s, d);
     float ring = aOuter * aInner;
@@ -310,14 +311,15 @@ def draw_ring(
     thickness: float = 2.0,
     softness: float = 0.008,
 ) -> None:
-    """Draw an anti-aliased ring (annulus)."""
+    """Draw an anti-aliased ring (annulus) from ``radius - thickness`` to ``radius + thickness``."""
     shader = _get_ring_shader()
-    half = radius + thickness
+    # Pad the quad so the outer edge's anti-aliasing isn't clipped by it.
+    half = radius + thickness + 2.0
     positions, uvs, indices = _quad_verts(cx, cy, half)
     batch = batch_for_shader(shader, 'TRIS', {"pos": positions, "uv": uvs}, indices=indices)
 
-    outer_r = 0.5
-    inner_r = 0.5 * (radius - thickness) / (radius + thickness)
+    outer_r = 0.5 * (radius + thickness) / half
+    inner_r = 0.5 * (radius - thickness) / half
 
     with CM_GPU_BLEND('ALPHA'):
         shader.bind()

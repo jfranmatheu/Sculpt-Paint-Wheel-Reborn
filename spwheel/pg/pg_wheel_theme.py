@@ -21,8 +21,10 @@ class ButtonTheme(PropertyGroup):
         subtype='COLOR', name="Brush Active Color", min=0, max=1, size=4, default=(.01, .01, .01, .92))
     outline_color: FloatVectorProperty(
         subtype='COLOR', name="Brush Outline Color", min=0, max=1, size=4, default=(.164, .164, .164, .9))
-    hovered_outline_color: FloatVectorProperty(
-        subtype='COLOR', name="Brush Outline Hovered Color", min=0, max=1, size=4, default=(.32, .32, .32, 1.0))
+    highlight_outline_width: FloatProperty(
+        name="Hovered / Active Outline Width",
+        description="Width of the outline of a hovered or active brush, in pixels",
+        min=0.25, max=6.0, default=2.0, subtype='PIXEL')
     active_outline_color: FloatVectorProperty(
         subtype='COLOR', name="Brush Outline Active Color", min=0, max=1, size=4, default=(.92, .64, .11, .92))
 
@@ -30,7 +32,7 @@ class ButtonTheme(PropertyGroup):
         if active:
             return self.active_color, self.active_outline_color
         elif hovered:
-            return self.hovered_color, self.hovered_outline_color
+            return self.hovered_color, self.outline_color  # Hover outline: the wheel's accent color.
         else:
             return self.color, self.outline_color
 
@@ -47,8 +49,9 @@ class WheelTheme(PropertyGroup):
     tarta_outline_color: FloatVectorProperty(
         subtype='COLOR', name="Pie Outline Color", min=0, max=1, size=4, default=(.164, .164, .164, .9))
     tarta_accent_color: FloatVectorProperty(
-        subtype='COLOR', name="Pie Accent Color", min=0, max=1, size=4, default=(.17, .36, .72, 1.0),
-        description="Outline of the hovered button and fill of pressed (toggled on) buttons")
+        subtype='COLOR', name="Accent Color", min=0, max=1, size=4, default=(.82, .84, .88, .85),
+        description="Hover outline of the pie buttons and the brush buttons; pressed (toggled on) pie buttons are "
+                    "filled with a blend of it")
     tarta_tint_mode: EnumProperty(
         name="Tint Mode",
         description="How the pie segments of the custom buttons are tinted",
@@ -105,44 +108,48 @@ class WheelTheme(PropertyGroup):
 
 
     def draw_ui(self, context: Context, layout: UILayout):
-        layout.prop(self, 'text_color')
+        from .pg_wheel_prefs import prefs_panel
 
-        layout.prop(self, 'base_color')
-        layout.prop(self, 'base_outline_color')
+        if body := prefs_panel(layout, "spwheel_theme_general", "General", 'COLOR'):
+            body.prop(self, 'tarta_accent_color')
+            body.prop(self, 'text_color')
 
-        layout.prop(self, 'tarta_color')
-        layout.prop(self, 'tarta_outline_color')
-        layout.prop(self, 'tarta_accent_color')
-        layout.prop(self, 'tarta_tint_mode')
-        if self.tarta_tint_mode == "PER_TYPE":
-            layout.prop(self, 'tarta_operator_tint')
-            layout.prop(self, 'tarta_popup_tint')
-            layout.prop(self, 'tarta_toggle_tint')
-        elif self.tarta_tint_mode == "CUSTOM":
-            layout.prop(self, 'tarta_custom_tint_strength')
+        if body := prefs_panel(layout, "spwheel_theme_wheel", "Wheel", 'MESH_CIRCLE'):
+            body.prop(self, 'base_color', text="Background")
+            body.prop(self, 'base_outline_color', text="Outline")
 
-        h, content = self.draw_section(layout, "Brush Slot Colors", icon='BRUSH_DATA', align_content=True, content_layout_type='COLUMN')
+        if body := prefs_panel(layout, "spwheel_theme_pie", "Pie Menu", 'ANTIALIASED'):
+            body.prop(self, 'tarta_color', text="Segment")
+            body.prop(self, 'tarta_outline_color', text="Outline")
+            body.separator()
+            body.row().prop(self, 'tarta_tint_mode', text="Tint", expand=True)
+            if self.tarta_tint_mode == "PER_TYPE":
+                body.prop(self, 'tarta_operator_tint', text="Operator / Script")
+                body.prop(self, 'tarta_popup_tint', text="Popup")
+                body.prop(self, 'tarta_toggle_tint', text="Toggle")
+            elif self.tarta_tint_mode == "CUSTOM":
+                body.prop(self, 'tarta_custom_tint_strength', text="Strength")
+                hint = body.row()
+                hint.active = False
+                hint.label(text="Pick each button's color in the Custom Buttons list", icon='INFO')
 
-        split = content.row(align=True).split(factor=0.15, align=True)
+        if body := prefs_panel(layout, "spwheel_theme_brush_ring", "Brush Ring", 'BRUSH_DATA'):
+            self._draw_brush_slots(body)
 
-        left_col = split.column(align=True)
-        left_col.label(text=" ", icon='BLANK1')
-        left_col.label(text="Base")
-        left_col.label(text="Outline")
-
-        right_row = split.row(align=True)
-
-        idle_col = right_row.column(align=True)
-        idle_col.label(text="Idle")
-        idle_col.prop(self.button, 'color', text="")
-        idle_col.prop(self.button, 'outline_color', text="")
-
-        hovered_col = right_row.column(align=True)
-        hovered_col.label(text="Hovered")
-        hovered_col.prop(self.button, 'hovered_color', text="")
-        hovered_col.prop(self.button, 'hovered_outline_color', text="")
-
-        active_col = right_row.column(align=True)
-        active_col.label(text="Active")
-        active_col.prop(self.button, 'active_color', text="")
-        active_col.prop(self.button, 'active_outline_color', text="")
+    def _draw_brush_slots(self, layout: UILayout) -> None:
+        bt = self.brush_picker_button  # What the brush slots draw with.
+        grid = layout.grid_flow(row_major=True, columns=4, even_columns=False, align=True)
+        grid.use_property_split = False
+        for text in ("", "Idle", "Hovered", "Active"):
+            grid.label(text=text)
+        grid.label(text="Fill")
+        grid.prop(bt, 'color', text="")
+        grid.prop(bt, 'hovered_color', text="")
+        grid.prop(bt, 'active_color', text="")
+        grid.label(text="Outline")
+        grid.prop(bt, 'outline_color', text="")
+        grid.prop(self, 'tarta_accent_color', text="")  # Shared with the pie menu hover.
+        grid.prop(bt, 'active_outline_color', text="")
+        layout.separator()
+        layout.prop(bt, 'highlight_outline_width', text="Hovered / Active Width")
+        layout.prop(bt, 'icon_opacity')

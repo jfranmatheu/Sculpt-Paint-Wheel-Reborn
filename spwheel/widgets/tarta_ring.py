@@ -19,6 +19,7 @@ SEG_INNER_RATIO = 0.58   # Inner edge of the segments.
 CORE_GAP = 4.0           # Between the segments and the core disc.
 SEG_GAP = 3.0            # Between neighbouring segments.
 SEG_ROUND = 3.0          # Corner rounding of the segments.
+PRESSED_BLEND = 0.35     # How much of the accent color fills a pressed button.
 
 
 def segment_angles(k: int, n: int) -> tuple[float, float]:
@@ -35,13 +36,6 @@ def segment_from_point(dx: float, dy: float, n: int) -> int:
         return -1
     step = TAU / n
     return int(math.floor(((PI - math.atan2(dy, dx)) % TAU) / step)) % n
-
-
-def _shade(c, k: float) -> tuple:
-    """``c`` darkened (k > 0) or lightened (k < 0) by |k|, alpha kept."""
-    t = 0.0 if k > 0 else 1.0
-    k = abs(k)
-    return (c[0] + (t - c[0]) * k, c[1] + (t - c[1]) * k, c[2] + (t - c[2]) * k, c[3])
 
 
 class TartaRing(WidgetRing):
@@ -101,12 +95,18 @@ class TartaRing(WidgetRing):
             btn = self._tarta_buttons[bid]
             # Fill = state (pressed toggles / operators), outline = hover.
             pressed = btn.get_state(context) is True
+            fill = theme.get_tarta_fill(btn)
+            if pressed:
+                # A blend, not the full accent: a light accent (e.g. white) would hide the light icons.
+                fill = tuple(f + (c - f) * PRESSED_BLEND for f, c in zip(fill[:3], accent[:3])) + (fill[3],)
             if k == self.hover_layout_slot:
-                seg_border, seg_border_w = (_shade(accent, -0.6) if pressed else _shade(accent, -0.3)), 2.0
+                seg_border, seg_border_w = accent, 2.0
+            elif pressed:
+                seg_border, seg_border_w = accent, 1.0
             else:
                 seg_border, seg_border_w = border, 1.0
             sector(cx, cy, self.seg_inner, self.seg_outer, a0, a1,
-                   fill=accent if pressed else theme.get_tarta_fill(btn),
+                   fill=fill,
                    border=seg_border, border_w=seg_border_w,
                    gap=SEG_GAP, round_=SEG_ROUND)
 
