@@ -104,7 +104,7 @@ def setup(kind, mode):
             ob = bpy.context.object
             ob.data.materials.append(bpy.data.materials.new("Paint"))
             bpy.ops.paint.add_texture_paint_slot(type='BASE_COLOR', color=(0.55, 0.62, 0.8, 1.0), width=1024, height=1024)
-    if PART not in ("tints", "presets"):
+    if PART not in ("themes_live", "tints_live"):
         # Cut-out shots: the object far away behind the wheel and no floor grid, so the translucent page pill
         # only shows the plain viewport background.
         space = a.spaces.active
@@ -220,7 +220,6 @@ def shot_prefs(name):
 
 # ----- Live recordings: Preferences (left) and the open wheel (right) -----------------------------------------
 
-meta = {"frames": []}
 FR = os.path.join(OUT, "frames")
 
 
@@ -241,28 +240,10 @@ def fit_view():
         bpy.ops.view3d.view_selected()
 
 
-def frame(label, sub=""):
-    os.makedirs(FR, exist_ok=True)
-    win = bpy.context.window
-    path = os.path.join(FR, f"{len(meta['frames']):03d}.png")
-    bpy.ops.screen.screenshot(filepath=path)
-    _, p = main_area('PREFERENCES')
-    _, v = main_area('VIEW_3D')
-    rv = region(v)
-    rect = lambda a: [a.x, a.y, a.width, a.height]
-    meta["frames"].append({"file": os.path.basename(path), "label": label, "sub": sub, "prefs": rect(p),
-                           "view": rect(v), "wheel": [rv.x + rv.width // 2, rv.y + rv.height // 2],
-                           "window": [win.width, win.height]})
 
 
-def recording_start(scroll):
-    return [(lambda: setup("MESH", "SCULPT"), 1.5), (split, 1.2), (fit_view, 0.6),
-            (lambda: bpy.ops.preferences.addon_expand(module=P), 0.8), (lambda: scroll_prefs(scroll), 0.8),
-            (lambda: ev('MOUSEMOVE', 'NOTHING'), 0.3), (lambda: ev('ESC', 'PRESS'), 0.4), (lambda: ev('SPACE', 'PRESS'), 1.0)]
 
 
-def recording_end():
-    return [(lambda: json.dump(meta, open(os.path.join(OUT, "frames.json"), "w"), indent=1), 0.1)] + close_wheel()
 
 
 # ----- Parts ----------------------------------------------------------------------------------------------------
@@ -318,40 +299,125 @@ elif PART == "prefs":
               (lambda: scroll_prefs(16), 0.8), (lambda: shot_prefs("prefs_theme_pie"), 0.4),
               (lambda: apply_theme("Dark"), 0.3)]
 
-elif PART == "tints":
-    T = "tarta_"
+elif PART in ("themes_live", "tints_live"):
+    # Beats for live_montage.py: each beat is a real UI state (full-window screenshot) plus where the cursor goes
+    # and what it does there (window pixels, top-left origin). Positions are calibrated for a 1920x1200 window
+    # with the Preferences split on the left, scrolled to the top.
+    DROPDOWN = (300, 536)
+    MENU_ORDER = ["Dark", "Light", "Ember", "Forest", "Frost", "Graphite", "High Contrast", "Midnight", "Paper", "Rose"]
+    TINT_Y, TARGET_Y, SLIDER_Y, SLIDER_X0, SLIDER_W = 960, 985, 1010, 390, 300
+    TINT_X = {"DISABLED": 439, "PER_TYPE": 539, "CUSTOM": 640}
+    TARGET_X = {"FILL": 426, "OUTLINE": 501, "ICON": 576, "COLOR_STRIP": 652}
+    live = {"beats": [], "wheels": {}}
+    cur = {"wheel": None}
 
-    def add(label, sub, hold=1, **kw):
-        steps.append((lambda kw=kw: [setattr(wheel_prefs().theme, k, v) for k, v in kw.items()] and redraw(), 0.45))
-        for _ in range(hold):
-            steps.append((lambda: frame(label, sub), 0.15))
+    def win_ev(type, value, x, y):
+        win = bpy.context.window
+        win.event_simulate(type=type, value=value, x=x, y=win.height - y)
 
-    steps += recording_start(13)
-    add("Tint: Disabled", "Every segment uses the pie color", hold=3, **{T + "tint_mode": "DISABLED"})
-    add("Tint: Per Type", "Operators, popups and toggles get their own tint", hold=3, **{T + "tint_mode": "PER_TYPE"})
-    add("Tint: Custom", "Every button keeps its own color", hold=3, **{T + "tint_mode": "CUSTOM"})
-    for target, name in (("COLOR_STRIP", "Color Strip"), ("OUTLINE", "Outline"), ("ICON", "Icon")):
-        for v in (0.2, 0.4, 0.6, 0.8, 1.0):
-            add(f"Custom · {name}", f"Tint opacity {v:.1f}", **{T + "tint_target": target, T + "tint_opacity": v})
-        steps.append((lambda name=name: frame(f"Custom · {name}", "Tint opacity 1.0"), 0.15))
-    for v in (0.12, 0.2, 0.3, 0.4, 0.5, 0.6):
-        add("Custom · Fill", f"Tint strength {v:.2f}", **{T + "tint_target": "FILL", T + "custom_tint_strength": v})
-    steps.append((lambda: frame("Custom · Fill", "Tint strength 0.60"), 0.15))
-    add("Custom · Color Strip", "The default look", hold=3,
-        **{T + "tint_target": "COLOR_STRIP", T + "tint_opacity": 0.9, T + "custom_tint_strength": 0.12})
-    steps += recording_end()
+    def grab(name):
+        os.makedirs(FR, exist_ok=True)
+        bpy.ops.screen.screenshot(filepath=os.path.join(FR, f"{name}.png"))
+        return f"{name}.png"
 
-elif PART == "presets":
-    themes = [("Dark", "The default"), ("Light", "Bright and crisp"), ("Midnight", "Deep navy, blue accent"),
-              ("Ember", "Warm charcoal, orange glow"), ("Forest", "Dark greens, mint accent"), ("Rose", "Plum, pink accent"),
-              ("Graphite", "Close to Blender's own greys"), ("High Contrast", "Black and white, yellow highlights"),
-              ("Paper", "Cream and ink, terracotta"), ("Frost", "Icy blues and slate")]
-    steps += recording_start(0)
-    for n, sub in themes:
-        steps.append((lambda n=n: apply_theme(n), 0.5))
-        for _ in range(3):
-            steps.append((lambda n=n, sub=sub: frame(n, sub), 0.15))
-    steps += [(lambda: apply_theme("Dark"), 0.5)] + [(lambda: frame("Dark", "The default"), 0.15)] + recording_end()
+    def wheel_geom():
+        _, v = main_area('VIEW_3D')
+        rv = region(v)
+        w = mod("wheels.wheel").Wheel.instances.get(bpy.context.mode)
+        return {"cx": rv.x + rv.width // 2, "cy": bpy.context.window.height - (rv.y + rv.height // 2),
+                "radius": w.radius * w.scale}
+
+    def beat(action, cursor, caption, sub="", hold=0.5):
+        n = len(live["beats"])
+        live["beats"].append({"file": grab(f"b{n:03d}"), "action": action, "cursor": list(cursor),
+                              "caption": caption, "sub": sub, "hold": hold, "wheel": cur["wheel"],
+                              "geom": wheel_geom()})  # (The wheel in this very screenshot, when it is open.)
+
+    def wheel_shot(apply_beat=None):
+        """The open wheel (whole window), cut out later around its centre."""
+        _, v = main_area('VIEW_3D')
+        rv = region(v)
+        win = bpy.context.window
+        w = mod("wheels.wheel").Wheel.instances.get(bpy.context.mode)
+        name = f"w{len(live['wheels']):03d}"
+        live["wheels"][name] = {"file": grab(name), "cx": rv.x + rv.width // 2,
+                                "cy": win.height - (rv.y + rv.height // 2), "radius": w.radius * w.scale}
+        cur["wheel"] = name
+        if apply_beat is not None:
+            live["beats"][apply_beat]["wheel"] = name
+
+    def set_theme(**kw):
+        for k, v in kw.items():
+            setattr(wheel_prefs().theme, k, v)
+        redraw()
+
+    steps += [(lambda: setup("MESH", "SCULPT"), 1.5), (split, 1.2), (fit_view, 0.6),
+              (lambda: bpy.ops.preferences.addon_expand(module=P), 0.8), (lambda: scroll_prefs(0), 0.8),
+              (lambda: ev('MOUSEMOVE', 'NOTHING'), 0.3), (lambda: ev('ESC', 'PRESS'), 0.4)]
+
+    if PART == "themes_live":
+        steps += [(lambda: ev('SPACE', 'PRESS'), 1.0), (wheel_shot, 0.2)] + close_wheel()
+        steps += [(lambda: win_ev('MOUSEMOVE', 'NOTHING', 560, 760), 0.4),
+                  (lambda: beat("idle", (560, 760), "Theme presets", "Ten built-in themes, one click away", 0.8), 0.2)]
+        for name in ["Light", "Midnight", "Ember", "Forest", "Paper", "Frost", "High Contrast", "Rose", "Graphite", "Dark"]:
+            item = (232, 561 + 22 * MENU_ORDER.index(name))
+            steps += [
+                (lambda: win_ev('MOUSEMOVE', 'NOTHING', *DROPDOWN), 0.35),
+                (lambda name=name: beat("move", DROPDOWN, name, "", 0.15), 0.1),
+                (lambda: win_ev('LEFTMOUSE', 'PRESS', *DROPDOWN), 0.05),
+                (lambda: win_ev('LEFTMOUSE', 'RELEASE', *DROPDOWN), 0.5),
+                (lambda name=name: beat("click", DROPDOWN, name, "", 0.25), 0.1),
+                (lambda item=item: win_ev('MOUSEMOVE', 'NOTHING', *item), 0.4),
+                (lambda item=item, name=name: beat("move", item, name, "", 0.2), 0.1),
+                (lambda item=item: win_ev('LEFTMOUSE', 'PRESS', *item), 0.05),
+                (lambda item=item: win_ev('LEFTMOUSE', 'RELEASE', *item), 0.5),
+                (lambda item=item, name=name: beat("click", item, name, "", 1.3), 0.1),
+                (lambda name=name: note(f"applied {name}", wheel_prefs().theme.active_preset), 0.1),
+                (lambda: ev('MOUSEMOVE', 'NOTHING'), 0.2), (lambda: ev('SPACE', 'PRESS'), 0.9),
+                (lambda: wheel_shot(len(live["beats"]) - 1), 0.2),
+            ] + close_wheel()
+    else:
+        def slider(v):
+            return (int(SLIDER_X0 + SLIDER_W * v), SLIDER_Y)
+
+        def drag(prop, values, caption, sub):
+            out = []
+            for i, v in enumerate(values):
+                out += [(lambda v=v: set_theme(**{prop: v}), 0.25),
+                        (lambda v=v, i=i: beat("press" if i == 0 else "drag", slider(v), caption, sub.format(v=v),
+                                               0.5 if i in (0, len(values) - 1) else 0.07), 0.1)]
+            out.append((lambda: beat("release", slider(values[-1]), caption, sub.format(v=values[-1]), 0.5), 0.1))
+            return out
+
+        def click(xy, caption, sub, hold=1.2, **kw):
+            return [(lambda: set_theme(**kw), 0.4), (lambda: beat("click", xy, caption, sub, hold), 0.1)]
+
+        T = "tarta_"
+        down = [round(0.9 - 0.1 * i, 2) for i in range(8)]          # 0.9 .. 0.2
+        up = [round(0.3 + 0.1 * i, 2) for i in range(8)]            # 0.3 .. 1.0
+        steps += [(lambda: set_theme(shadow_size=0.061), 0.2), (lambda: ev('SPACE', 'PRESS'), 1.0),
+                  (lambda: beat("idle", (560, 900), "Button tints", "Color the pie buttons your way", 0.8), 0.1)]
+        steps += click((TINT_X["DISABLED"], TINT_Y), "Tint: Disabled", "Every segment uses the pie color",
+                       **{T + "tint_mode": "DISABLED"})
+        steps += click((TINT_X["PER_TYPE"], TINT_Y), "Tint: Per Type", "Operators, popups and toggles get their own tint",
+                       **{T + "tint_mode": "PER_TYPE"})
+        steps += click((TINT_X["CUSTOM"], TINT_Y), "Tint: Custom", "Every button keeps its own color",
+                       **{T + "tint_mode": "CUSTOM"})
+        steps += click((TARGET_X["OUTLINE"], TARGET_Y), "Target: Outline", "The outline takes the color", 0.6,
+                       **{T + "tint_target": "OUTLINE"})
+        steps += drag(T + "tint_opacity", down + up, "Target: Outline", "Opacity {v:.1f}")
+        steps += click((TARGET_X["ICON"], TARGET_Y), "Target: Icon", "The icon takes the color", 0.6,
+                       **{T + "tint_target": "ICON"})
+        steps += drag(T + "tint_opacity", [1.0] + down[1:-1] + up[2:], "Target: Icon", "Opacity {v:.1f}")
+        steps += click((TARGET_X["FILL"], TARGET_Y), "Target: Fill", "The whole segment is tinted", 0.6,
+                       **{T + "tint_target": "FILL"})
+        steps += drag(T + "custom_tint_strength", [0.12, 0.2, 0.3, 0.4, 0.5, 0.6, 0.5, 0.4, 0.3, 0.2, 0.12],
+                      "Target: Fill", "Strength {v:.2f}")
+        steps += click((TARGET_X["COLOR_STRIP"], TARGET_Y), "Target: Color Strip", "The default: a thin strip of color",
+                       1.6, **{T + "tint_target": "COLOR_STRIP", T + "tint_opacity": 0.9})
+        steps += close_wheel()
+
+    steps += [(lambda: json.dump(live, open(os.path.join(OUT, "live.json"), "w"), indent=1), 0.1)]
 
 else:
     raise SystemExit(f"unknown part {PART!r}")

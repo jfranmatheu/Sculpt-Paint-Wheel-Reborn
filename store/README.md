@@ -18,12 +18,12 @@ Images and animations load from `store/superhive/` on the repository's **`main`*
 
 Everything is made from the real add-on running in Blender 5.3:
 
-1. **Capture** with `store/tools/capture_v2.py`, once per part (`modes`, `centre`, `themes`, `double`, `prefs`, `tints`, `presets`). Use an isolated Blender profile (`BLENDER_USER_RESOURCES`) with the extension installed as `user_default/spwheel` and no saved preferences, so the defaults are captured:
+1. **Capture** with `store/tools/capture_v2.py`, once per part (`modes`, `centre`, `themes`, `double`, `prefs`, `themes_live`, `tints_live`). Use an isolated Blender profile (`BLENDER_USER_RESOURCES`) with the extension installed as `user_default/spwheel` and no saved preferences, so the defaults are captured:
    ```
    blender --factory-startup --enable-event-simulate --window-geometry 0 0 1920 1200 --python store/tools/capture_v2.py -- <captures dir> <part>
    ```
 2. **Graphics**: `python store/tools/v2_graphics.py <captures dir> <output dir>` renders `v2_01_hero.png` ... `v2_14_anatomy.png` and the chapter banners `v2_ch01.png` ... `v2_ch10.png` (1600 px wide, rounded transparent corners). Copy them to `superhive/images/`.
-3. **Videos**: `python store/tools/theme_montage.py <captures dir>/tints <output dir> tints` and `... /presets <output dir> presets` (needs ffmpeg) make the theme videos (`.mp4` for the gallery, animated `.webp` for the pages). Copy them to `superhive/videos/`.
+3. **Videos**: `python store/tools/live_montage.py <captures dir>/themes_live <output dir> themes` and `... /tints_live <output dir> tints` (needs ffmpeg) edit the live recordings into `v2_themes` / `v2_tints`: an animated cursor working the real Preferences, the wheel updating beside it, captions and title cards. `.mp4` (1920x1080) for the gallery, animated `.webp` for the pages. Copy them to `superhive/videos/`.
 
 ## Build for the stores
 

@@ -93,7 +93,7 @@ CHAPTER_GRAPHICS = {
     5: [("images/v2_07_double_ring.png", "Double ring")],
     6: [("images/v2_10_yours.png", "Make it yours")],
     7: [("images/v2_08_settings.png", "Settings"), ("images/v2_09_theme_tab.png", "Theme tab"),
-        ("images/v2_06_themes.png", "Built-in themes"), ("videos/v2_tint_modes.webp", "Tint modes, changed live")],
+        ("images/v2_06_themes.png", "Built-in themes"), ("videos/v2_tints.webp", "Button tints, changed live")],
 }
 
 
