@@ -31,7 +31,7 @@ Yes. Sculpt-Paint Wheel is **free and open source** under the GPL-2.0-or-later l
 
 ### Which Blender versions are supported?
 
-**Blender 5.1 and newer.** Version 1.1.0 is tested on Blender 5.3 and 5.2.
+**Blender 5.1 and newer.**
 
 ### Does it work with Blender 4.x?
 
@@ -45,7 +45,7 @@ Not this version. It's built as a Blender 5.x extension and relies on the brush 
 
 ### How do I update?
 
-Install the newer zip the same way. Your brush sets, custom buttons and preferences are kept.
+Install the newer zip the same way. Your brush sets, custom buttons, scripts, themes and preferences are kept.
 
 ### Does it work on Windows, macOS and Linux?
 
@@ -53,7 +53,7 @@ It's built only on Blender's own Python and drawing APIs, with no platform-speci
 
 ### Does it need internet access?
 
-No. The add-on only reads and writes its own settings file on your computer.
+No. The add-on only reads and writes its own files on your computer: its settings, your custom button scripts and your themes.
 
 ---
 
@@ -69,7 +69,7 @@ In sculpt and paint modes, the add-on binds `Space` to the wheel, which takes pr
 
 ### Can I change the hotkey?
 
-Yes. Go to **Edit › Preferences › Keymap**, search for `Sculpt-Paint Wheel Modal`, and change the key for the modes you want.
+Yes. Open the add-on preferences and go to the **Keymap** tab, or go to **Edit › Preferences › Keymap**, search for `Sculpt-Paint Wheel Modal`, and change the key for the modes you want.
 
 ### Can I pick a brush just by releasing the key?
 
@@ -77,11 +77,21 @@ Yes. Turn on **Select on Release** in the add-on preferences: press `Space`, mov
 
 ### Some of my brushes don't fit on the wheel.
 
-When a set has more brushes than fit on the ring, the wheel gets pages. Scroll the mouse wheel to switch between them, and check the `1 / 2` indicator at the bottom.
+When a set has more brushes than fit on the ring, the wheel gets pages. Scroll the mouse wheel, or click the arrows of the `‹ 1 / 2 ›` pill under the wheel, to switch between them.
+
+You can also turn on **Allow Double Ring** in the add-on preferences (**Settings** tab, **Brush Ring**). Sets that don't fit on one ring then use two rings, and the wheel grows to fit them. **Slots per Page** there shows how many brushes fit.
+
+### How do I switch brush sets from the wheel?
+
+Drag the set name at the top of the wheel left or right, or use `Shift` + mouse wheel.
+
+### Can I change the brush size from the wheel?
+
+Yes. Press in the center of the wheel and drag up or down to change the brush radius, or left and right to change the strength. Hold `Shift` for finer steps or `Ctrl` for faster ones. `Esc` or a right click puts the values back.
 
 ### Why doesn't Weight Paint show brushes?
 
-The Weight Paint wheels (mesh and Grease Pencil) show a **weight dial** instead of a brush list: pick any weight from 0.0 to 1.0 in one gesture. Brushes and weight tools are available from the buttons in the center.
+The Weight Paint wheels (mesh and Grease Pencil) show a **weight dial** instead of a brush list: pick any weight from 0.0 to 1.0 in one gesture. The round buttons under the dial switch weight paint tools, such as Blur or Smear.
 
 ---
 
@@ -93,15 +103,19 @@ Open the sidebar with `N` in the 3D Viewport and go to the **Wheel** tab while y
 
 ### What can a custom button do?
 
-It can run an operator, for example inverting the mask, or open a panel or menu as a popup, for example Stroke or Falloff settings. Each mode offers ready-made presets, and you can enter any panel, menu or operator ID by hand.
+It can run an operator, for example inverting the mask, or open a panel or menu as a popup, for example Stroke or Falloff settings. It can also toggle a setting such as Mirror X and show whether it's on, or run your own Python script. Each mode offers ready-made presets, and you can enter any panel, menu, operator or property by hand. A set holds up to 10 buttons.
 
 ### Can I go back to the default setup?
 
-Yes. The default set is only created when a mode has no sets at all. Remove your sets for that mode in the **Wheel** tab, and the **Default Set** is recreated the next time Blender starts.
+Yes. The default set is only created when a mode has no sets at all. Remove your sets for that mode in the **Wheel** tab, and the **Default Set** is recreated the next time Blender starts. In Sculpt Mode, **Default Set (Masking)** is only added once and doesn't come back if you remove it.
 
 ### Where are my settings saved?
 
-In `preferences.json`, inside an `spwheel` folder in Blender's user configuration directory. It's written automatically when Blender closes, and whenever you press **Save/Backup Addon Preferences** in the add-on preferences. It's restored after you update or reinstall the extension.
+In `preferences.json`, inside an `spwheel` folder in Blender's user folder for your Blender version, next to its `config` and `scripts` folders. It's written automatically when Blender closes, and whenever you press **Save/Backup Addon Preferences** in the add-on preferences. It's restored after you update or reinstall the extension. The same folder holds your custom button scripts (`scripts`) and your saved themes (`themes`).
+
+### Can I change the wheel's colors?
+
+Yes. In the add-on preferences, open the **Theme** tab. Pick one of the 10 built-in themes, such as Dark, Light or High Contrast, or edit the colors and use **Save As** to keep them as your own theme.
 
 ---
 
