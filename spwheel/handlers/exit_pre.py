@@ -4,6 +4,7 @@ import bpy
 from ..prefs import BlendWheelPrefs
 
 
+@handlers.persistent  # (Non-persistent handlers are removed on every file load.)
 def on_exit_pre(*_args):
     # Blender auto-saves the preferences at quit only when they are marked as changed, and editing the add-on's
     # nested data (brush sets, custom buttons...) doesn't mark them: do it so that data reaches userpref.blend.
