@@ -112,8 +112,23 @@ class WheelTartaButton(PropertyGroup):
 
     @staticmethod
     def _parse_operator_kwargs(payload: str) -> dict:
+        """Keyword arguments of an operator call: ``mode='INVERT', value=(0, 0, 1)``. Values are Python literals;
+        a bare word (``mode=INVERT``) is taken as a string."""
         if not payload:
             return {}
+        try:
+            call = ast.parse(f"f({payload})", mode="eval").body
+        except SyntaxError:
+            call = None
+        if isinstance(call, ast.Call) and not call.args and all(kw.arg for kw in call.keywords):
+            kwargs = {}
+            for kw in call.keywords:
+                try:
+                    kwargs[kw.arg] = ast.literal_eval(kw.value)
+                except (ValueError, SyntaxError, TypeError):
+                    kwargs[kw.arg] = kw.value.id if isinstance(kw.value, ast.Name) else ast.unparse(kw.value)
+            return kwargs
+        # Not valid Python (e.g. unquoted text with spaces): the old lenient split on commas.
         kwargs = {}
         for part in payload.split(','):
             chunk = part.strip()
