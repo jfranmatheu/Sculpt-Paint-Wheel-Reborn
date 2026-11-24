@@ -2,7 +2,7 @@
 
 All notable changes to Sculpt-Paint Wheel. Downloads are on the [releases page](https://github.com/jfran3d/Sculpt-Paint-Wheel-Reborn/releases).
 
-## [2.0.0] - Unreleased
+## [2.0.0] - 2026-11-25
 
 ### New
 - **New ring menu** for custom buttons, styled after FlexSpace's ring menu. The hovered button's name shows in the wheel centre.
