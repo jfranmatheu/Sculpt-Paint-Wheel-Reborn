@@ -9,24 +9,24 @@ from ..utils.tint_palette import PALETTE_RGB
 
 class ButtonTheme(PropertyGroup):
     label_color: FloatVectorProperty(
-        subtype='COLOR', name="Label Color", min=0, max=1, size=4, default=(.92, .92, .92, .95))
+        subtype='COLOR_GAMMA', name="Label Color", min=0, max=1, size=4, default=(.92, .92, .92, .95))
     icon_opacity: FloatProperty(
         name="Icon Opacity", min=0, max=1, default=1.0)
 
     color: FloatVectorProperty(
-        subtype='COLOR', name="Brush Color", min=0, max=1, size=4, default=(.153, .153, .165, 1.0))
+        subtype='COLOR_GAMMA', name="Brush Color", min=0, max=1, size=4, default=(.153, .153, .165, 1.0))
     hovered_color: FloatVectorProperty(
-        subtype='COLOR', name="Brush Hovered Color", min=0, max=1, size=4, default=(.188, .188, .204, 1.0))
+        subtype='COLOR_GAMMA', name="Brush Hovered Color", min=0, max=1, size=4, default=(.188, .188, .204, 1.0))
     active_color: FloatVectorProperty(
-        subtype='COLOR', name="Brush Active Color", min=0, max=1, size=4, default=(.178, .267, .421, 1.0))
+        subtype='COLOR_GAMMA', name="Brush Active Color", min=0, max=1, size=4, default=(.178, .267, .421, 1.0))
     outline_color: FloatVectorProperty(
-        subtype='COLOR', name="Brush Outline Color", min=0, max=1, size=4, default=(.247, .247, .275, 1.0))
+        subtype='COLOR_GAMMA', name="Brush Outline Color", min=0, max=1, size=4, default=(.247, .247, .275, 1.0))
     highlight_outline_width: FloatProperty(
         name="Hovered / Active Outline Width",
         description="Width of the outline of a hovered or active brush, in pixels",
         min=0.25, max=6.0, default=2.0, subtype='PIXEL')
     active_outline_color: FloatVectorProperty(
-        subtype='COLOR', name="Brush Outline Active Color", min=0, max=1, size=4, default=(.231, .510, .965, 1.0))
+        subtype='COLOR_GAMMA', name="Brush Outline Active Color", min=0, max=1, size=4, default=(.231, .510, .965, 1.0))
 
     def get_color(self, hovered: bool, active: bool) -> Tuple[Tuple[float, float, float, float], Tuple[float, float, float, float]]:
         if active:
@@ -39,23 +39,23 @@ class ButtonTheme(PropertyGroup):
 
 class WheelTheme(PropertyGroup):
     text_color: FloatVectorProperty(
-        subtype='COLOR', name="Text Color", min=0, max=1, size=4, default=(.98, .98, .98, 1.0))
+        subtype='COLOR_GAMMA', name="Text Color", min=0, max=1, size=4, default=(.98, .98, .98, 1.0))
     base_color: FloatVectorProperty(
-        subtype='COLOR', name="Wheel Base Color", min=0, max=1, size=4, default=(.084, .084, .091, 1.0))
+        subtype='COLOR_GAMMA', name="Wheel Base Color", min=0, max=1, size=4, default=(.084, .084, .091, 1.0))
     base_outline_color: FloatVectorProperty(
-        subtype='COLOR', name="Wheel Base Outline Color", min=0, max=1, size=4, default=(.247, .247, .275, 1.0))
+        subtype='COLOR_GAMMA', name="Wheel Base Outline Color", min=0, max=1, size=4, default=(.247, .247, .275, 1.0))
     tarta_color: FloatVectorProperty(
-        subtype='COLOR', name="Pie Color", min=0, max=1, size=4, default=(.115, .115, .124, 1.0))
+        subtype='COLOR_GAMMA', name="Pie Color", min=0, max=1, size=4, default=(.115, .115, .124, 1.0))
     tarta_outline_color: FloatVectorProperty(
-        subtype='COLOR', name="Pie Outline Color", min=0, max=1, size=4, default=(.247, .247, .275, 1.0))
+        subtype='COLOR_GAMMA', name="Pie Outline Color", min=0, max=1, size=4, default=(.247, .247, .275, 1.0))
     tarta_accent_color: FloatVectorProperty(
-        subtype='COLOR', name="Accent Color", min=0, max=1, size=4, default=(.98, .98, .98, .75),
+        subtype='COLOR_GAMMA', name="Accent Color", min=0, max=1, size=4, default=(.98, .98, .98, .75),
         description="Ring around a hovered brush slot")
     tarta_pressed_color: FloatVectorProperty(
-        subtype='COLOR', name="Pressed Color", min=0, max=1, size=4, default=(.231, .510, .965, 1.0),
+        subtype='COLOR_GAMMA', name="Pressed Color", min=0, max=1, size=4, default=(.231, .510, .965, 1.0),
         description="Pressed pie buttons (toggles that are on, operators whose state is on): their fill blends towards it and their outline takes it")
     core_color: FloatVectorProperty(
-        subtype='COLOR', name="Core Color", min=0, max=1, size=4, default=(.061, .061, .066, 1.0),
+        subtype='COLOR_GAMMA', name="Core Color", min=0, max=1, size=4, default=(.061, .061, .066, 1.0),
         description="Disc in the middle of the wheel, behind the name")
     tarta_icon_size: FloatProperty(
         name="Icon Size", description="Size of the pie buttons' icons, as a fraction of the segment thickness",
@@ -94,13 +94,13 @@ class WheelTheme(PropertyGroup):
         description="How strongly a button's custom color tints its segment (0: none, 1: the full color)",
         min=0.0, max=1.0, default=0.12, subtype='FACTOR')
     tarta_operator_tint: FloatVectorProperty(
-        subtype='COLOR', name="Operator / Script Tint", min=0, max=1, size=4, default=(.2, .35, .7, .25),
+        subtype='COLOR_GAMMA', name="Operator / Script Tint", min=0, max=1, size=4, default=(.2, .35, .7, .25),
         description="Tint of operator and script buttons, mixed over the pie color (alpha: tint strength)")
     tarta_popup_tint: FloatVectorProperty(
-        subtype='COLOR', name="Popup Tint", min=0, max=1, size=4, default=(.6, .4, .8, .15),
+        subtype='COLOR_GAMMA', name="Popup Tint", min=0, max=1, size=4, default=(.6, .4, .8, .15),
         description="Tint of popup (menu / panel) buttons, mixed over the pie color (alpha: tint strength)")
     tarta_toggle_tint: FloatVectorProperty(
-        subtype='COLOR', name="Toggle Tint", min=0, max=1, size=4, default=(.25, .6, .45, .2),
+        subtype='COLOR_GAMMA', name="Toggle Tint", min=0, max=1, size=4, default=(.25, .6, .45, .2),
         description="Tint of toggle buttons while off, mixed over the pie color (alpha: tint strength). "
                     "When on, they are filled with the accent color")
 
@@ -132,7 +132,7 @@ class WheelTheme(PropertyGroup):
                 base[2] + (tint[2] - base[2]) * k,
                 base[3])
     # pad_color: FloatVectorProperty(
-    #     subtype='COLOR', name="PAD Color", min=0, max=1, size=4, default=(.12, .12, .12, .4))
+    #     subtype='COLOR_GAMMA', name="PAD Color", min=0, max=1, size=4, default=(.12, .12, .12, .4))
 
     button: PointerProperty(type=ButtonTheme)
     brush_picker_button: PointerProperty(type=ButtonTheme)
