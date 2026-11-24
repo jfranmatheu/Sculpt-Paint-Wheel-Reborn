@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Callable, Optional, Sequence, Tuple
 from ..pg.pg_brush_set import BrushSetPreferences
 from ..pg.pg_wheel_storage import SculptPaintWheelStorage
 
-from ..gpu.utils import compute_slot_positions_in_double_ring
+from ..gpu.utils import compute_slot_positions_in_single_ring
 
 from .buttons.pk_brush import PickerBrushButton
 from .widget import WidgetRing
@@ -34,6 +34,40 @@ PAGE_PILL_ALPHA = 0.5    # Idle pill: a translucent, secondary chip...
 PAGE_PILL_ALPHA_HOVER = 0.95  # ...solid while the mouse is over it.
 
 
+def _layout_count(center_radius: float, slot_radius: float, slot_padding: float = 0.0) -> int:
+    """How many slots fit around *center_radius* with tangential padding."""
+    if center_radius <= 0.0 or slot_radius <= 0.0:
+        return 0
+    effective_radius = slot_radius + max(0.0, slot_padding) * 0.5
+    if effective_radius >= center_radius:
+        return 1
+    angle = asin(max(0.0, min(1.0, effective_radius / center_radius)))
+    if angle <= 0.0:
+        return 0
+    return max(1, int(pi / angle))
+
+
+def ring_rows(radius_inner: float, radius_outer: float, prefs: BrushSetPreferences) -> list[tuple[float, float, int]]:
+    """The rows of brush slots of a ring: (centre radius, slot radius, slot count) each, the outer row first."""
+    inner = min(radius_inner, radius_outer) + prefs.ring_padding
+    outer = max(radius_inner, radius_outer) - prefs.ring_padding
+    rows = prefs.row_count
+    gap = prefs.row_gap if rows > 1 else 0.0
+    row_h = max(0.0, (outer - inner - gap * (rows - 1)) / rows)
+    slot_r = min(max(0.0, prefs.slot_size * 0.5), row_h * 0.5)
+    out = []
+    for k in range(rows):
+        center = outer - row_h * 0.5 - k * (row_h + gap)
+        out.append((center, slot_r, _layout_count(center, slot_r, prefs.slot_padding)))
+    return out
+
+
+def slots_per_page(prefs: BrushSetPreferences, wheel_radius: float) -> int:
+    """Brush slots per page of a wheel of that (base) radius, as the wheel lays them out."""
+    outer = (wheel_radius + prefs.extra_radius()) * 0.97
+    return sum(n for _c, _r, n in ring_rows(outer - prefs.ring_thickness(), outer, prefs))
+
+
 def _toward(c, target, k: float):
     return (c[0] + (target[0] - c[0]) * k, c[1] + (target[1] - c[1]) * k, c[2] + (target[2] - c[2]) * k, c[3])
 
@@ -48,29 +82,24 @@ class BrushSetRing(WidgetRing):
     interactable = True
     use_modal = True
 
-    @staticmethod
-    def _compute_layout_count_from_slot_radius(
-        center_radius: float,
-        slot_radius: float,
-        slot_padding: float = 0.0,
-    ) -> int:
-        """Compute how many slots can fit around *center_radius* with tangential padding."""
-        if center_radius <= 0.0 or slot_radius <= 0.0:
-            return 0
-        effective_radius = slot_radius + max(0.0, slot_padding) * 0.5
-        if effective_radius >= center_radius:
-            return 1
-        ratio = max(0.0, min(1.0, effective_radius / center_radius))
-        angle = asin(ratio)
-        if angle <= 0.0:
-            return 0
-        return max(1, int(pi / angle))
+    def _row_positions(self, count: int) -> list[tuple[float, float]]:
+        """Centres of the first *count* slots: the outer row fills first, then the inner one; a row that isn't
+        full spreads its slots evenly around it."""
+        cx, cy = self.center
+        positions = []
+        for center, _r, n in self._rows:
+            k = min(n, count - len(positions))
+            if k <= 0:
+                break
+            positions += compute_slot_positions_in_single_ring(cx, cy, center, k, 0.0)
+        return positions
 
     def init(self) -> None:
         super().init()
         self._pickers = []
         self.slot_count = 0
         self._slot_radius = 0.0
+        self._rows = []
         self._last_active_index = -1
         self._is_page_dragging = False
         self._page_drag_start_x = 0.0
@@ -174,14 +203,9 @@ class BrushSetRing(WidgetRing):
             self.remove_child(p, free=True)
         self._pickers.clear()
 
-        inner = min(self.radius_inner, self.radius_outer) + self.ring_padding
-        outer = max(self.radius_inner, self.radius_outer) - self.ring_padding
-        radial_space = max(0.0, outer - inner)
-        center_radius = 0.5 * (inner + outer)
-        preferred_slot_radius = max(0.0, self.wg_prefs.slot_size * 0.5)
-        slot_r = min(preferred_slot_radius, radial_space * 0.5)
-        slot_padding = max(0.0, self.wg_prefs.slot_padding)
-        count = self._compute_layout_count_from_slot_radius(center_radius, slot_r, slot_padding)
+        self._rows = ring_rows(self.radius_inner, self.radius_outer, self.wg_prefs)
+        count = sum(n for _c, _r, n in self._rows)
+        slot_r = self._rows[0][1] if self._rows else 0.0
         self._slot_radius = slot_r
         self.slot_count = count
         if count == 0:
@@ -191,7 +215,7 @@ class BrushSetRing(WidgetRing):
 
         # Compute slot positions and radius.
         cx, cy = self.center
-        positions = compute_slot_positions_in_double_ring(cx, cy, self.radius_inner, self.radius_outer, count)
+        positions = self._row_positions(count)
 
         # Create and position pickers.
         for i in range(count):
@@ -207,15 +231,7 @@ class BrushSetRing(WidgetRing):
     def _layout_visible_pickers(self, visible_count: int) -> None:
         visible_count = max(0, min(visible_count, len(self._pickers)))
         cx, cy = self.center
-        positions = []
-        if visible_count > 0:
-            positions = compute_slot_positions_in_double_ring(
-                cx,
-                cy,
-                self.radius_inner,
-                self.radius_outer,
-                visible_count,
-            )
+        positions = self._row_positions(visible_count)
         for i, pb in enumerate(self._pickers):
             if i < visible_count:
                 px, py = positions[i]

@@ -118,6 +118,8 @@ class WheelPrefs(PropertyGroup):
             body.prop(self.brush_set_ring, 'slot_size')
             body.prop(self.brush_set_ring, 'slot_padding')
             body.prop(self.brush_set_ring, 'ring_padding')
+            body.prop(self.brush_set_ring, 'use_double_ring')
+            self._draw_slots_per_page(body)
 
         if body := prefs_panel(layout, "spwheel_settings_color_picker", "Color Picker", 'COLORSET_02_VEC'):
             self.color_picker.draw_ui(context, body)
@@ -130,6 +132,21 @@ class WheelPrefs(PropertyGroup):
             sub.prop(self.weight, "use_interactable_markers", text="Interactable")
             sub.prop(self.weight, "marker_count", text="Count")
             body.prop(self.weight, "set_weight_of_selection_directly")
+
+    def _draw_slots_per_page(self, layout: UILayout) -> None:
+        from ..widgets.brush_set_ring import slots_per_page
+        from ..wheels.sculpt_paint_base import SculptPaintWheel
+
+        ring = self.brush_set_ring
+        n = slots_per_page(ring, SculptPaintWheel.reduced_radius)
+        n_picker = slots_per_page(ring, SculptPaintWheel.default_radius)
+        split = layout.split(factor=0.4)
+        left = split.row()
+        left.alignment = 'RIGHT'
+        left.label(text="Slots per Page")
+        right = split.row()
+        right.active = False
+        right.label(text=f"{n}" + (f"   ({n_picker} with the color picker)" if n_picker != n else ""))
 
     def _draw_keymap_tab(self, context: Context, layout: UILayout) -> None:
         import rna_keymap_ui

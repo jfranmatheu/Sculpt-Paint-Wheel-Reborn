@@ -49,12 +49,15 @@ class SculptPaintWheel(Wheel):
 
     def activate(self, context: Context, prefs: WheelPrefs, storage: SculptPaintWheelStorage) -> None:
         use_colorpk = self.wants_color_picker(context)
-        self.radius = self.default_radius if use_colorpk else self.reduced_radius
+        ring_prefs = prefs.brush_set_ring
+        base_radius = self.default_radius if use_colorpk else self.reduced_radius
+        self.radius = base_radius + ring_prefs.extra_radius()  # (A double ring grows the wheel by its second row.)
 
-        self.brush_set_ring.set_transform_thickness(0.97, -1 * (prefs.brush_set_ring.slot_size + prefs.brush_set_ring.ring_padding * 2.0))
+        self.brush_set_ring.set_transform_thickness(0.97, -ring_prefs.ring_thickness())
         if use_colorpk:
             self.color_picker.enabled = True
-            self.tarta_ring.set_transform(0, 0, .1, .4)
+            # (Sized from the base radius: a double ring's extra row doesn't grow the pie into the color picker.)
+            self.tarta_ring.set_transform(0, 0, base_radius * .1, base_radius * .4)
             self.color_picker.set_transform(0, 0, self.tarta_ring.radius_outer+4, self.brush_set_ring.radius_inner-4)
         else:
             self.color_picker.enabled = False
