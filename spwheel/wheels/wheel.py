@@ -10,6 +10,7 @@ from ..core.utils.callback_utils import CallbackDict
 from ..utils.fun import point_inside_circle
 from ..pg.pg_wheel_prefs import WheelPrefs, WheelTheme
 from ..gpu.draw import draw_circle_fill, draw_ring
+from ..gpu.ring_prims import sector
 from ..pg.pg_wheel_storage import SculptPaintWheelStorage, WheelStorage
 
 if TYPE_CHECKING:
@@ -163,8 +164,12 @@ class Wheel:
         pass
 
     def draw(self, context: Context, theme: WheelTheme) -> None:
-        draw_circle_fill(0, 0, self.radius, theme.base_color)
-        draw_ring(0, 0, self.radius, theme.base_outline_color)
+        r = self.radius
+        if theme.shadow_opacity > 0.0:
+            # A soft dark disc a bit lower than the wheel (as FlexSpace's ring menu): its blur shows around it.
+            sector(0.0, -r * 0.025, 0.0, r, fill=(0.0, 0.0, 0.0, theme.shadow_opacity),
+                   soft=max(r * theme.shadow_size, 1.0))
+        sector(0.0, 0.0, 0.0, r, fill=tuple(theme.base_color), border=tuple(theme.base_outline_color), border_w=1.0)
 
 
 # -------------------------------------------------------

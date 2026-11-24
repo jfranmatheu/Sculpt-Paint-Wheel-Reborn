@@ -102,6 +102,10 @@ void main() {
 """
 
 _WEIGHT_RING_FRAG = """
+vec3 srgb_to_lin(vec3 c) {
+  /* Exact sRGB -> linear (pow(c, 2.2) crushes the darks). */
+  return mix(c / 12.92, pow((c + 0.055) / 1.055, vec3(2.4)), step(0.04045, c));
+}
 #define PI 3.14159265359
 #define PI_4 (PI / 4.0)
 #define ARC_HALF (3.0 * PI / 4.0)
@@ -150,7 +154,7 @@ void main() {
     float u = 1.0 - clamp((angle + ARC_HALF) / (2.0 * ARC_HALF), 0.0, 1.0);
     float hue = mix(2.0 / 3.0, 0.0, u);
     vec3 co = hsv2rgb(vec3(hue, 1.0, 1.0));
-    fragColor = vec4(pow(co, vec3(2.2)), alpha);
+    fragColor = vec4(srgb_to_lin(co), alpha);
 }
 """
 

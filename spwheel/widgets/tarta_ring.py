@@ -15,11 +15,14 @@ from ..pg.pg_tarta_set import MAX_TARTA_BUTTONS
 
 
 # Proportions (of the ring's outer radius) and spacing (wheel-local units).
-SEG_INNER_RATIO = 0.58   # Inner edge of the segments.
-CORE_GAP = 4.0           # Between the segments and the core disc.
-SEG_GAP = 3.0            # Between neighbouring segments.
-SEG_ROUND = 3.0          # Corner rounding of the segments.
-PRESSED_BLEND = 0.35     # How much of the accent color fills a pressed button.
+SEG_INNER_RATIO = 0.61   # Inner edge of the segments.
+CORE_GAP = 6.0           # Between the segments and the core disc.
+SEG_GAP_RATIO = 0.027    # Between neighbouring segments, as a fraction of the pie's outer radius.
+SEG_ROUND_RATIO = 0.03   # Corner rounding of the segments, as a fraction of the pie's outer radius.
+PRESSED_BLEND = 0.55     # How far a pressed segment's fill goes towards the pressed color.
+HOVER_LIGHTEN = 0.10     # How much lighter a hovered segment is.
+STRIP_WIDTH = 3.0        # Color strip (tint target): width, and its inset from the segment's edges.
+STRIP_INSET = 4.0
 
 
 def segment_angles(k: int, n: int) -> tuple[float, float]:
@@ -36,6 +39,11 @@ def segment_from_point(dx: float, dy: float, n: int) -> int:
         return -1
     step = TAU / n
     return int(math.floor(((PI - math.atan2(dy, dx)) % TAU) / step)) % n
+
+
+def _mix(a, b, k: float) -> tuple:
+    """sRGB mix of the rgb of ``a`` towards ``b``; alpha of ``a`` kept."""
+    return (a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k, a[3])
 
 
 class TartaRing(WidgetRing):
@@ -81,8 +89,14 @@ class TartaRing(WidgetRing):
         cx, cy = self.center
         seg_fill = tuple(theme.tarta_color)  # (Empty slots; buttons: theme.get_tarta_fill.)
         border = tuple(theme.tarta_outline_color)
-        accent = tuple(theme.tarta_accent_color)
+        pressed_col = tuple(theme.tarta_pressed_color)
         n = self.layout_n
+        target = theme.tarta_tint_target
+        tint_opacity = theme.tarta_tint_opacity
+        tints = [theme.get_tarta_tint(self._tarta_buttons[bid]) if bid >= 0 else None
+                 for bid in self.custom_layout_map[:n]]
+        seg_gap = self.seg_outer * SEG_GAP_RATIO
+        seg_round = self.seg_outer * SEG_ROUND_RATIO
 
         # Segments.
         for k in range(n):
@@ -90,30 +104,37 @@ class TartaRing(WidgetRing):
             bid = self.custom_layout_map[k]
             if bid < 0:
                 fill = (seg_fill[0], seg_fill[1], seg_fill[2], seg_fill[3] * 0.45)
-                sector(cx, cy, self.seg_inner, self.seg_outer, a0, a1, fill=fill, gap=SEG_GAP, round_=SEG_ROUND)
+                sector(cx, cy, self.seg_inner, self.seg_outer, a0, a1, fill=fill, gap=seg_gap, round_=seg_round)
                 continue
             btn = self._tarta_buttons[bid]
             # Fill = state (pressed toggles / operators), outline = hover.
             pressed = btn.get_state(context) is True
             fill = theme.get_tarta_fill(btn)
             if pressed:
-                # A blend, not the full accent: a light accent (e.g. white) would hide the light icons.
-                fill = tuple(f + (c - f) * PRESSED_BLEND for f, c in zip(fill[:3], accent[:3])) + (fill[3],)
+                fill = _mix(fill, pressed_col, PRESSED_BLEND)
             if k == self.hover_layout_slot:
-                seg_border, seg_border_w = accent, 2.0
-            elif pressed:
-                seg_border, seg_border_w = accent, 1.0
+                fill = _mix(fill, (1.0, 1.0, 1.0, 1.0), HOVER_LIGHTEN)
+            if pressed:
+                seg_border = (pressed_col[0], pressed_col[1], pressed_col[2], 0.9)
+            elif (tint := tints[k]) is not None and target == "OUTLINE":
+                seg_border = (tint[0], tint[1], tint[2], tint_opacity)
             else:
-                seg_border, seg_border_w = border, 1.0
+                seg_border = border
             sector(cx, cy, self.seg_inner, self.seg_outer, a0, a1,
-                   fill=fill,
-                   border=seg_border, border_w=seg_border_w,
-                   gap=SEG_GAP, round_=SEG_ROUND)
+                   fill=(fill[0], fill[1], fill[2], 1.0),
+                   border=seg_border, border_w=1.0,
+                   gap=seg_gap, round_=seg_round)
+            if target == "COLOR_STRIP" and (tint := tints[k]) is not None:
+                r0 = self.seg_inner + STRIP_INSET
+                sector(cx, cy, r0, r0 + STRIP_WIDTH, a0, a1, fill=(tint[0], tint[1], tint[2], tint_opacity),
+                       gap=seg_gap + STRIP_INSET * 2.0, round_=STRIP_WIDTH * 0.5)
 
         # Icons (or the name when the button has no image), centred in their segment.
         if n:
             rm = (self.seg_inner + self.seg_outer) * 0.5
-            half = min((self.seg_outer - self.seg_inner) * 0.3, rm * math.sin(min(PI / n, PI * 0.5)) * 0.55)
+            # (Half-size: the icon is tarta_icon_size of the segment thickness, and fits its angular width.)
+            half = min((self.seg_outer - self.seg_inner) * theme.tarta_icon_size * 0.5,
+                       rm * math.sin(min(PI / n, PI * 0.5)) * 0.5)
             col_text = tuple(theme.text_color)
             for k in range(n):
                 bid = self.custom_layout_map[k]
@@ -123,10 +144,12 @@ class TartaRing(WidgetRing):
                 a0, a1 = segment_angles(k, n)
                 am = (a0 + a1) * 0.5 if n > 1 else PI * 0.5  # A single button fills the ring: icon on top.
                 sx, sy = cx + rm * math.cos(am), cy + rm * math.sin(am)
-                hovered = k == self.hover_layout_slot
                 tex = get_custom_button_texture(btn.image_path)
                 if tex is not None:
-                    draw_textured_quad(sx, sy, half * (1.08 if hovered else 1.0), tex, opacity=1.0 if hovered else 0.9)
+                    icon_tint = (1.0, 1.0, 1.0, 1.0)
+                    if target == "ICON" and (tint := tints[k]) is not None:
+                        icon_tint = _mix((1.0, 1.0, 1.0, 1.0), tint, tint_opacity)
+                    draw_textured_quad(sx, sy, half, tex, tint=icon_tint)
                 elif btn.name:
                     draw_text(btn.name[:10], sx, sy, size=9.0, color=col_text, align='CENTER', valign='MIDDLE', shadow=True)
 

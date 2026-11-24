@@ -25,11 +25,15 @@ void main() {
 """
 
 _CIRCLE_FILL_FRAG = """
+vec3 srgb_to_lin(vec3 c) {
+  /* Exact sRGB -> linear (pow(c, 2.2) crushes the darks). */
+  return mix(c / 12.92, pow((c + 0.055) / 1.055, vec3(2.4)), step(0.04045, c));
+}
 void main() {
     float d = length(v_uv - vec2(0.5));
     float r = 0.5;
     float edge = smoothstep(r, r - softness, d);
-    fragColor = vec4(pow(color.rgb, vec3(2.2)), color.a * edge);
+    fragColor = vec4(srgb_to_lin(color.rgb), color.a * edge);
 }
 """
 
@@ -41,6 +45,10 @@ void main() {
 """
 
 _RING_FRAG = """
+vec3 srgb_to_lin(vec3 c) {
+  /* Exact sRGB -> linear (pow(c, 2.2) crushes the darks). */
+  return mix(c / 12.92, pow((c + 0.055) / 1.055, vec3(2.4)), step(0.04045, c));
+}
 void main() {
     float d = length(v_uv - vec2(0.5));
     float band = max(outerRadius - innerRadius, 1e-5);
@@ -49,7 +57,7 @@ void main() {
     float aOuter = 1.0 - smoothstep(outerRadius - s, outerRadius + s, d);
     float aInner = smoothstep(innerRadius - s, innerRadius + s, d);
     float ring = aOuter * aInner;
-    fragColor = vec4(pow(color.rgb, vec3(2.2)), color.a * ring);
+    fragColor = vec4(srgb_to_lin(color.rgb), color.a * ring);
 }
 """
 
@@ -108,6 +116,10 @@ void main() {
 """
 
 _ANNULUS_FRAG = """
+vec3 srgb_to_lin(vec3 c) {
+  /* Exact sRGB -> linear (pow(c, 2.2) crushes the darks). */
+  return mix(c / 12.92, pow((c + 0.055) / 1.055, vec3(2.4)), step(0.04045, c));
+}
 void main() {
     float r = distance(v_world, center);
     float band = max(outerR - innerR, 1e-5);
@@ -115,14 +127,18 @@ void main() {
     float aOuter = 1.0 - smoothstep(outerR - s, outerR + s, r);
     float aInner = smoothstep(innerR - s, innerR + s, r);
     float a = aOuter * aInner;
-    fragColor = vec4(pow(color.rgb, vec3(2.2)), color.a * a);
+    fragColor = vec4(srgb_to_lin(color.rgb), color.a * a);
 }
 """
 
 _TEXTURED_QUAD_FRAG = _TEX_SAMPLE_SS + """
+vec3 srgb_to_lin(vec3 c) {
+  return mix(c / 12.92, pow((c + 0.055) / 1.055, vec3(2.4)), step(0.04045, c));
+}
 void main() {
     vec4 tex = sample_minified(v_uv);
-    fragColor = vec4(pow(tex.rgb, vec3(2.2)), tex.a * opacity);
+    /* tint: an sRGB color the icon is multiplied by (white: unchanged). */
+    fragColor = vec4(pow(tex.rgb, vec3(2.2)) * srgb_to_lin(tint.rgb), tex.a * opacity * tint.a);
 }
 """
 
@@ -218,6 +234,7 @@ def _build_tex_quad_shader() -> GPUShader:
     info = GPUShaderCreateInfo()
     info.push_constant('MAT4', "ModelViewProjectionMatrix")
     info.push_constant('FLOAT', "opacity")
+    info.push_constant('VEC4', "tint")
     info.sampler(0, 'FLOAT_2D', "image")
     info.vertex_in(0, 'VEC2', "pos")
     info.vertex_in(1, 'VEC2', "uv")
@@ -382,8 +399,10 @@ def draw_textured_quad(
     half: float,
     texture: GPUTexture,
     opacity: float = 1.0,
+    tint: Tuple[float, float, float, float] = (1.0, 1.0, 1.0, 1.0),
 ) -> None:
-    """Axis-aligned square with texture; alpha from texture (no circular mask)."""
+    """Axis-aligned square with texture; alpha from texture (no circular mask). ``tint``: sRGB color the texture
+    is multiplied by."""
     shader = _get_tex_quad_shader()
     positions, uvs, indices = _quad_verts(cx, cy, half)
     batch = batch_for_shader(shader, 'TRIS', {"pos": positions, "uv": uvs}, indices=indices)
@@ -391,6 +410,7 @@ def draw_textured_quad(
         shader.bind()
         shader.uniform_sampler("image", texture)
         shader.uniform_float("opacity", opacity)
+        shader.uniform_float("tint", tint)
         batch.draw(shader)
 
 

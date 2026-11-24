@@ -106,6 +106,11 @@ class WheelPrefs(PropertyGroup):
             col.prop(self, 'keep_open')
             col.prop(self, 'select_on_release')
 
+        if body := prefs_panel(layout, "spwheel_settings_brush_ring", "Brush Ring", 'BRUSH_DATA'):
+            body.prop(self.brush_set_ring, 'slot_size')
+            body.prop(self.brush_set_ring, 'slot_padding')
+            body.prop(self.brush_set_ring, 'ring_padding')
+
         if body := prefs_panel(layout, "spwheel_settings_color_picker", "Color Picker", 'COLORSET_02_VEC'):
             self.color_picker.draw_ui(context, body)
 

@@ -14,7 +14,7 @@ class SculptPaintWheel(Wheel):
     tarta_ring: TartaRing
     color_picker: ColorPickerWidget
     default_radius = 210 # radius without color picker: 160
-    reduced_radius = 157
+    reduced_radius = 195
 
     def setup(self, context: Context) -> None:
         tarta_ring = TartaRing()
@@ -48,4 +48,4 @@ class SculptPaintWheel(Wheel):
             self.color_picker.set_transform(0, 0, self.tarta_ring.radius_outer+4, self.brush_set_ring.radius_inner-4)
         else:
             self.color_picker.enabled = False
-            self.tarta_ring.set_transform(0, 0, 0.1, self.brush_set_ring.radius_inner-4)
+            self.tarta_ring.set_transform(0, 0, 0.1, self.brush_set_ring.radius_inner - self.radius * 0.03)

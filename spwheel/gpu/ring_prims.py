@@ -33,6 +33,10 @@ void main()
 '''
 
 _FRAG = '''
+vec3 srgb_to_lin(vec3 c) {
+  /* Exact sRGB -> linear (pow(c, 2.2) crushes the darks). */
+  return mix(c / 12.92, pow((c + 0.055) / 1.055, vec3(2.4)), step(0.04045, c));
+}
 void main()
 {
   float r = length(v_p);
@@ -70,7 +74,7 @@ void main()
   vec4 col = vec4(u_border.rgb, 1.0) * tb + pf * (1.0 - tb);
   col *= cov;
   /* (Same colour handling as the other wheel shaders.) */
-  fragColor = vec4(pow(col.rgb / max(col.a, 1e-5), vec3(2.2)), col.a);
+  fragColor = vec4(srgb_to_lin(col.rgb / max(col.a, 1e-5)), col.a);
 }
 '''
 

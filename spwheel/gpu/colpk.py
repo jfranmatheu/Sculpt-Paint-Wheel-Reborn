@@ -32,6 +32,10 @@ void main() {
 
 # Full hue ring — uniforms s, v (saturation / value driving the wheel colors)
 _COLPK_H_FRAG = """
+vec3 srgb_to_lin(vec3 c) {
+  /* Exact sRGB -> linear (pow(c, 2.2) crushes the darks). */
+  return mix(c / 12.92, pow((c + 0.055) / 1.055, vec3(2.4)), step(0.04045, c));
+}
 #define TWO_PI 6.28318530718
 #define RAD_THRES 0.03
 
@@ -72,13 +76,17 @@ void main() {
     }
 
     vec3 co = hsb2rgb(vec3((angle / TWO_PI) + 0.5, s, v));
-    fragColor.rgb = pow(co, vec3(2.2));
+    fragColor.rgb = srgb_to_lin(co);
     fragColor.a = alpha;
 }
 """
 
 # Saturation arc (left half of quad), angles in degrees
 _COLPK_S_FRAG = """
+vec3 srgb_to_lin(vec3 c) {
+  /* Exact sRGB -> linear (pow(c, 2.2) crushes the darks). */
+  return mix(c / 12.92, pow((c + 0.055) / 1.055, vec3(2.4)), step(0.04045, c));
+}
 #define ALPHA_THRES 0.01
 #define RAD_THRES 0.03
 
@@ -144,12 +152,16 @@ void main() {
     sat = mix(sat, 0.0, clamp(capMix0, 0.0, 1.0));
     sat = mix(sat, 1.0, clamp(capMix1, 0.0, 1.0));
     vec3 co = hsv2rgb(vec3(h, sat, v));
-    fragColor.rgb = pow(co, vec3(2.2));
+    fragColor.rgb = srgb_to_lin(co);
 }
 """
 
 # Value arc (right half of quad)
 _COLPK_V_FRAG = """
+vec3 srgb_to_lin(vec3 c) {
+  /* Exact sRGB -> linear (pow(c, 2.2) crushes the darks). */
+  return mix(c / 12.92, pow((c + 0.055) / 1.055, vec3(2.4)), step(0.04045, c));
+}
 #define ALPHA_THRES 0.01
 #define RAD_THRES 0.03
 
@@ -212,7 +224,7 @@ void main() {
     val = mix(val, 0.0, clamp(capMix0, 0.0, 1.0));
     val = mix(val, 1.0, clamp(capMix1, 0.0, 1.0));
     vec3 co = hsv2rgb(vec3(h, s, val));
-    fragColor.rgb = pow(co, vec3(2.2));
+    fragColor.rgb = srgb_to_lin(co);
 }
 """
 

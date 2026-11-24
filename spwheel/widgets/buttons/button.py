@@ -114,11 +114,16 @@ class ButtonCircle(ButtonBase, WidgetCircle):
 
     def draw_outline(self, context: Context, button_theme: ButtonTheme) -> None:
         base_color, outline_color = button_theme.get_color(self.hovered, self.active)
-        if self.hovered and not self.active:
-            outline_color = getattr(self, "_accent_color", outline_color)
         # draw_ring's thickness is half the stroke width.
-        half_width = button_theme.highlight_outline_width * 0.5 if (self.active or self.hovered) else 0.5  # Idle: 1 px.
-        draw_ring(0.0, 0.0, self.radius, outline_color, thickness=half_width, softness=0.012)
+        half_width = button_theme.highlight_outline_width * 0.5
+        if self.active:
+            draw_ring(0.0, 0.0, self.radius - half_width, outline_color, thickness=half_width, softness=0.012)
+        else:
+            draw_ring(0.0, 0.0, self.radius - 0.5, button_theme.outline_color, thickness=0.5, softness=0.012)  # 1 px.
+        if self.hovered:
+            # A ring just outside the slot (2 px gap), in the accent color.
+            accent = getattr(self, "_accent_color", outline_color)
+            draw_ring(0.0, 0.0, self.radius + 2.0 + half_width, accent, thickness=half_width, softness=0.012)
 
 class ButtonRect(ButtonBase, WidgetRect):
     def draw_base(self, context: Context, button_theme: ButtonTheme) -> None:

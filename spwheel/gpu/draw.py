@@ -51,6 +51,10 @@ void main() {
 """
 
 _PIE_RING_FRAG = """
+vec3 srgb_to_lin(vec3 c) {
+  /* Exact sRGB -> linear (pow(c, 2.2) crushes the darks). */
+  return mix(c / 12.92, pow((c + 0.055) / 1.055, vec3(2.4)), step(0.04045, c));
+}
 float sector_kind(int s) {
     if (s < 0 || s > 30) {
         return 0.0;
@@ -120,11 +124,15 @@ void main() {
         alpha *= outer_t * outer_t * (3.0 - 2.0 * outer_t);
     }
 
-    fragColor = vec4(pow(color.rgb, vec3(2.2)), alpha);
+    fragColor = vec4(srgb_to_lin(color.rgb), alpha);
 }
 """
 
 _RING_BLR_FRAG = """
+vec3 srgb_to_lin(vec3 c) {
+  /* Exact sRGB -> linear (pow(c, 2.2) crushes the darks). */
+  return mix(c / 12.92, pow((c + 0.055) / 1.055, vec3(2.4)), step(0.04045, c));
+}
 void main() {
     vec4 co = ringColor;
 
@@ -152,7 +160,7 @@ void main() {
         alpha = smoothstep(inner, rad + edge_soft, radius);
     }
 
-    fragColor = vec4(pow(co.rgb, vec3(2.2)), co.a * alpha * s);
+    fragColor = vec4(srgb_to_lin(co.rgb), co.a * alpha * s);
 }
 """
 

@@ -12,7 +12,7 @@ from ..utils.ups import get_tool_settings
 from .widget import Widget, WheelPrefs
 
 
-CORE_TEXT_SIZE = 11.0
+CORE_TEXT_SIZE = 13.0
 LINE_SPACING = 1.25      # Line step, in text heights.
 TEXT_MARGIN = 0.88       # Fraction of the chord the text may take.
 
@@ -37,6 +37,7 @@ class WheelCore(Widget):
     ``hover_label``: a custom button, a brush), else the active brush. Up to ``center_text_max_lines`` lines, centred
     both ways. Display only: no interaction."""
     interactable = False
+    text_size = CORE_TEXT_SIZE  # (Sized from the core radius on draw.)
 
     def __init__(self, ring) -> None:
         super().__init__()
@@ -59,7 +60,7 @@ class WheelCore(Widget):
     def layout_lines(self, text: str, radius: float, line_h: float) -> list[str]:
         """The fewest lines (up to ``max_lines``) that fit ``text`` in the disc; each line as wide as the chord at
         the block's top / bottom edge allows. Text that still doesn't fit: the last line shortened with an ellipsis."""
-        blf.size(0, int(round(CORE_TEXT_SIZE)))
+        blf.size(0, int(round(self.text_size)))
         lines: list[str] = []
         max_w = 0.0
         for n in range(1, self.max_lines + 1):
@@ -71,31 +72,30 @@ class WheelCore(Widget):
             if len(lines) <= n and all(blf.dimensions(0, ln)[0] <= max_w for ln in lines):
                 return lines
         if not lines:  # (Not even one line fits vertically: one line at the disc's width.)
-            return [ellipsis_middle(text, radius * 2.0 * TEXT_MARGIN, size=CORE_TEXT_SIZE)]
+            return [ellipsis_middle(text, radius * 2.0 * TEXT_MARGIN, size=self.text_size)]
         n = min(len(lines), self.max_lines)
         out = lines[:n]
         if len(lines) > n:
             out[-1] = " ".join([out[-1]] + lines[n:])
-        return [ellipsis_middle(ln, max_w, size=CORE_TEXT_SIZE) for ln in out]
+        return [ellipsis_middle(ln, max_w, size=self.text_size) for ln in out]
 
     def draw(self, context: Context, theme: WheelTheme) -> None:
         r = self.ring.core_radius
         if r <= 2.0 or not self.ring.enabled:
             return
         cx, cy = self.ring.center
-        c = theme.tarta_color
-        fill = (c[0] * 0.55, c[1] * 0.55, c[2] * 0.55, c[3])
-        sector(cx, cy, 0.0, r, fill=fill, border=tuple(theme.tarta_outline_color), border_w=1.0)
+        sector(cx, cy, 0.0, r, fill=tuple(theme.core_color), border=tuple(theme.tarta_outline_color), border_w=1.0)
+        self.text_size = min(max(r * 0.2, 9.0), 28.0)
 
         text = self.get_text(context).strip()
         if not text:
             return
-        blf.size(0, int(round(CORE_TEXT_SIZE)))
+        blf.size(0, int(round(self.text_size)))
         line_h = blf.dimensions(0, "Mg")[1]
         lines = self.layout_lines(text, r, line_h)
         step = line_h * LINE_SPACING
         y = cy + (len(lines) - 1) * step * 0.5
         col = tuple(theme.text_color)
         for ln in lines:
-            draw_text(ln, cx, y, size=CORE_TEXT_SIZE, color=col, align='CENTER', valign='MIDDLE')
+            draw_text(ln, cx, y, size=self.text_size, color=col, align='CENTER', valign='MIDDLE')
             y -= step

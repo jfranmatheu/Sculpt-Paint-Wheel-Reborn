@@ -7,6 +7,9 @@ from ...pg.pg_brush_metadata import BrushMetadata
 from ..widget import WheelTheme
 
 
+ICON_INSET = 0.84  # Preview radius, as a fraction of the slot: the backplate shows around it.
+
+
 class PickerBrushButton(ButtonCircle):
     _brush_metadata: BrushMetadata
     button_theme_datapath = 'brush_picker_button'
@@ -51,7 +54,7 @@ class PickerBrushButton(ButtonCircle):
         draw_textured_circle(
             0.0,
             0.0,
-            self.radius,
+            self.radius * ICON_INSET,
             tex,
             opacity=button_theme.icon_opacity,
             softness=0.025,
