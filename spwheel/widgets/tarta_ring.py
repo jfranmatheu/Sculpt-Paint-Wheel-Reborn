@@ -114,7 +114,9 @@ class TartaRing(WidgetRing):
             if pressed:
                 fill = _mix(fill, pressed_col, PRESSED_BLEND)
             if k == self.hover_layout_slot:
-                fill = _mix(fill, (1.0, 1.0, 1.0, 1.0), HOVER_LIGHTEN)
+                # Hover lightens on a dark palette, darkens on a light one.
+                fill = _mix(fill, (0.0, 0.0, 0.0, 1.0) if getattr(theme, 'is_light', False) else (1.0, 1.0, 1.0, 1.0),
+                            HOVER_LIGHTEN)
             if pressed:
                 seg_border = (pressed_col[0], pressed_col[1], pressed_col[2], 0.9)
             elif (tint := tints[k]) is not None and target == "OUTLINE":
@@ -142,6 +144,7 @@ class TartaRing(WidgetRing):
             half = min((self.seg_outer - r_lo) * theme.tarta_icon_size * 0.5,
                        rm * math.sin(min(PI / n, PI * 0.5)) * 0.5)
             col_text = tuple(theme.text_color)
+            icon_base = tuple(getattr(theme, 'icon_color', (1.0, 1.0, 1.0, 1.0)))
             for k in range(n):
                 bid = self.custom_layout_map[k]
                 if bid < 0:
@@ -152,9 +155,9 @@ class TartaRing(WidgetRing):
                 sx, sy = cx + rm * math.cos(am), cy + rm * math.sin(am)
                 tex = get_custom_button_texture(btn.icon_filepath)
                 if tex is not None:
-                    icon_tint = (1.0, 1.0, 1.0, 1.0)
+                    icon_tint = icon_base
                     if target == "ICON" and (tint := tints[k]) is not None:
-                        icon_tint = _mix((1.0, 1.0, 1.0, 1.0), tint, tint_opacity)
+                        icon_tint = _mix(icon_base, tint, tint_opacity)
                     draw_textured_quad(sx, sy, half, tex, tint=icon_tint)
                 elif btn.name:
                     draw_text(btn.name[:10], sx, sy, size=9.0, color=col_text, align='CENTER', valign='MIDDLE', shadow=True)

@@ -151,7 +151,7 @@ class Wheel:
         self.propagate_event('scroll_down', context, event)
 
     def _draw(self, context: Context, prefs: WheelPrefs) -> None:
-        theme = prefs.theme
+        theme = prefs.theme.effective()  # Dark or Light palette (Auto: follows Blender's theme).
         with gpu.matrix.push_pop():
             gpu.matrix.translate(self.center)
             gpu.matrix.scale((self.scale, self.scale))

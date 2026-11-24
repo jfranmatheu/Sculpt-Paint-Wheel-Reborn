@@ -87,14 +87,19 @@ def draw_weight_markers(
     button_radius: float,
     hover_index: int = -1,
     interactive: bool = True,
+    line_color=(0.90, 0.90, 0.90, 0.95),
+    fill_color=(0.016, 0.016, 0.016, 0.80),
+    ring_color=(0.2, 0.2, 0.2, 0.8),
+    ring_hover_color=(0.85, 0.85, .89, 1.0),
 ) -> None:
+    """Weight dial markers. The default colors are the Dark look; the light palette passes its own."""
     if lines:
-        draw_lines(list(lines), (0.90, 0.90, 0.90, 0.95), line_width=1.7, strip=False)
+        draw_lines(list(lines), line_color, line_width=1.7, strip=False)
     if not interactive:
         return
     for i, p in enumerate(marker_buttons):
-        draw_circle_fill(p[0], p[1], button_radius, (0.016, 0.016, 0.016, 0.80), softness=0.10)
-        col = (0.85, 0.85, .89, 1.0) if i == hover_index else (0.2, 0.2, 0.2, 0.8)
+        draw_circle_fill(p[0], p[1], button_radius, fill_color, softness=0.10)
+        col = ring_hover_color if i == hover_index else ring_color
         draw_ring(p[0], p[1], button_radius, col, thickness=1.1, softness=0.08)
 
 

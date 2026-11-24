@@ -184,6 +184,19 @@ class WeightPickerWidget(WidgetRing):
             return False
         return True
 
+    @staticmethod
+    def _marker_colors(theme) -> dict:
+        """Marker colors for the light palette (the Dark look is draw_weight_markers' default)."""
+        if not getattr(theme, 'is_light', False):
+            return {}
+        bt = theme.brush_picker_button
+        return {
+            "line_color": tuple(theme.base_outline_color),
+            "fill_color": tuple(bt.color),
+            "ring_color": tuple(bt.outline_color),
+            "ring_hover_color": tuple(theme.tarta_pressed_color),
+        }
+
     def draw(self, context: "Context", theme: "WheelTheme") -> None:
         cx, cy = self.center
         # inner = min(self.radius_inner, self.radius_outer)
@@ -199,12 +212,14 @@ class WeightPickerWidget(WidgetRing):
                 button_radius=self.marker_button_radius,
                 hover_index=self.hover_marker_index,
                 interactive=getattr(self.wg_prefs, "use_interactable_markers", True),
+                **self._marker_colors(theme),
             )
             marker_count = max(1, len(self.marker_buttons) - 1)
             label_size = max(10.0, self.wheel.radius * 0.05)
+            label_col = (*tuple(theme.text_color)[:3], 0.88) if getattr(theme, 'is_light', False) else (.95, .95, .95, 0.88)
             for i, p in enumerate(self.marker_buttons):
                 lbl = f"{(i / marker_count):.1f}"
-                draw_text(lbl, p[0], p[1], size=label_size, color=(.95, .95, .95, 0.88), align="CENTER", valign='MIDDLE', shadow=False, font_id=1)
+                draw_text(lbl, p[0], p[1], size=label_size, color=label_col, align="CENTER", valign='MIDDLE', shadow=False, font_id=1)
 
         draw_weight_hue_ring(cx, cy, self.color_ring_outer_radius, self.color_ring_inner_radius)
         draw_weight_handle(

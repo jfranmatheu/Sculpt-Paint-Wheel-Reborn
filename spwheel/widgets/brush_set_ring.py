@@ -13,7 +13,8 @@ from ..gpu.utils import compute_slot_positions_in_double_ring
 from .buttons.pk_brush import PickerBrushButton
 from .widget import WidgetRing
 from ..gpu.draw import draw_circle_fill, draw_ring, draw_text
-from ..core.gpu.imm_2d import draw_lines
+from ..core.gpu.imm_2d import draw_lines, draw_rect_fill
+from ..gpu.ring_prims import sector
 from ..core.globals import GLOBALS
 from ..utils.ups import get_tool_settings
 
@@ -28,8 +29,19 @@ if TYPE_CHECKING:
     from ..pg.pg_brush_metadata import BrushMetadata
 
 
-COL_TOOLSET_DOT_ACTIVE = (0.72, 0.60, 0.26, 0.88)
-COL_TOOLSET_DOT = (0.32, 0.34, 0.38, 0.55)
+PAGE_PILL_HOVER = 0.07   # How much a hovered page pill lightens (dark palette) / darkens (light palette).
+
+
+def _capsule(x: float, y: float, w: float, h: float, color) -> None:
+    """A pill (rectangle with round ends), bottom-left corner at (x, y). Round ends: anti-aliased discs."""
+    r = h * 0.5
+    draw_rect_fill(x + r, y, w - h, h, color)
+    sector(x + r, y + r, 0.0, r, fill=color)
+    sector(x + w - r, y + r, 0.0, r, fill=color)
+
+
+def _toward(c, target, k: float):
+    return (c[0] + (target[0] - c[0]) * k, c[1] + (target[1] - c[1]) * k, c[2] + (target[2] - c[2]) * k, c[3])
 
 class BrushSetRing(WidgetRing):
     """Places ``PickerBrushButton`` children on a ring using ``gpu.utils`` layout."""
@@ -75,6 +87,7 @@ class BrushSetRing(WidgetRing):
         self._set_drag_steps_applied = 0
         self._set_drag_step_px = 20.0
         self._hover_page_area = False
+        self._hover_page_part = None  # Page pill part under the mouse: -1 back arrow, 0 middle, 1 forward arrow.
         self._hover_set_area = False
 
     @property
@@ -269,7 +282,9 @@ class BrushSetRing(WidgetRing):
             
         context.region.tag_redraw()
 
-    def _get_page_indicator_layout(self) -> tuple[int, int, float, float, float, float, float] | None:
+    def _get_page_indicator_layout(self) -> tuple[int, int, float, float, float, float] | None:
+        """Page pill under the ring (only with more than one page): (page_index, page_count, x, y, w, h),
+        (x, y) its bottom-left corner in wheel-local units. It overlaps the ring's edge a little."""
         active_brush_set: BrushSet = self.active_brush_set
         if not active_brush_set:
             return None
@@ -279,13 +294,11 @@ class BrushSetRing(WidgetRing):
         if page_count <= 1:
             return None
         page_index = max(0, min(active_brush_set.page_index, page_count - 1))
-        wheel = self.wheel
-        dot_radius = 3.0
-        spacing = min(10.0, max(5.0, 180.0 / max(page_count, 1)))
-        total_w = (page_count - 1) * spacing
-        start_x = -total_w * 0.5
-        dot_y = -wheel.radius - 14.0
-        return (page_index, page_count, dot_radius, spacing, start_x, dot_y, total_w)
+        r = self.wheel.radius
+        h = max(26.0, r * 0.14)
+        w = max(120.0, r * 0.64)
+        top = -r + h * 0.2
+        return (page_index, page_count, -w * 0.5, top - h, w, h)
 
     def _get_title_layout(self) -> tuple[str, float, float] | None:
         active_brush_set: BrushSet = self.active_brush_set
@@ -300,7 +313,7 @@ class BrushSetRing(WidgetRing):
         title_half_w = max(26.0, len(title) * 4.2)
         return (title, title_y, title_half_w)
 
-    def _step_page(self, context: Context, delta: int) -> bool:
+    def _step_page(self, context: Context, delta: int, wrap: bool = False) -> bool:
         if delta == 0:
             return False
         active_brush_set: BrushSet = self.active_brush_set
@@ -311,7 +324,10 @@ class BrushSetRing(WidgetRing):
             return False
         max_page_index = max(0, (len(active_brush_set.items) + slot_count - 1) // slot_count - 1)
         last_page_index = active_brush_set.page_index
-        active_brush_set.page_index = max(0, min(max_page_index, active_brush_set.page_index + delta))
+        if wrap:  # (Back from the first page is the last one, forward from the last is the first.)
+            active_brush_set.page_index = (active_brush_set.page_index + delta) % (max_page_index + 1)
+        else:
+            active_brush_set.page_index = max(0, min(max_page_index, active_brush_set.page_index + delta))
         if active_brush_set.page_index != last_page_index:
             self._rebuild_pickers(context)
             return True
@@ -347,13 +363,14 @@ class BrushSetRing(WidgetRing):
         layout = self._get_page_indicator_layout()
         if layout is None:
             return False
-        _page_index, _page_count, dot_radius, _spacing, _start_x, dot_y, total_w = layout
-        # Thin horizontal target around page dots; low-risk and tablet friendly.
-        half_w = total_w * 0.5 + 16.0
-        if abs(p.y - dot_y) > max(14.0, dot_radius * 4.0):
+        _page_index, _page_count, x, y, w, h = layout
+        if not (x <= p.x <= x + w and y <= p.y <= y + h):
+            self._hover_page_part = None
             return False
-        self._hover_page_area = -half_w <= p.x <= half_w
-        return self._hover_page_area
+        u = (p.x - x) / max(w, 1e-6)
+        self._hover_page_part = -1 if u < 0.32 else 1 if u > 0.68 else 0
+        self._hover_page_area = True
+        return True
 
     def on_left_press(self, context: Context, event: Event) -> bool:
         mx, _my = self.wheel.to_local(event.mouse_region_x, event.mouse_region_y)
@@ -366,14 +383,8 @@ class BrushSetRing(WidgetRing):
                 _title, _title_y, title_half_w = title_layout
                 self._set_drag_step_px = max(16.0, min(42.0, (title_half_w * 2.0) / 4.0))
             return True
-        if self._hover_page_area:
-            self._is_page_dragging = True
-            self._page_drag_start_x = mx
-            self._page_drag_steps_applied = 0
-            layout = self._get_page_indicator_layout()
-            if layout is not None:
-                _page_index, _page_count, dot_radius, spacing, _start_x, _dot_y, _total_w = layout
-                self._page_drag_step_px = max(12.0, spacing + dot_radius * 1.2)
+        if self._hover_page_area and self._hover_page_part is not None:
+            self._step_page(context, self._hover_page_part or 1, wrap=True)
             return True
         return False
 
@@ -455,23 +466,32 @@ class BrushSetRing(WidgetRing):
             draw_lines(lines, col, line_width=1.8, strip=False)
 
     def draw_page_indicator(self, context: Context, theme: WheelTheme) -> None:
+        """A pill in the wheel's colors: back arrow, "n / N", forward arrow; the part under the mouse lit."""
         layout = self._get_page_indicator_layout()
         if layout is None:
             return
-        page_index, page_count, dot_radius, spacing, start_x, dot_y, _total_w = layout
-        for i in range(page_count):
-            dx = start_x + i * spacing
-            col = COL_TOOLSET_DOT_ACTIVE if i == page_index else COL_TOOLSET_DOT
-            draw_circle_fill(dx, dot_y, dot_radius, col, softness=0.04)
+        page_index, page_count, x, y, w, h = layout
+        light = getattr(theme, 'is_light', False)
+        part = self._hover_page_part if self._hover_page_area else None
+        base = tuple(theme.base_color)
+        fill = _toward(base, (0.0, 0.0, 0.0, 1.0) if light else (1.0, 1.0, 1.0, 1.0), PAGE_PILL_HOVER) if part is not None else base
+        border = tuple(theme.base_outline_color)
+        _capsule(x, y, w, h, (border[0], border[1], border[2], 1.0))                  # 1 px outline...
+        _capsule(x + 1.0, y + 1.0, w - 2.0, h - 2.0, (fill[0], fill[1], fill[2], 1.0))  # ...around the fill.
 
-        # draw page number
-        draw_text(
-            f"{page_index + 1} / {page_count}",
-            0,
-            dot_y - dot_radius - 5.0,
-            size=9.0,
-            color=theme.text_color,
-            align="CENTER",
-            shadow=True,
-            valign='TOP'
-        )
+        text_col = tuple(theme.text_color)
+        muted = (text_col[0], text_col[1], text_col[2], text_col[3] * 0.75)
+        accent = tuple(theme.tarta_pressed_color)
+        draw_text(f"{page_index + 1} / {page_count}", 0.0, y + h * 0.5, size=max(10.0, h * 0.48),
+                  color=text_col if part in (None, 0) else muted, align="CENTER", valign='MIDDLE', shadow=False)
+
+        k = h * 0.2                      # Caret half-height.
+        inset = h * 0.55                 # Carets at the pill's ends, clear of the numbers.
+        cy = y + h * 0.5
+        for step, cx, sign in ((-1, x + inset, -1.0), (1, x + w - inset, 1.0)):
+            lit = part == step
+            col = (accent[0], accent[1], accent[2], 1.0) if lit else muted
+            tip = cx + sign * k * 0.5
+            back = cx - sign * k * 0.5
+            draw_lines([(back, cy + k), (tip, cy), (tip, cy), (back, cy - k)], col,
+                       line_width=2.2 if lit else 1.8, strip=False)

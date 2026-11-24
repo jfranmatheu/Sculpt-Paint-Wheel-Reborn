@@ -4,6 +4,7 @@ from bpy.types import Context, UILayout
 
 from ..core.bl_types import PropertyGroup
 from ..utils.tint_palette import PALETTE_RGB
+from ..utils.theme_detect import blender_theme_is_light
 
 
 
@@ -37,7 +38,86 @@ class ButtonTheme(PropertyGroup):
             return self.color, self.outline_color
 
 
+# ----- Light palette ----------------------------------------------------------------
+# The colors above are the Dark palette. The Light palette mirrors the colors that depend on the background
+# (the rest of the theme: sizes, tints, opacities... is shared). See WheelTheme.effective().
+
+class LightButtonTheme(PropertyGroup):
+    label_color: FloatVectorProperty(
+        subtype='COLOR_GAMMA', name="Label Color", min=0, max=1, size=4, default=(0.102, 0.102, 0.102, 0.95))
+    icon_opacity: FloatProperty(
+        name="Icon Opacity", min=0, max=1, default=1.0)
+
+    color: FloatVectorProperty(
+        subtype='COLOR_GAMMA', name="Brush Color", min=0, max=1, size=4, default=(0.788, 0.788, 0.808, 1))
+    hovered_color: FloatVectorProperty(
+        subtype='COLOR_GAMMA', name="Brush Hovered Color", min=0, max=1, size=4, default=(0.737, 0.737, 0.761, 1))
+    active_color: FloatVectorProperty(
+        subtype='COLOR_GAMMA', name="Brush Active Color", min=0, max=1, size=4, default=(0.62, 0.702, 0.839, 1))
+    outline_color: FloatVectorProperty(
+        subtype='COLOR_GAMMA', name="Brush Outline Color", min=0, max=1, size=4, default=(0.557, 0.557, 0.584, 1))
+    highlight_outline_width: FloatProperty(
+        name="Hovered / Active Outline Width",
+        description="Width of the outline of a hovered or active brush, in pixels",
+        min=0.25, max=6.0, default=2.0, subtype='PIXEL')
+    active_outline_color: FloatVectorProperty(
+        subtype='COLOR_GAMMA', name="Brush Outline Active Color", min=0, max=1, size=4, default=(0.337, 0.502, 0.761, 1))
+
+    get_color = ButtonTheme.get_color
+
+
+class WheelThemeLight(PropertyGroup):
+    text_color: FloatVectorProperty(
+        subtype='COLOR_GAMMA', name="Text Color", min=0, max=1, size=4, default=(0.102, 0.102, 0.102, 1))
+    icon_color: FloatVectorProperty(
+        subtype='COLOR_GAMMA', name="Icon Color", min=0, max=1, size=4, default=(0.149, 0.149, 0.149, 1),
+        description="Color of the pie buttons' icons")
+    base_color: FloatVectorProperty(
+        subtype='COLOR_GAMMA', name="Wheel Base Color", min=0, max=1, size=4, default=(0.902, 0.902, 0.914, 1))
+    base_outline_color: FloatVectorProperty(
+        subtype='COLOR_GAMMA', name="Wheel Base Outline Color", min=0, max=1, size=4, default=(0.416, 0.416, 0.439, 1))
+    tarta_color: FloatVectorProperty(
+        subtype='COLOR_GAMMA', name="Pie Color", min=0, max=1, size=4, default=(0.965, 0.965, 0.973, 1))
+    tarta_outline_color: FloatVectorProperty(
+        subtype='COLOR_GAMMA', name="Pie Outline Color", min=0, max=1, size=4, default=(0.663, 0.663, 0.69, 1))
+    tarta_accent_color: FloatVectorProperty(
+        subtype='COLOR_GAMMA', name="Accent Color", min=0, max=1, size=4, default=(0.227, 0.227, 0.227, 0.85),
+        description="Ring around a hovered brush slot")
+    tarta_pressed_color: FloatVectorProperty(
+        subtype='COLOR_GAMMA', name="Pressed Color", min=0, max=1, size=4, default=(0.337, 0.502, 0.761, 1),
+        description="Pressed pie buttons (toggles that are on, operators whose state is on): their fill blends towards it and their outline takes it")
+    core_color: FloatVectorProperty(
+        subtype='COLOR_GAMMA', name="Core Color", min=0, max=1, size=4, default=(1, 1, 1, 1),
+        description="Disc in the middle of the wheel, behind the name")
+    shadow_opacity: FloatProperty(
+        name="Shadow Opacity", description="Opacity of the soft shadow around the wheel (0: no shadow)",
+        min=0.0, max=1.0, default=0.55, subtype='FACTOR')
+
+    button: PointerProperty(type=LightButtonTheme)
+    brush_picker_button: PointerProperty(type=LightButtonTheme)
+
+
+# Theme attributes that come from the active palette (everything else is shared by both).
+PALETTE_KEYS = frozenset({
+    'text_color', 'icon_color', 'base_color', 'base_outline_color', 'tarta_color', 'tarta_outline_color',
+    'tarta_accent_color', 'tarta_pressed_color', 'core_color', 'shadow_opacity', 'button', 'brush_picker_button',
+})
+
+
 class WheelTheme(PropertyGroup):
+    theme_mode: EnumProperty(
+        name="Theme",
+        description="Colors of the wheel",
+        items=(
+            ("AUTO", "Auto", "Follow Blender's interface theme: the Light palette with a light theme, else the Dark one"),
+            ("DARK", "Dark", "Always use the Dark palette"),
+            ("LIGHT", "Light", "Always use the Light palette"),
+        ),
+        default="AUTO")
+    light: PointerProperty(type=WheelThemeLight)
+    icon_color: FloatVectorProperty(
+        subtype='COLOR_GAMMA', name="Icon Color", min=0, max=1, size=4, default=(1.0, 1.0, 1.0, 1.0),
+        description="Color of the pie buttons' icons")
     text_color: FloatVectorProperty(
         subtype='COLOR_GAMMA', name="Text Color", min=0, max=1, size=4, default=(.98, .98, .98, 1.0))
     base_color: FloatVectorProperty(
@@ -84,7 +164,7 @@ class WheelTheme(PropertyGroup):
             ("ICON", "Icon", "The button's icon"),
             ("COLOR_STRIP", "Color Strip", "A thin strip along the inner edge of the segment"),
         ),
-        default="FILL")
+        default="COLOR_STRIP")
     tarta_tint_opacity: FloatProperty(
         name="Tint Opacity",
         description="Opacity of the tint on the outline, the icon or the color strip",
@@ -131,6 +211,22 @@ class WheelTheme(PropertyGroup):
                 base[1] + (tint[1] - base[1]) * k,
                 base[2] + (tint[2] - base[2]) * k,
                 base[3])
+    def uses_light(self) -> bool:
+        """True when the Light palette applies (Light mode, or Auto with a light Blender theme)."""
+        if self.theme_mode == "LIGHT":
+            return True
+        if self.theme_mode == "DARK":
+            return False
+        return blender_theme_is_light()
+
+    def palette(self):
+        """The palette in use: this group (Dark) or ``self.light``. Holds every attribute in PALETTE_KEYS."""
+        return self.light if self.uses_light() else self
+
+    def effective(self) -> "ThemeView":
+        """What the widgets draw with: this theme, with the palette colors of the mode in use."""
+        return ThemeView(self, self.light if self.uses_light() else None)
+
     # pad_color: FloatVectorProperty(
     #     subtype='COLOR_GAMMA', name="PAD Color", min=0, max=1, size=4, default=(.12, .12, .12, .4))
 
@@ -141,28 +237,40 @@ class WheelTheme(PropertyGroup):
     def draw_ui(self, context: Context, layout: UILayout):
         from .pg_wheel_prefs import prefs_panel
 
-        row = layout.row()
-        row.alignment = 'RIGHT'
-        row.operator("spwheel.opresetwheeltheme", text="Reset Theme", icon='LOOP_BACK')
+        row = layout.row(align=True)
+        row.scale_y = 1.2
+        row.prop(self, 'theme_mode', expand=True)
+        row.separator()
+        row.operator("spwheel.opresetwheeltheme", text="", icon='LOOP_BACK')
+        light = self.uses_light()
+        pal = self.palette()  # The colors below are the palette in use: what you see is what you edit.
+        hint = layout.row()
+        hint.active = False
+        if self.theme_mode == "AUTO":
+            hint.label(text=f"Blender's theme is {'light' if light else 'dark'}: editing the {'Light' if light else 'Dark'} palette",
+                       icon='LIGHT_SUN' if light else 'HIDE_ON')
+        else:
+            hint.label(text=f"Editing the {'Light' if light else 'Dark'} palette", icon='LIGHT_SUN' if light else 'HIDE_ON')
 
         if body := prefs_panel(layout, "spwheel_theme_general", "General", 'COLOR'):
-            body.prop(self, 'tarta_accent_color')
-            body.prop(self, 'text_color')
+            body.prop(pal, 'tarta_accent_color')
+            body.prop(pal, 'text_color')
+            body.prop(pal, 'icon_color')
 
         if body := prefs_panel(layout, "spwheel_theme_wheel", "Wheel", 'MESH_CIRCLE'):
-            body.prop(self, 'base_color', text="Background")
-            body.prop(self, 'base_outline_color', text="Outline")
-            body.prop(self, 'core_color', text="Core")
+            body.prop(pal, 'base_color', text="Background")
+            body.prop(pal, 'base_outline_color', text="Outline")
+            body.prop(pal, 'core_color', text="Core")
             col = body.column(heading="Shadow")
-            col.prop(self, 'shadow_opacity', text="Opacity")
+            col.prop(pal, 'shadow_opacity', text="Opacity")
             sub = col.column()
-            sub.active = self.shadow_opacity > 0.0
+            sub.active = pal.shadow_opacity > 0.0
             sub.prop(self, 'shadow_size', text="Size")
 
         if body := prefs_panel(layout, "spwheel_theme_pie", "Pie Menu", 'ANTIALIASED'):
-            body.prop(self, 'tarta_color', text="Segment")
-            body.prop(self, 'tarta_outline_color', text="Outline")
-            body.prop(self, 'tarta_pressed_color', text="Pressed")
+            body.prop(pal, 'tarta_color', text="Segment")
+            body.prop(pal, 'tarta_outline_color', text="Outline")
+            body.prop(pal, 'tarta_pressed_color', text="Pressed")
             body.prop(self, 'tarta_icon_size')
             body.separator()
             body.row().prop(self, 'tarta_tint_mode', text="Tint", expand=True)
@@ -182,10 +290,10 @@ class WheelTheme(PropertyGroup):
                 hint.label(text="Pick each button's color in the Custom Buttons list", icon='INFO')
 
         if body := prefs_panel(layout, "spwheel_theme_brush_ring", "Brush Ring", 'BRUSH_DATA'):
-            self._draw_brush_slots(body)
+            self._draw_brush_slots(body, pal)
 
-    def _draw_brush_slots(self, layout: UILayout) -> None:
-        bt = self.brush_picker_button  # What the brush slots draw with.
+    def _draw_brush_slots(self, layout: UILayout, pal) -> None:
+        bt = pal.brush_picker_button  # What the brush slots draw with.
         grid = layout.grid_flow(row_major=True, columns=4, even_columns=False, align=True)
         grid.use_property_split = False
         for text in ("", "Idle", "Hovered", "Active"):
@@ -196,8 +304,33 @@ class WheelTheme(PropertyGroup):
         grid.prop(bt, 'active_color', text="")
         grid.label(text="Outline")
         grid.prop(bt, 'outline_color', text="")
-        grid.prop(self, 'tarta_accent_color', text="")  # Shared with the pie menu hover.
+        grid.prop(pal, 'tarta_accent_color', text="")  # Shared with the pie menu hover.
         grid.prop(bt, 'active_outline_color', text="")
         layout.separator()
         layout.prop(bt, 'highlight_outline_width', text="Hovered / Active Width")
         layout.prop(bt, 'icon_opacity')
+
+
+class ThemeView:
+    """The theme as the widgets draw it: palette colors from the Dark (the theme itself) or Light palette,
+    everything else (sizes, tints, opacities...) from the theme. ``is_light`` tells widgets with their own
+    shading which way to go (e.g. hovering lightens on dark, darkens on light)."""
+
+    __slots__ = ('_theme', '_light', 'is_light')
+
+    def __init__(self, theme: "WheelTheme", light: "WheelThemeLight | None") -> None:
+        self._theme = theme
+        self._light = light
+        self.is_light = light is not None
+
+    def __getattr__(self, name: str):
+        if self._light is not None and name in PALETTE_KEYS:
+            return getattr(self._light, name)
+        return getattr(self._theme, name)
+
+    # The theme's helpers, reading the palette through this view.
+    def get_tarta_tint(self, button):
+        return WheelTheme.get_tarta_tint(self, button)
+
+    def get_tarta_fill(self, button):
+        return WheelTheme.get_tarta_fill(self, button)

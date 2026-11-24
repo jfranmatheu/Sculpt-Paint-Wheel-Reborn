@@ -19,6 +19,11 @@ if TYPE_CHECKING:
     from ..pg.pg_wheel_theme import WheelTheme
 
 
+def _shade(c, k: float):
+    """``c`` darkened by ``k`` (0..1), alpha kept."""
+    return (c[0] * (1.0 - k), c[1] * (1.0 - k), c[2] * (1.0 - k), c[3])
+
+
 @dataclass(frozen=True)
 class _ToolSpec:
     label: str
@@ -162,6 +167,15 @@ class WeightToolbarWidget(Widget):
         col_active = (0.1, 0.3, 0.55, 0.8)
         col_idle_hov = (0.04, 0.04, 0.04, 0.8)
         col_idle = (0.015, 0.015, 0.015, 0.8)
+        col_border = (0.14, 0.14, 0.2, 0.8)
+        col_label = (0.9, 0.9, 0.9, 0.9)
+        if getattr(theme, 'is_light', False):
+            # Light palette: the brush slots' colors (the Dark look above is kept as designed).
+            bt = theme.brush_picker_button
+            col_idle, col_idle_hov = tuple(bt.color), tuple(bt.hovered_color)
+            col_active = tuple(bt.active_color)
+            col_hover = _shade(col_active, 0.06)
+            col_border, col_label = tuple(bt.outline_color), tuple(theme.text_color)
         rad = self._tool_button_radius()
         icon_half = self._tool_icon_half()
         for i, (p, c) in enumerate(zip(self._positions, self._centers)):
@@ -172,9 +186,9 @@ class WeightToolbarWidget(Widget):
             else:
                 col = col_idle_hov if is_hover else col_idle
             draw_circle_fill(c.x, c.y, rad, col, softness=0.015)
-            draw_ring(c.x, c.y, rad, (0.14, 0.14, 0.2, 0.8), thickness=1.0, softness=0.08)
+            draw_ring(c.x, c.y, rad, col_border, thickness=1.0, softness=0.08)
             tex = get_custom_button_texture(self._icon_paths[i]) if i < len(self._icon_paths) else None
             if tex is not None:
                 draw_textured_circle(c.x, c.y, icon_half * (1.06 if is_hover else 1.0), tex, opacity=1.0 if is_hover else 0.90, softness=0.2)
             else:
-                draw_text(self._tools[i].label[:8], c.x, c.y, size=8.5, color=(0.9, 0.9, 0.9, 0.9), align="CENTER", shadow=True)
+                draw_text(self._tools[i].label[:8], c.x, c.y, size=8.5, color=col_label, align="CENTER", shadow=True)

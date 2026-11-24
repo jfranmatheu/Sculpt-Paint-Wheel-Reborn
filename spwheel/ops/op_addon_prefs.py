@@ -3,11 +3,11 @@
 from ..core.bl_types import OperatorAction
 
 
-def _reset_to_defaults(data) -> None:
-    """Reset every property of a PropertyGroup (recursively) to its default value."""
+def _reset_to_defaults(data, keep: frozenset = frozenset()) -> None:
+    """Reset every property of a PropertyGroup (recursively) to its default value, except those in ``keep``."""
     for prop in data.bl_rna.properties:
         pid = prop.identifier
-        if pid == "rna_type" or prop.is_readonly and prop.type != 'POINTER':
+        if pid == "rna_type" or pid in keep or prop.is_readonly and prop.type != 'POINTER':
             continue
         if prop.type == 'POINTER':
             sub = getattr(data, pid, None)
@@ -18,7 +18,7 @@ def _reset_to_defaults(data) -> None:
 
 
 class OpResetWheelTheme(OperatorAction):
-    """Reset all the wheel theme colors and sizes to their defaults"""
+    """Reset the wheel theme colors and sizes (both Dark and Light palettes) to their defaults. The theme mode (Auto / Dark / Light) is kept"""
     bl_label = "Reset Wheel Theme"
 
     def invoke(self, context, event):
@@ -26,7 +26,7 @@ class OpResetWheelTheme(OperatorAction):
 
     def execute(self, context):
         from ..prefs import BlendWheelPrefs
-        _reset_to_defaults(BlendWheelPrefs.get_prefs(context).wheel.theme)
+        _reset_to_defaults(BlendWheelPrefs.get_prefs(context).wheel.theme, keep=frozenset({"theme_mode"}))
         return {'FINISHED'}
 
 
