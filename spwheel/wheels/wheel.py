@@ -42,6 +42,7 @@ class Wheel:
         self._widgets: list["Widget"] = []
         self.hovered_widget: "Widget" | None = None
         self._pressed_widget: "Widget" | None = None
+        self._last_mouse: Vector | None = None  # Region space, from the last update_hover.
         self._event_subscriptions: CallbackDict = CallbackDict()
         self.setup(context)
         for wg in self.get_all_widgets():
@@ -71,6 +72,13 @@ class Wheel:
         self.activate(context, prefs, storage)
         for widget in self._widgets:
             widget._on_wheel_activate(context, prefs, storage)
+        # Activation rebuilds widgets (e.g. the brush slots): the hovered / pressed ones may be gone. Hover again at
+        # the mouse (the centre when opening), so a click without moving hits what is really under it.
+        self.hovered_widget = None
+        self._pressed_widget = None
+        p = center if center is not None else self._last_mouse
+        if p is not None:
+            self.update_hover(context, p)
 
     def to_region(self, lx: float, ly: float) -> tuple[float, float]:
         s = self.scale
@@ -92,6 +100,7 @@ class Wheel:
     def update_hover(self, context: Context, p: Vector) -> bool:
         # Widget transforms are defined in wheel-local space, while mouse coords
         # arrive in region space. Convert once and use local coords for hit tests.
+        self._last_mouse = p.copy()
         p_local = Vector(self.to_local(p.x, p.y))
 
         if self.hovered_widget:
