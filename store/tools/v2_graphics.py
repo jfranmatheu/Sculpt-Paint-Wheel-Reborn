@@ -308,8 +308,10 @@ for t in ("Every sculpt and paint mode", "10 themes, or make your own", "Up to 3
     d.ellipse((P(74), P(y + 9), P(82), P(y + 17)), fill=ACCENT)
     d.text((P(96), P(y)), t, font=F_LABEL, fill=TEXT)
     y += 24
-place_wheel(img, "themes", "texture_light", 1050, 230, 300, opacity=0.95)
-place_wheel(img, "modes", "sculpt", 800, 420, 500, glow=True)
+# Three wheels: Texture Paint and Weight Paint behind, Sculpt in front.
+place_wheel(img, "modes", "texture", 1012, 228, 300)
+place_wheel(img, "modes", "weight", 1030, 588, 252, with_pill=False)
+place_wheel(img, "modes", "sculpt", 738, 432, 420, glow=True)
 save(img, "v2_01_hero.png")
 
 # ===== 2. What's new ===============================================================================================
@@ -590,8 +592,9 @@ for t_ in ("Every sculpt and paint mode", "10 themes, or make your own", "Up to 
     d.ellipse((P(74), P(y + 9), P(82), P(y + 17)), fill=ACCENT)
     d.text((P(96), P(y)), t_, font=F_LABEL, fill=TEXT)
     y += 36
-place_wheel(img, "themes", "texture_light", 1060, 190, 290, opacity=0.95)
-place_wheel(img, "modes", "sculpt", 820, 370, 470, glow=True)
+place_wheel(img, "modes", "texture", 1022, 178, 276)
+place_wheel(img, "modes", "weight", 1040, 506, 228, with_pill=False)
+place_wheel(img, "modes", "sculpt", 752, 368, 388, glow=True)
 save_slide(img, "g01_cover.png")
 
 # 2. Modes
