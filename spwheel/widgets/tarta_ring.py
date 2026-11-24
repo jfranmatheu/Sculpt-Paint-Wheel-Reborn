@@ -60,6 +60,7 @@ class TartaRing(WidgetRing):
         self.core_radius = 0.0
         self.hover_layout_slot: int = -1
         self.hover_custom_bid: int = -1
+        self._pressed_bid: int = -1  # Button pressed (it runs on the release, when still over it).
 
     def on_wheel_activate(self, context: Context, wheel_prefs: WheelPrefs, storage: WheelTartaSetStorage, wg_prefs = None) -> None:
         self._active_tarta_set = storage.active_tarta_set
@@ -164,11 +165,16 @@ class TartaRing(WidgetRing):
 
     def on_left_press(self, context: Context, event) -> bool:
         # Arm click on press; actual action is executed on release.
-        return self.hover_custom_bid != -1 and self.hover_layout_slot != -1 and self.layout_n > 0
+        armed = self.hover_custom_bid != -1 and self.hover_layout_slot != -1 and self.layout_n > 0
+        self._pressed_bid = self.hover_custom_bid if armed else -1
+        return armed
 
     def on_left_click(self, context: Context, event) -> bool:
+        pressed_bid, self._pressed_bid = self._pressed_bid, -1
         if self.hover_custom_bid == -1 or self.hover_layout_slot == -1 or self.layout_n <= 0:
             return False
+        if self.hover_custom_bid != pressed_bid:
+            return False  # (Released over another button than the pressed one: like leaving a button, no click.)
         hovered_button = self._tarta_buttons[self.hover_custom_bid]
         hovered_button(context)
         return True
