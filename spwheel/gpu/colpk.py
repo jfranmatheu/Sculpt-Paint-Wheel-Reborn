@@ -40,8 +40,8 @@ vec3 srgb_to_lin(vec3 c) {
 #define RAD_THRES 0.03
 
 vec3 hsb2rgb(in vec3 c) {
+    /* Plain HSV, as the S / V arcs and the picked color (no smoothing: the ring shows the hue it sets). */
     vec3 rgb = clamp(abs(mod(c.x * 6.0 + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0, 0.0, 1.0);
-    rgb = rgb * rgb * (3.0 - 2.0 * rgb);
     return c.z * mix(vec3(1.0), rgb, c.y);
 }
 
