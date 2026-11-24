@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from math import asin, pi
+from math import asin, cos, pi, sin
 from typing import TYPE_CHECKING, Callable, Optional, Sequence, Tuple
 
 from ..pg.pg_brush_set import BrushSetPreferences
@@ -51,8 +51,8 @@ def ring_rows(radius_inner: float, radius_outer: float, prefs: BrushSetPreferenc
               rows: int = 1) -> list[tuple[float, float, int]]:
     """The rings of brush slots: (centre radius, slot radius, slot count) each, the outer one first.
 
-    Two rings are laid out as radial pairs: every outer slot has an inner slot right under it, so both rings
-    hold as many slots as the inner (shorter) one fits."""
+    Two rings hold the same number of slots (as many as the inner, shorter one fits), the inner ones staggered
+    half a step: each inner slot sits between two outer ones."""
     inner = min(radius_inner, radius_outer) + prefs.ring_padding
     outer = max(radius_inner, radius_outer) - prefs.ring_padding
     gap = prefs.row_gap if rows > 1 else 0.0
@@ -91,9 +91,10 @@ class BrushSetRing(WidgetRing):
     use_modal = True
 
     def _row_positions(self, count: int) -> list[tuple[float, float]]:
-        """Centres of the first *count* slots, spread evenly around the ring. On two rings the slots go in radial
-        pairs (outer, then the inner one under it), the pairs spread evenly: a page that isn't full keeps the
-        rings aligned and symmetric (an odd count leaves the last pair without its inner slot)."""
+        """Centres of the first *count* slots, spread evenly around the ring. On two rings the slots alternate
+        outer / inner, the inner ones half a step further (clockwise) so they sit between two outer ones: a page
+        that isn't full stays interleaved and symmetric (an odd count leaves the last outer slot without the
+        inner one after it)."""
         cx, cy = self.center
         rows = self._rows
         if count <= 0 or not rows:
@@ -101,13 +102,15 @@ class BrushSetRing(WidgetRing):
         if len(rows) == 1:
             return compute_slot_positions_in_single_ring(cx, cy, rows[0][0], min(count, rows[0][2]), 0.0)
         count = min(count, sum(n for _c, _r, n in rows))
-        pairs = (count + len(rows) - 1) // len(rows)
-        per_row = [compute_slot_positions_in_single_ring(cx, cy, c, pairs, 0.0) for c, _r, _n in rows]
+        steps = (count + len(rows) - 1) // len(rows)
+        step = 2.0 * pi / steps
         positions = []
-        for j in range(pairs):
-            for row in per_row:
-                if len(positions) < count:
-                    positions.append(row[j])
+        for j in range(steps):
+            for k, (center, _r, _n) in enumerate(rows):
+                if len(positions) >= count:
+                    break
+                angle = pi - (j + 0.5 + k * 0.5) * step
+                positions.append((cx + center * cos(angle), cy + center * sin(angle)))
         return positions
 
     def init(self) -> None:
