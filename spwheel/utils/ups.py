@@ -44,6 +44,9 @@ def has_brush_color_capabilities(context: Context | Brush | None) -> bool:
     elif act_brush.use_paint_vertex:
         return act_brush.vertex_paint_capabilities.has_color
         # we could also act_brush.image_paint_capabilities.has_color
+    elif act_brush.use_vertex_grease_pencil:
+        # Grease Pencil vertex paint: the draw / replace brushes paint the color (blur, average, smear don't).
+        return act_brush.gpencil_vertex_brush_type in {'DRAW', 'REPLACE'}
     else:
         return False
 
