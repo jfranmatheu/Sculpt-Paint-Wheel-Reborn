@@ -7,12 +7,10 @@ from typing import Sequence
 
 from gpu.shader import create_from_info
 from gpu.types import GPUShader, GPUShaderCreateInfo, GPUStageInterfaceInfo
-from gpu_extras.batch import batch_for_shader
 
 from ..core.gpu.state_control import CM_GPU_BLEND
 from ..core.gpu.imm_2d import draw_lines
-from .utils import _quad_verts
-from .utils import draw_circle_fill, draw_ring
+from .utils import draw_circle_fill, draw_ring, quad_batch
 
 
 START_DEG = -45.0
@@ -189,8 +187,7 @@ def draw_weight_hue_ring(cx: float, cy: float, outer_radius_px: float, inner_rad
     if outer_radius_px <= 0.0:
         return
     shader = _get_weight_ring_shader()
-    positions, uvs, indices = _quad_verts(cx, cy, outer_radius_px)
-    batch = batch_for_shader(shader, "TRIS", {"pos": positions, "uv": uvs}, indices=indices)
+    batch = quad_batch(shader, cx, cy, outer_radius_px)
     ratio = 0.8 if outer_radius_px <= 0.0 else max(0.0, min(0.999, inner_radius_px / outer_radius_px))
     with CM_GPU_BLEND("ALPHA"):
         shader.bind()

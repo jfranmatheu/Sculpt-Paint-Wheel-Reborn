@@ -285,6 +285,27 @@ def _get_tex_quad_shader() -> GPUShader:
 # Quad geometry helper
 # ---------------------------------------------------------------------------
 
+# Quad batches by (shader, centre, half size, has uv). The wheel draws the same shapes on every redraw (layouts only
+# change when it opens or re-lays out): building their vertex buffers again on every frame was wasted work.
+_quad_batches: dict[tuple, tuple] = {}
+_QUAD_BATCHES_MAX = 512  # (Moving shapes, e.g. a dragged handle, add entries: start over past this.)
+
+
+def quad_batch(shader, cx: float, cy: float, half: float, uv: bool = True):
+    """The (cached) batch of a screen-space quad centred at (cx, cy) for ``shader``."""
+    key = (id(shader), cx, cy, half, uv)
+    hit = _quad_batches.get(key)
+    if hit is not None and hit[0] is shader:
+        return hit[1]
+    if len(_quad_batches) >= _QUAD_BATCHES_MAX:
+        _quad_batches.clear()
+    positions, uvs, indices = _quad_verts(cx, cy, half)
+    batch = batch_for_shader(shader, 'TRIS', {"pos": positions, "uv": uvs} if uv else {"pos": positions},
+                             indices=indices)
+    _quad_batches[key] = (shader, batch)  # (The shader is kept so a new shader with a reused id never matches.)
+    return batch
+
+
 def _quad_verts(cx: float, cy: float, half: float) -> Tuple[list, list, list]:
     """Return (positions, uvs, indices) for a screen-space quad centred at (cx, cy)."""
     positions = [
@@ -314,8 +335,7 @@ def draw_circle_fill(
 ) -> None:
     """Draw an anti-aliased filled circle."""
     shader = _get_circle_fill_shader()
-    positions, uvs, indices = _quad_verts(cx, cy, radius)
-    batch = batch_for_shader(shader, 'TRIS', {"pos": positions, "uv": uvs}, indices=indices)
+    batch = quad_batch(shader, cx, cy, radius)
     with CM_GPU_BLEND('ALPHA'):
         shader.bind()
         shader.uniform_float("color", color)
@@ -333,8 +353,7 @@ def draw_ring(
     shader = _get_ring_shader()
     # Pad the quad so the outer edge's anti-aliasing isn't clipped by it.
     half = radius + thickness + 2.0
-    positions, uvs, indices = _quad_verts(cx, cy, half)
-    batch = batch_for_shader(shader, 'TRIS', {"pos": positions, "uv": uvs}, indices=indices)
+    batch = quad_batch(shader, cx, cy, half)
 
     outer_r = 0.5 * (radius + thickness) / half
     inner_r = 0.5 * (radius - thickness) / half
@@ -356,8 +375,7 @@ def draw_textured_circle(
 ) -> None:
     """Draw a texture clipped to a circle."""
     shader = _get_tex_circle_shader()
-    positions, uvs, indices = _quad_verts(cx, cy, radius)
-    batch = batch_for_shader(shader, 'TRIS', {"pos": positions, "uv": uvs}, indices=indices)
+    batch = quad_batch(shader, cx, cy, radius)
     with CM_GPU_BLEND('ALPHA'):
         shader.bind()
         shader.uniform_sampler("image", texture)
@@ -382,8 +400,7 @@ def draw_annulus(
     if outer_r <= inner_r + 0.5:
         return
     shader = _get_annulus_shader()
-    positions, _uvs, indices = _quad_verts(cx, cy, outer_r)
-    batch = batch_for_shader(shader, 'TRIS', {"pos": positions}, indices=indices)
+    batch = quad_batch(shader, cx, cy, outer_r, uv=False)
     with CM_GPU_BLEND('ALPHA'):
         shader.bind()
         shader.uniform_float("center", (cx, cy))
@@ -405,8 +422,7 @@ def draw_textured_quad(
     """Axis-aligned square with texture; alpha from texture (no circular mask). ``tint``: sRGB color the texture
     is multiplied by."""
     shader = _get_tex_quad_shader()
-    positions, uvs, indices = _quad_verts(cx, cy, half)
-    batch = batch_for_shader(shader, 'TRIS', {"pos": positions, "uv": uvs}, indices=indices)
+    batch = quad_batch(shader, cx, cy, half)
     with CM_GPU_BLEND('ALPHA'):
         shader.bind()
         shader.uniform_sampler("image", texture)

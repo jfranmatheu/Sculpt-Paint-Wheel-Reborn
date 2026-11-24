@@ -12,7 +12,6 @@ from typing import Any, Sequence, Tuple
 from bpy.types import Context
 from gpu.shader import create_from_info
 from gpu.types import GPUShader, GPUShaderCreateInfo, GPUStageInterfaceInfo, GPUTexture
-from gpu_extras.batch import batch_for_shader
 
 from ..core.gpu.imm_2d import draw_text
 from ..core.gpu.state_control import CM_GPU_BLEND
@@ -30,12 +29,12 @@ from .colpk_helpers import (
     get_sculpt_brush_rgb,
 )
 from .utils import (
-    _quad_verts,
     draw_annulus,
     draw_circle_fill,
     draw_ring,
     draw_textured_circle,
     draw_textured_quad,
+    quad_batch,
 )
 
 
@@ -291,8 +290,7 @@ def draw_pie_split_ring(
     sk = list(sector_kinds[:n_sectors])
     sector_mask = _pack_sector_kinds_mask(sk)
     shader = _get_pie_ring_shader()
-    positions, uvs, indices = _quad_verts(cx, cy, outer_radius_px)
-    batch = batch_for_shader(shader, "TRIS", {"pos": positions, "uv": uvs}, indices=indices)
+    batch = quad_batch(shader, cx, cy, outer_radius_px)
     with CM_GPU_BLEND("ALPHA"):
         shader.bind()
         shader.uniform_float("pieColorPopup", color_popup)
@@ -317,8 +315,7 @@ def draw_ring_blr_gamma(
     if radius_px <= 0.0:
         return
     shader = _get_ring_blr_shader()
-    positions, uvs, indices = _quad_verts(cx, cy, radius_px)
-    batch = batch_for_shader(shader, "TRIS", {"pos": positions, "uv": uvs}, indices=indices)
+    batch = quad_batch(shader, cx, cy, radius_px)
     with CM_GPU_BLEND("ALPHA"):
         shader.bind()
         shader.uniform_float("ringColor", color)
@@ -336,8 +333,7 @@ def draw_textured_circle_boost(
     softness: float = 0.025,
 ) -> None:
     shader = _get_tex_boost_shader()
-    positions, uvs, indices = _quad_verts(cx, cy, radius)
-    batch = batch_for_shader(shader, "TRIS", {"pos": positions, "uv": uvs}, indices=indices)
+    batch = quad_batch(shader, cx, cy, radius)
     with CM_GPU_BLEND("ALPHA"):
         shader.bind()
         shader.uniform_sampler("image", texture)

@@ -12,12 +12,10 @@ from typing import Tuple
 import gpu
 from gpu.shader import create_from_info
 from gpu.types import GPUShader, GPUShaderCreateInfo, GPUStageInterfaceInfo
-from gpu_extras.batch import batch_for_shader
 
 from ..core.gpu.state_control import CM_GPU_BLEND
 from ..core.gpu.imm_2d import draw_lines
-from .utils import _quad_verts
-from .utils import draw_circle_fill, draw_ring
+from .utils import draw_circle_fill, draw_ring, quad_batch
 
 # ---------------------------------------------------------------------------
 # Vertex (shared with wheel quads)
@@ -323,8 +321,7 @@ def draw_colpk_hue_ring(
     if outer_radius_px <= 0.0:
         return
     shader = _get_shader_h()
-    positions, uvs, indices = _quad_verts(cx, cy, outer_radius_px)
-    batch = batch_for_shader(shader, "TRIS", {"pos": positions, "uv": uvs}, indices=indices)
+    batch = quad_batch(shader, cx, cy, outer_radius_px)
     with CM_GPU_BLEND("ALPHA"):
         shader.bind()
         shader.uniform_float("s", float(max(0.0, min(1.0, sat))))
@@ -348,8 +345,7 @@ def draw_colpk_sat_arc(
     if outer_radius_px <= 0.0:
         return
     shader = _get_shader_s()
-    positions, uvs, indices = _quad_verts(cx, cy, outer_radius_px)
-    batch = batch_for_shader(shader, "TRIS", {"pos": positions, "uv": uvs}, indices=indices)
+    batch = quad_batch(shader, cx, cy, outer_radius_px)
     with CM_GPU_BLEND("ALPHA"):
         shader.bind()
         shader.uniform_float("h", float(max(0.0, min(1.0, hue))))
@@ -375,8 +371,7 @@ def draw_colpk_val_arc(
     if outer_radius_px <= 0.0:
         return
     shader = _get_shader_v()
-    positions, uvs, indices = _quad_verts(cx, cy, outer_radius_px)
-    batch = batch_for_shader(shader, "TRIS", {"pos": positions, "uv": uvs}, indices=indices)
+    batch = quad_batch(shader, cx, cy, outer_radius_px)
     with CM_GPU_BLEND("ALPHA"):
         shader.bind()
         shader.uniform_float("h", float(max(0.0, min(1.0, hue))))
