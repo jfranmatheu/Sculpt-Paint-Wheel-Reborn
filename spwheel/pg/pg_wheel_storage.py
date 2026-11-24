@@ -9,8 +9,10 @@ from .pg_brush_set import BrushSet
 from .default_sets import DEFAULTS_VERSION, MASKING_SET_NAME, get_tarta_set, get_masking_set, get_brush_set
 from ..utils.tint_palette import default_tint
 
-TARTA_SET_ENUM_ITEMS: list[tuple[str, str, str]] = [("__none__", "No sets", "No custom button sets available")]
-BRUSH_SET_ENUM_ITEMS: list[tuple[str, str, str]] = [("__none__", "No sets", "No brush sets available")]
+# Dynamic set dropdowns. Items are numbered with the set's index: Blender stores an enum's number, and the items are
+# sorted by name, so without explicit numbers a rename (re-sort) made the stored value point at another set.
+TARTA_SET_ENUM_ITEMS: list[tuple[str, str, str, int]] = [("__none__", "No sets", "No custom button sets available", 0)]
+BRUSH_SET_ENUM_ITEMS: list[tuple[str, str, str, int]] = [("__none__", "No sets", "No brush sets available", 0)]
 
 def _sorted_tarta_set_entries(storage: "WheelTartaSetStorage") -> list[tuple[int, str]]:
     entries: list[tuple[int, str]] = []
@@ -25,9 +27,9 @@ def enum_tarta_set_items(self: "WheelTartaSetStorage", context):
     global TARTA_SET_ENUM_ITEMS
     entries = _sorted_tarta_set_entries(self)
     if not entries:
-        TARTA_SET_ENUM_ITEMS = [("__none__", "No sets", "No custom button sets available")]
+        TARTA_SET_ENUM_ITEMS = [("__none__", "No sets", "No custom button sets available", 0)]
     else:
-        TARTA_SET_ENUM_ITEMS = [(str(idx), name, "") for idx, name in entries]
+        TARTA_SET_ENUM_ITEMS = [(str(idx), name, "", idx) for idx, name in entries]
     return TARTA_SET_ENUM_ITEMS
 
 
@@ -69,9 +71,9 @@ def enum_brush_set_items(self: "WheelBrushSetStorage", context):
     global BRUSH_SET_ENUM_ITEMS
     entries = _sorted_brush_set_entries(self)
     if not entries:
-        BRUSH_SET_ENUM_ITEMS = [("__none__", "No sets", "No brush sets available")]
+        BRUSH_SET_ENUM_ITEMS = [("__none__", "No sets", "No brush sets available", 0)]
     else:
-        BRUSH_SET_ENUM_ITEMS = [(str(idx), name, "") for idx, name in entries]
+        BRUSH_SET_ENUM_ITEMS = [(str(idx), name, "", idx) for idx, name in entries]
     return BRUSH_SET_ENUM_ITEMS
 
 
@@ -381,3 +383,10 @@ class WheelStorage(PropertyGroup):
                     def_brush_set.name = "Default Set"
                     for brush_name in default_brush_names:
                         def_brush_set.add_brush_from_essential(mode, brush_name)
+
+            # Re-align the set dropdowns with the active sets (saved dropdown values from older versions were
+            # positions in a name-sorted list, not set indices).
+            if hasattr(storage, "tarta_sets"):
+                _sync_tarta_sets_enum(storage)
+            if hasattr(storage, "brush_sets"):
+                _sync_brush_sets_enum(storage)
