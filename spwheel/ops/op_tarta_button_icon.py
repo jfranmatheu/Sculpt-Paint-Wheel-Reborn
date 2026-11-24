@@ -8,6 +8,7 @@ from ..core.bl_types import OperatorAction
 from ..core.utils.image_previews import get_image_icon_id
 from ..gpu.button_texture import forget_custom_button_texture
 from ..pg.pg_wheel_storage import WheelStorage
+from ..utils import icon_paths
 
 
 def _get_active_button(context):
@@ -47,7 +48,7 @@ class OpTartaButtonSetIcon(OperatorAction):
             return self.OpReturn.FINISH
         button = _get_active_button(context)
         if button.image_path:
-            self.filepath = bpy.path.abspath(button.image_path)
+            self.filepath = bpy.path.abspath(button.icon_filepath)
         context.window_manager.fileselect_add(self)
         return self.OpReturn.RUN
 
@@ -62,5 +63,5 @@ class OpTartaButtonSetIcon(OperatorAction):
         # Picking the same file again reloads it (it may have been edited on disk).
         forget_custom_button_texture(path)
         get_image_icon_id(path, force_reload=True)
-        button.image_path = path
+        button.image_path = icon_paths.to_portable(path)
         return self.OpReturn.FINISH

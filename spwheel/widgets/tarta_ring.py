@@ -144,7 +144,7 @@ class TartaRing(WidgetRing):
                 a0, a1 = segment_angles(k, n)
                 am = (a0 + a1) * 0.5 if n > 1 else PI * 0.5  # A single button fills the ring: icon on top.
                 sx, sy = cx + rm * math.cos(am), cy + rm * math.sin(am)
-                tex = get_custom_button_texture(btn.image_path)
+                tex = get_custom_button_texture(btn.icon_filepath)
                 if tex is not None:
                     icon_tint = (1.0, 1.0, 1.0, 1.0)
                     if target == "ICON" and (tint := tints[k]) is not None:

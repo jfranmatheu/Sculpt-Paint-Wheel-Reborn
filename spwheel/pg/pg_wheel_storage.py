@@ -10,6 +10,7 @@ from .pg_tarta_set import MAX_TARTA_BUTTONS, WheelTartaSet
 from .pg_brush_set import BrushSet
 from .default_sets import DEFAULTS_VERSION, MASKING_SET_NAME, get_tarta_set, get_masking_set, get_brush_set
 from ..utils.tint_palette import default_tint
+from ..utils import icon_paths
 
 # Dynamic set dropdowns. Items are numbered with the set's index: Blender stores an enum's number, and the items are
 # sorted by name, so without explicit numbers a rename (re-sort) made the stored value point at another set.
@@ -383,6 +384,14 @@ class WheelStorage(PropertyGroup):
                     tarta_storage.active_tarta_set_index = active_idx
                     _sync_tarta_sets_enum(tarta_storage)
                 storage.masking_set_seeded = True
+
+            # Bundled icons stored as full paths into an install folder (older versions): portable references, so
+            # they survive the add-on moving (new Blender version, other repository) and show updated icons.
+            for tarta_set in getattr(storage, "tarta_sets", ()):
+                for button in tarta_set.buttons:
+                    portable = icon_paths.to_portable(button.image_path)
+                    if portable != button.image_path:
+                        button.image_path = portable
 
             if hasattr(storage, "tarta_sets") and not storage.tints_seeded:
                 for tarta_set in storage.tarta_sets:

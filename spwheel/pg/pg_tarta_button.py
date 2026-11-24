@@ -4,7 +4,7 @@ from bpy.props import EnumProperty, StringProperty
 from bpy.types import Context
 
 from ..core.bl_types import PropertyGroup
-from ..utils import button_scripts
+from ..utils import button_scripts, icon_paths
 from ..utils.tint_palette import tint_enum_items
 
 
@@ -80,6 +80,11 @@ class WheelTartaButton(PropertyGroup):
     @property
     def is_script(self) -> bool:
         return self.type == "SCRIPT"
+
+    @property
+    def icon_filepath(self) -> str:
+        """The icon file to load (``image_path`` may be a portable ``builtin:`` reference to a bundled icon)."""
+        return icon_paths.resolve(self.image_path)
 
     @property
     def is_toggle(self) -> bool:

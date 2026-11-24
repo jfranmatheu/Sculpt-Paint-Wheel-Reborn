@@ -6,7 +6,6 @@ dropdown of swatches. Default sets get a color per button by function, guessed f
 
 from __future__ import annotations
 
-import os
 
 import bpy
 import bpy.utils.previews
@@ -91,10 +90,9 @@ _WEIGHT_ICONS = {"smooth", "invert", "normalize", "clean", "weights"}
 
 def default_tint(image_path: str, mode: str = "") -> str:
     """Palette key for a bundled button icon (by function), or "NONE" for other images."""
-    if not image_path:
-        return "NONE"
-    name = os.path.splitext(os.path.basename(image_path))[0]
-    if os.path.basename(os.path.dirname(image_path)) != "custom_buttons":
+    from .icon_paths import builtin_name
+    name = builtin_name(image_path or "")
+    if name is None:
         return "NONE"
     if "WEIGHT" in mode and name in _WEIGHT_ICONS:
         return "ORANGE"

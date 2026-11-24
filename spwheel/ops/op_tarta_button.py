@@ -7,7 +7,7 @@ from bpy.props import EnumProperty, IntProperty, StringProperty
 from ..core.bl_types import OperatorAction
 from ..pg.pg_wheel_storage import WheelStorage, WheelTartaSetStorage
 from ..pg.pg_tarta_set import MAX_TARTA_BUTTONS
-from ..utils import button_scripts
+from ..utils import button_scripts, icon_paths
 from ..wheels.presets import preset_operator_states, preset_toggles_per_mode, preset_type_per_mode
 
 
@@ -273,7 +273,7 @@ class OpTartaButtonAdd(OperatorAction, OpPollActiveSet):
 
         button = active_set.buttons.add()
         button.name = self.name.strip() or "Button"
-        button.image_path = self.image_path
+        button.image_path = icon_paths.to_portable(self.image_path)
         button.type = self.type
         button.state_path = self.state_path.strip() if self.type in {"OPERATOR", "SCRIPT"} else ""
 

@@ -78,7 +78,7 @@ class WheelTartaButtonsPanel(PanelTypes.VIEW_3D_SIDEBAR):
             return
         button = active_tarta_set.buttons[idx]
         row = layout.row(align=True)
-        icon_id = get_image_icon_id(button.image_path)
+        icon_id = get_image_icon_id(button.icon_filepath)
         if icon_id:
             row.operator(OpTartaButtonSetIcon.bl_idname, text="Change Icon", icon_value=icon_id)
             row.operator(OpTartaButtonSetIcon.bl_idname, text="", icon='X').clear = True

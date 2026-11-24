@@ -68,7 +68,7 @@ class TartaButtonList(UIList):
         row = layout.row(align=True)
         if _tint_mode(context) == "CUSTOM":
             row.prop(item, "tint", text="", icon_only=True, emboss=False)
-        icon_id = get_image_icon_id(item.image_path)
+        icon_id = get_image_icon_id(item.icon_filepath)
         if icon_id:
             row.prop(item, "name", text="", icon_value=icon_id, emboss=False)
         else:
