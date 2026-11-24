@@ -1,0 +1,134 @@
+{
+  "_note": "Bright & crisp light wheel. Only the values that differ from the defaults (the Dark theme).",
+  "text_color": [
+    0.102,
+    0.102,
+    0.102,
+    1
+  ],
+  "icon_color": [
+    0.149,
+    0.149,
+    0.149,
+    1
+  ],
+  "base_color": [
+    0.902,
+    0.902,
+    0.914,
+    1.0
+  ],
+  "base_outline_color": [
+    0.416,
+    0.416,
+    0.439,
+    1.0
+  ],
+  "tarta_color": [
+    0.965,
+    0.965,
+    0.973,
+    1.0
+  ],
+  "tarta_outline_color": [
+    0.663,
+    0.663,
+    0.69,
+    1.0
+  ],
+  "tarta_accent_color": [
+    0.227,
+    0.227,
+    0.227,
+    0.85
+  ],
+  "tarta_pressed_color": [
+    0.337,
+    0.502,
+    0.761,
+    1
+  ],
+  "core_color": [
+    1.0,
+    1.0,
+    1.0,
+    1.0
+  ],
+  "shadow_opacity": 0.55,
+  "button": {
+    "label_color": [
+      0.102,
+      0.102,
+      0.102,
+      0.95
+    ],
+    "color": [
+      0.788,
+      0.788,
+      0.808,
+      1.0
+    ],
+    "hovered_color": [
+      0.737,
+      0.737,
+      0.761,
+      1.0
+    ],
+    "active_color": [
+      0.62,
+      0.702,
+      0.839,
+      1
+    ],
+    "outline_color": [
+      0.557,
+      0.557,
+      0.584,
+      1.0
+    ],
+    "active_outline_color": [
+      0.337,
+      0.502,
+      0.761,
+      1.0
+    ]
+  },
+  "brush_picker_button": {
+    "label_color": [
+      0.102,
+      0.102,
+      0.102,
+      0.95
+    ],
+    "color": [
+      0.788,
+      0.788,
+      0.808,
+      1.0
+    ],
+    "hovered_color": [
+      0.737,
+      0.737,
+      0.761,
+      1.0
+    ],
+    "active_color": [
+      0.62,
+      0.702,
+      0.839,
+      1
+    ],
+    "outline_color": [
+      0.557,
+      0.557,
+      0.584,
+      1.0
+    ],
+    "active_outline_color": [
+      0.337,
+      0.502,
+      0.761,
+      1.0
+    ]
+  }
+}

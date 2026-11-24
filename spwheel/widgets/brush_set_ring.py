@@ -278,7 +278,7 @@ class BrushSetRing(WidgetRing):
 
     def _get_page_indicator_layout(self) -> tuple[int, int, float, float, float, float] | None:
         """Page pill under the ring (only with more than one page): (page_index, page_count, x, y, w, h),
-        (x, y) its bottom-left corner in wheel-local units. It overlaps the ring's edge a little."""
+        (x, y) its bottom-left corner in wheel-local units. A small gap separates it from the wheel's edge."""
         active_brush_set: BrushSet = self.active_brush_set
         if not active_brush_set:
             return None
@@ -291,7 +291,7 @@ class BrushSetRing(WidgetRing):
         r = self.wheel.radius
         h = max(26.0, r * 0.14)
         w = max(120.0, r * 0.64)
-        top = -r + h * 0.2
+        top = -r - h * 0.3
         return (page_index, page_count, -w * 0.5, top - h, w, h)
 
     def _get_title_layout(self) -> tuple[str, float, float] | None:
