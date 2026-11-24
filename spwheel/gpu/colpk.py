@@ -97,13 +97,24 @@ vec3 hsv2rgb(vec3 c) {
 }
 
 void main() {
+    /* Derivatives (fwidth) first: after a discard they are undefined for the rest of the pixel quad, which shows
+       as jagged edges on some GPUs. */
     vec2 cxy = 2.0 * v_uv - 1.0;
+    float r = dot(cxy, cxy);
+    float delta = fwidth(r);
+    float minRad = clamp(ring_inner_ratio, 0.0, 0.999);
+    float maxRad = 1.0;
+    float midRad = 0.5 * (minRad + maxRad);
+    vec2 cap0 = vec2(cos(radians(angbot)), sin(radians(angbot))) * midRad;
+    vec2 cap1 = vec2(cos(radians(angtop)), sin(radians(angtop))) * midRad;
+    float cap0Dist = distance(cxy, cap0);
+    float cap1Dist = distance(cxy, cap1);
+    float cap0Fw = max(1e-6, fwidth(cap0Dist));
+    float cap1Fw = max(1e-6, fwidth(cap1Dist));
+
     if (cxy.x > 0.0) {
         discard;
     }
-
-    float r = dot(cxy, cxy);
-    float delta = fwidth(r);
     float alpha = 1.0 - smoothstep(1.0 - delta, 1.0 + delta, r);
     if (alpha < ALPHA_THRES) {
         discard;
@@ -111,11 +122,8 @@ void main() {
 
     vec2 toCenter = vec2(0.5) - v_uv.xy;
     float radius = length(toCenter) * 2.0;
-    float minRad = clamp(ring_inner_ratio, 0.0, 0.999);
-    float maxRad = 1.0;
     float minRad2 = minRad + RAD_THRES;
     float maxRad2 = maxRad - RAD_THRES;
-    float midRad = 0.5 * (minRad + maxRad);
     float capRad = 0.5 * (maxRad - minRad);
     if (radius < minRad || radius > maxRad) {
         discard;
@@ -125,13 +133,7 @@ void main() {
     if (angle < 0.0) {
         angle = 360.0 + angle;
     }
-    vec2 cap0 = vec2(cos(radians(angbot)), sin(radians(angbot))) * midRad;
-    vec2 cap1 = vec2(cos(radians(angtop)), sin(radians(angtop))) * midRad;
     bool inSector = (angle >= angbot && angle <= angtop);
-    float cap0Dist = distance(cxy, cap0);
-    float cap1Dist = distance(cxy, cap1);
-    float cap0Fw = max(1e-6, fwidth(cap0Dist));
-    float cap1Fw = max(1e-6, fwidth(cap1Dist));
     float capAlpha0 = 1.0 - smoothstep(capRad - cap0Fw, capRad + cap0Fw, cap0Dist);
     float capAlpha1 = 1.0 - smoothstep(capRad - cap1Fw, capRad + cap1Fw, cap1Dist);
     float shapeAlpha = max(inSector ? 1.0 : 0.0, max(capAlpha0, capAlpha1));
@@ -172,13 +174,23 @@ vec3 hsv2rgb(vec3 c) {
 }
 
 void main() {
+    /* Derivatives (fwidth) first: after a discard they are undefined for the rest of the pixel quad. */
     vec2 cxy = 2.0 * v_uv - 1.0;
+    float r = dot(cxy, cxy);
+    float delta = fwidth(r);
+    float minRad = clamp(ring_inner_ratio, 0.0, 0.999);
+    float maxRad = 1.0;
+    float midRad = 0.5 * (minRad + maxRad);
+    vec2 cap0 = vec2(cos(radians(angbot)), sin(radians(angbot))) * midRad;
+    vec2 cap1 = vec2(cos(radians(angtop)), sin(radians(angtop))) * midRad;
+    float cap0Dist = distance(cxy, cap0);
+    float cap1Dist = distance(cxy, cap1);
+    float cap0Fw = max(1e-6, fwidth(cap0Dist));
+    float cap1Fw = max(1e-6, fwidth(cap1Dist));
+
     if (cxy.x < 0.0) {
         discard;
     }
-
-    float r = dot(cxy, cxy);
-    float delta = fwidth(r);
     float alpha = 1.0 - smoothstep(1.0 - delta, 1.0 + delta, r);
     if (alpha < ALPHA_THRES) {
         discard;
@@ -186,24 +198,15 @@ void main() {
 
     vec2 toCenter = vec2(0.5) - v_uv.xy;
     float radius = length(toCenter) * 2.0;
-    float minRad = clamp(ring_inner_ratio, 0.0, 0.999);
-    float maxRad = 1.0;
     float minRad2 = minRad + RAD_THRES;
     float maxRad2 = maxRad - RAD_THRES;
-    float midRad = 0.5 * (minRad + maxRad);
     float capRad = 0.5 * (maxRad - minRad);
     if (radius < minRad || radius > maxRad) {
         discard;
     }
 
     float angle = degrees(atan(cxy.y, cxy.x));
-    vec2 cap0 = vec2(cos(radians(angbot)), sin(radians(angbot))) * midRad;
-    vec2 cap1 = vec2(cos(radians(angtop)), sin(radians(angtop))) * midRad;
     bool inSector = (angle <= angbot && angle >= angtop);
-    float cap0Dist = distance(cxy, cap0);
-    float cap1Dist = distance(cxy, cap1);
-    float cap0Fw = max(1e-6, fwidth(cap0Dist));
-    float cap1Fw = max(1e-6, fwidth(cap1Dist));
     float capAlpha0 = 1.0 - smoothstep(capRad - cap0Fw, capRad + cap0Fw, cap0Dist);
     float capAlpha1 = 1.0 - smoothstep(capRad - cap1Fw, capRad + cap1Fw, cap1Dist);
     float shapeAlpha = max(inSector ? 1.0 : 0.0, max(capAlpha0, capAlpha1));
