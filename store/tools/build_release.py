@@ -1,10 +1,12 @@
 """Build the Sculpt-Paint Wheel extension zip for GitHub releases and the stores.
 
 Usage:
-    python store/tools/build_release.py [--blender PATH]
+    python store/tools/build_release.py [--store] [--blender PATH]
 
 Output (ignored by git):
-    build/store/spwheel-<version>.zip
+    build/store/spwheel-<version>.zip             GitHub release (free download)
+    build/store/superhive/spwheel-<version>.zip   --store: the copy sold on Superhive. Same add-on, without the
+                                                  "Support Development" box in the preferences (buyers already did).
 
 Blender is found from --blender, then the BLENDER environment variable, then the newest
 "Blender X.Y" folder under C:/Program Files/Blender Foundation, then `blender` on PATH.
@@ -23,6 +25,26 @@ import zipfile
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 SRC = ROOT / "spwheel"
 OUT = ROOT / "build" / "store"
+
+# Store build: changes made to the staging copy only (the repository is never modified).
+# (path in the zip, regex, replacement): each must match exactly once, so a refactor can't silently skip it.
+STORE_PATCHES = [
+    # The "Support Development" box at the top of the add-on preferences.
+    ("prefs.py", r"[ \t]*self\.draw_support_ui\(layout\)\r?\n[ \t]*layout\.separator\(\)\r?\n", ""),
+]
+
+
+def apply_store_patches(staging):
+    for rel, pattern, repl in STORE_PATCHES:
+        path = staging / rel
+        with open(path, encoding="utf-8", newline="") as f:
+            text = f.read()
+        text, count = re.subn(pattern, repl, text)
+        if count != 1:
+            sys.exit(f"Store patch for {rel} matched {count} times (expected 1): update STORE_PATCHES.")
+        with open(path, "w", encoding="utf-8", newline="") as f:
+            f.write(text)
+        print(f"Patched:  {rel} (store build)")
 
 
 def find_blender(cli_path):
@@ -56,7 +78,9 @@ def run(cmd):
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--blender", help="Path to the Blender executable")
+    parser.add_argument("--store", action="store_true", help="Build the store copy (no support box in the preferences)")
     args = parser.parse_args()
+    out = OUT / "superhive" if args.store else OUT
 
     blender = find_blender(args.blender)
     version = re.search(r'^version\s*=\s*"([^"]+)"', (SRC / "blender_manifest.toml").read_text(encoding="utf-8"), re.M).group(1)
@@ -71,12 +95,14 @@ def main():
             dst = pathlib.Path(tmp) / rel
             dst.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(ROOT / rel, dst)
+        if args.store:
+            apply_store_patches(staging)
 
-        OUT.mkdir(parents=True, exist_ok=True)
-        zip_path = OUT / f"spwheel-{version}.zip"
+        out.mkdir(parents=True, exist_ok=True)
+        zip_path = out / f"spwheel-{version}.zip"
         zip_path.unlink(missing_ok=True)
         run([blender, "--factory-startup", "--command", "extension", "build",
-             "--source-dir", str(staging), "--output-dir", str(OUT)])
+             "--source-dir", str(staging), "--output-dir", str(out)])
 
     run([blender, "--factory-startup", "--command", "extension", "validate", str(zip_path)])
 
