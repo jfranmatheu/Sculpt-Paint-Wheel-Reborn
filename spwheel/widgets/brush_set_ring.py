@@ -14,9 +14,10 @@ from .buttons.pk_brush import PickerBrushButton
 from .widget import WidgetRing
 from ..gpu.draw import draw_circle_fill, draw_ring, draw_text
 from ..core.gpu.imm_2d import draw_lines
+from ..core.globals import GLOBALS
 
 
-USE_DEBUG=True
+USE_DEBUG = GLOBALS.IN_DEVELOPMENT  # (Rebuild logs: development builds only.)
 
 
 if TYPE_CHECKING:

@@ -6,7 +6,7 @@ import tomllib
 
 from .. import __package__ as __main_package__
 
-FORCE_DEBUG = True
+FORCE_DEBUG = False  # (True: debug logging for everyone; development builds turn it on by themselves.)
 
 
 class PATHS:
