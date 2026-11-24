@@ -175,6 +175,11 @@ class Widget:
     def modal(self, context: Context, event: Event) -> bool:
         return True
 
+    def end_drag(self, context: Context) -> None:
+        """End a drag started by a press without its release (e.g. a press sent by select-on-release, with no
+        mouse button held): reset what the modal resets on the mouse release."""
+        pass
+
     def draw(self, context: Context, theme: WheelTheme) -> None:
         pass
 

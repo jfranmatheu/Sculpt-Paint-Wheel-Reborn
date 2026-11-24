@@ -165,6 +165,10 @@ class WeightPickerWidget(WidgetRing):
         context.region.tag_redraw()
         return True
 
+    def end_drag(self, context: "Context") -> None:
+        self._drag_mode = None
+        self._pad_axis = None
+
     def modal(self, context: "Context", event: "Event") -> bool:
         if self._drag_mode is None:
             return False

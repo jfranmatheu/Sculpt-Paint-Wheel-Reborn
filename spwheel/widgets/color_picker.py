@@ -282,6 +282,9 @@ class ColorPickerWidget(WidgetRing):
         self._apply_handle_drag(context, event, self._active_handle)
         return True
 
+    def end_drag(self, context: "Context") -> None:
+        self._active_handle = None
+
     def modal(self, context: "Context", event: "Event") -> bool:
         if self._active_handle is None:
             return False

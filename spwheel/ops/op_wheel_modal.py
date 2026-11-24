@@ -78,8 +78,13 @@ class WheelModal(bl_types.OperatorModal):
                         if self.wheel_is_hovered:
                             ret = self.wheel.on_left_press(context, event)
                             if ret and callable(ret):
-                                return ret
-                            self.wheel.on_left_release(context, event)
+                                # A widget that drags (pickers, brush set title / pages): no mouse button is held
+                                # here, so take the press as a click and end its drag instead of entering it.
+                                widget = getattr(ret, "__self__", None)
+                                if widget is not None and hasattr(widget, "end_drag"):
+                                    widget.end_drag(context)
+                            else:
+                                self.wheel.on_left_release(context, event)
                         
                         if not self.prefs.keep_open:
                             return OpReturn.FINISH
