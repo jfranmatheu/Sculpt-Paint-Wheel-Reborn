@@ -145,6 +145,14 @@ class WheelTartaButton(PropertyGroup):
         return kwargs
 
     def __call__(self, context: Context) -> None:
+        try:
+            self._run(context)
+        except Exception as ex:
+            # E.g. an operator whose poll fails here (no vertex groups...), a wrong operator / menu / panel id.
+            message = str(ex).strip().removeprefix("Error: ") or type(ex).__name__
+            button_scripts.report_script_error(context, f"Can't run '{self.name}'", message)
+
+    def _run(self, context: Context) -> None:
         if self.is_operator:
             op_call = self._resolve_op_call(self.operator_id)
             if op_call is None:

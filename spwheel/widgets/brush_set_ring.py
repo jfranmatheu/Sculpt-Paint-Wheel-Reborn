@@ -96,6 +96,8 @@ class BrushSetRing(WidgetRing):
     def on_scroll_up(self, context: Context, event: Event) -> None:
         if event.shift:
             self._step_set(context, 1)
+        elif self.active_brush_set is None:
+            return  # (No brush set in this mode: no pages.)
         else:
             # Scroll up: change to next page.
             active_brush_set: BrushSet = self.active_brush_set
@@ -113,6 +115,8 @@ class BrushSetRing(WidgetRing):
     def on_scroll_down(self, context: Context, event: Event) -> None:
         if event.shift:
             self._step_set(context, -1)
+        elif self.active_brush_set is None:
+            return  # (No brush set in this mode: no pages.)
         else:
             # Scroll down: change to previous page.
             active_brush_set: BrushSet = self.active_brush_set

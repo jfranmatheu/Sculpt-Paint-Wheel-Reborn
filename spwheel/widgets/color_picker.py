@@ -276,7 +276,11 @@ class ColorPickerWidget(WidgetRing):
 
     def on_left_press(self, context: "Context", event: "Event") -> bool:
         if self._hover_swap:
-            bpy.ops.paint.brush_colors_flip()
+            try:
+                bpy.ops.paint.brush_colors_flip()
+            except RuntimeError as ex:  # (Its poll fails in some modes.)
+                print(f"[SPWheel] Can't swap the brush colors here: {ex}")
+                return False
             context.region.tag_redraw()
             return True
         if self._hover_handle is None:
