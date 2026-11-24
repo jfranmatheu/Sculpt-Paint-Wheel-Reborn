@@ -132,9 +132,14 @@ class TartaRing(WidgetRing):
 
         # Icons (or the name when the button has no image), centred in their segment.
         if n:
-            rm = (self.seg_inner + self.seg_outer) * 0.5
-            # (Half-size: the icon is tarta_icon_size of the segment thickness, and fits its angular width.)
-            half = min((self.seg_outer - self.seg_inner) * theme.tarta_icon_size * 0.5,
+            r_lo = self.seg_inner
+            if target == "COLOR_STRIP" and any(t is not None for t in tints):
+                # The strip takes the segment's inner edge: icons go in the band above it (moved out, and sized
+                # to that band, so they don't sit on the strip). Same for every button, strip or not.
+                r_lo += STRIP_INSET + STRIP_WIDTH
+            rm = (r_lo + self.seg_outer) * 0.5
+            # (Half-size: the icon is tarta_icon_size of the band's thickness, and fits its angular width.)
+            half = min((self.seg_outer - r_lo) * theme.tarta_icon_size * 0.5,
                        rm * math.sin(min(PI / n, PI * 0.5)) * 0.5)
             col_text = tuple(theme.text_color)
             for k in range(n):
