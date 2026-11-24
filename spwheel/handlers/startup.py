@@ -15,6 +15,8 @@ def startup_timer() -> None:
             prefs.load(prefs_path)
         prefs.first_time = False
     WheelStorage.get(bpy.context).initialize_defaults()
+    # Restored / seeded data lives in nested groups, which don't mark the preferences as changed by themselves.
+    bpy.context.preferences.is_dirty = True
     return None
 
 def register() -> None:
