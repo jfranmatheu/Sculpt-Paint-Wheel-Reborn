@@ -17,10 +17,15 @@ Superhive's description and documentation editors don't accept `<head>`, `<style
 ## Build for the stores
 
 ```
-python store/tools/build_release.py
+python store/tools/build_release.py            # GitHub release
+python store/tools/build_release.py --store    # Superhive product file
 ```
 
-Creates `build/store/spwheel-<version>.zip` (ignored by git) with Blender's own extension builder, from the git-tracked files only, and validates it. Upload that zip as the product file on Superhive, and attach it to the GitHub release. Blender is found automatically; pass `--blender PATH` to choose one.
+Both build with Blender's own extension builder, from the git-tracked files only, and validate the zip (output in `build/store/`, ignored by git):
+- `build/store/spwheel-<version>.zip`: attach it to the GitHub release.
+- `build/store/superhive/spwheel-<version>.zip` (`--store`): upload it as the product file on Superhive. It's the same add-on without the "Support Development" box in the preferences, since buyers have already supported it. The change is made on the build's copy only (`STORE_PATCHES` in the script), never in the repository.
+
+Blender is found automatically; pass `--blender PATH` to choose one.
 
 ## Image tools
 
