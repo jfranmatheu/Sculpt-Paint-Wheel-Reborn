@@ -158,7 +158,7 @@ class WheelCore(Widget):
     def layout_lines(self, text: str, radius: float, line_h: float) -> list[str]:
         """The fewest lines (up to ``max_lines``) that fit ``text`` in the disc; each line as wide as the chord at
         the block's top / bottom edge allows. Text that still doesn't fit: the last line shortened with an ellipsis."""
-        blf.size(0, int(round(self.text_size)))
+        blf.size(0, self.text_size)
         lines: list[str] = []
         max_w = 0.0
         for n in range(1, self.max_lines + 1):
@@ -186,12 +186,14 @@ class WheelCore(Widget):
         if self.interactable and (self.hovered or self._drag_axis is not None):
             fill = tuple(c + (1.0 - c) * HOVER_LIGHTEN for c in fill[:3]) + (fill[3],)
         sector(cx, cy, 0.0, r, fill=fill, border=tuple(theme.tarta_outline_color), border_w=1.0)
-        self.text_size = min(max(r * 0.2, 9.0), 28.0)
+        # Whole points: the text is measured (wrap / ellipsis) at the size blf rounds to, so it must be drawn at
+        # that same size, or it comes out wider than measured and overflows the disc.
+        self.text_size = float(round(min(max(r * 0.2, 9.0), 28.0)))
 
         text = self.get_text(context).strip()
         if not text:
             return
-        blf.size(0, int(round(self.text_size)))
+        blf.size(0, self.text_size)
         line_h = blf.dimensions(0, "Mg")[1]
         lines = self.layout_lines(text, r, line_h)
         step = line_h * LINE_SPACING
