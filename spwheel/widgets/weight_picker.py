@@ -71,15 +71,29 @@ class WeightPickerWidget(WidgetRing):
         return float(get_ups_weight(context) or 0.0)
 
     def _set_weight_value(self, context: "Context", value: float) -> None:
+        """Set the brush weight (live while dragging); the masked selection gets it when the drag ends."""
         self._center_text = f"{self._clamp(value, 0.0, 1.0):.2f}"
         value = self._clamp(value, 0.0, 1.0)
         set_ups_weight(context, value)
+        self._weight_changed = True
+
+    def _apply_weight_to_selection(self, context: "Context") -> None:
+        """Set the weight of the masked selection, once per drag (weight_set pushes an undo step each time)."""
+        if not getattr(self, "_weight_changed", False):
+            return
+        self._weight_changed = False
         if getattr(self.wg_prefs, "set_weight_of_selection_directly", True) and context.mode == "PAINT_WEIGHT":
             ob = context.active_object
             if ob and getattr(ob, "data", None):
                 data = ob.data
                 if getattr(data, "use_paint_mask", False) or getattr(data, "use_paint_mask_vertex", False):
                     bpy.ops.paint.weight_set()
+
+    def _finish_drag(self, context: "Context") -> None:
+        if self._drag_mode in {"weight", "marker"}:
+            self._apply_weight_to_selection(context)
+        self._drag_mode = None
+        self._pad_axis = None
 
     def _weight_from_pointer(self, p_local: Vector) -> float:
         dx = p_local.x - self.center.x
@@ -166,8 +180,7 @@ class WeightPickerWidget(WidgetRing):
         return True
 
     def end_drag(self, context: "Context") -> None:
-        self._drag_mode = None
-        self._pad_axis = None
+        self._finish_drag(context)
 
     def modal(self, context: "Context", event: "Event") -> bool:
         if self._drag_mode is None:
@@ -199,12 +212,10 @@ class WeightPickerWidget(WidgetRing):
             context.region.tag_redraw()
             return True
         if event.type == "LEFTMOUSE" and event.value == "RELEASE":
-            self._drag_mode = None
-            self._pad_axis = None
+            self._finish_drag(context)
             return False
         if event.type in {"RIGHTMOUSE", "ESC"} and event.value == "PRESS":
-            self._drag_mode = None
-            self._pad_axis = None
+            self._finish_drag(context)
             return False
         return True
 
