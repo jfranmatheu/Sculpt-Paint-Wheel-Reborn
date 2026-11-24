@@ -1,3 +1,4 @@
+from mathutils import Color
 from typing import Optional
 
 from bl_ui.properties_paint_common import UnifiedPaintPanel, BrushAssetShelf
@@ -74,11 +75,20 @@ def set_ups_strength(context: Context, strength: float = 0.5): _set_ups_attr(con
 
 def get_ups_color(context: Optional[Context] = None) -> float | None: return _get_ups_attr(context, "color")
 def get_ups_secondary_color(context: Optional[Context] = None) -> float | None: return _get_ups_attr(context, "secondary_color", unif_attr='color')
-def get_ups_color_hsv(context: Optional[Context] = None) -> float | None: return _get_ups_attr(context, "color").hsv
+def get_ups_color_hsv(context: Optional[Context] = None) -> tuple[float, float, float] | None:
+    """HSV of the brush color as displayed (sRGB), as Blender's own color wheel: the color itself is stored
+    scene-linear."""
+    color = _get_ups_attr(context, "color")
+    if color is None:
+        return None
+    return tuple(Color(color[:3]).from_scene_linear_to_srgb().hsv)
 def set_ups_color(context: Context, color: tuple[float, float, float, float] = (0.0, 0.0, 0.0)): _set_ups_attr(context, "color", color)
 def set_ups_color_hsv(context: Context, h: float, s: float, v: float):
+    """Set the brush color from a displayed (sRGB) HSV."""
     color_attr = _get_ups_attr(context, "color")
-    color_attr.hsv = (h, s, v)
+    srgb = Color()
+    srgb.hsv = (h, s, v)
+    color_attr[:3] = srgb.from_srgb_to_scene_linear()
 
 def get_ups_weight(context: Optional[Context] = None) -> float | None: return _get_ups_attr(context, "weight")
 def set_ups_weight(context: Context, weight: float = 0.5): _set_ups_attr(context, "weight", weight)

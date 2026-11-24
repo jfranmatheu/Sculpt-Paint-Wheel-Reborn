@@ -2,7 +2,7 @@
 import math
 from typing import TYPE_CHECKING
 
-from mathutils import Vector
+from mathutils import Color, Vector
 import bpy
 
 from ..pg.pg_wheel_theme import WheelTheme
@@ -242,18 +242,11 @@ class ColorPickerWidget(WidgetRing):
             draw_circle_fill(hx, hy, hr, col_fill, softness=0.12)
             draw_ring(hx, hy, hr, col_outline, thickness=1.15, softness=0.05)
 
+        # Brush colors are scene-linear; the swatches are drawn as sRGB (as every flat color here).
         primary = get_ups_color(context)
         secondary = get_ups_secondary_color(context)
-        primary_rgb = (
-            float(primary[0]) if primary else 0.0,
-            float(primary[1]) if primary else 0.0,
-            float(primary[2]) if primary else 0.0,
-        )
-        secondary_rgb = (
-            float(secondary[0]) if secondary else 1.0,
-            float(secondary[1]) if secondary else 1.0,
-            float(secondary[2]) if secondary else 1.0,
-        )
+        primary_rgb = tuple(Color(primary[:3]).from_scene_linear_to_srgb()) if primary else (0.0, 0.0, 0.0)
+        secondary_rgb = tuple(Color(secondary[:3]).from_scene_linear_to_srgb()) if secondary else (1.0, 1.0, 1.0)
         draw_colpk_sv_swatches(
             cx,
             cy,
