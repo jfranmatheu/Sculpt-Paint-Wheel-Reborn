@@ -4,10 +4,13 @@ import bpy
 from ..prefs import BlendWheelPrefs
 
 
-def on_exit_pre(arg_1, arg_2):
-    print("on_exit_pre")
-    print(arg_1) # boolean
-    print(arg_2) # None, type?
+def on_exit_pre(*_args):
+    # Blender auto-saves the preferences at quit only when they are marked as changed, and editing the add-on's
+    # nested data (brush sets, custom buttons...) doesn't mark them: do it so that data reaches userpref.blend.
+    try:
+        bpy.context.preferences.is_dirty = True
+    except Exception as ex:
+        print(f"Cleaning up... could not mark the preferences as changed: {ex}")
     try:
         prefs = BlendWheelPrefs.get_prefs(bpy.context)
         out_path = prefs.save()
