@@ -12,7 +12,7 @@ What it does:
 - Store page: the V2 store graphics instead of the README images, a banner per chapter and a graphic or two per
   chapter; no links to the repository, the FAQ or the issue tracker (help goes through Superhive), and a sales
   "Supporting the project" section.
-- Images load from store/superhive/images/ in the repository's ``BRANCH``.
+- Images and animations load from store/media/ in the repository's ``BRANCH``.
 """
 import pathlib
 import re
@@ -21,8 +21,9 @@ import markdown
 
 HERE = pathlib.Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
-BRANCH = "main"
-RAW = f"https://raw.githubusercontent.com/jfran3d/Sculpt-Paint-Wheel-Reborn/{BRANCH}/store/superhive"
+BRANCH = "V2"
+RAW = f"https://raw.githubusercontent.com/jfran3d/Sculpt-Paint-Wheel-Reborn/{BRANCH}/store/media"
+MEDIA = ROOT / "store" / "media"
 
 md = (ROOT / "DOCS.md").read_text(encoding="utf-8")
 
@@ -31,6 +32,8 @@ md = re.sub(r" ?For quick answers, see the \[FAQ\]\(FAQ\.md\)\.", "", md)
 md = re.sub(r"See the \[FAQ\]\(FAQ\.md\) or \[open an issue\]\([^)]*\) with",
             "Message the developer from this product page on Superhive with", md)
 md = re.sub(r"\[([^\]]+)\]\((?:FAQ|README|DOCS)\.md[^)]*\)", r"\1", md)  # Any other link to the repository's files.
+# The store build has no "Support Development" box in the preferences (STORE_PATCHES in build_release.py).
+md = re.sub(r"### Support Development\r?\n\r?\n[^\n]*\r?\n\r?\n", "", md)
 support_start = md.index("## Supporting the project")
 md = md[:support_start] + """## Supporting the project
 
@@ -111,7 +114,7 @@ html = re.sub(r"\n{3,}", "\n\n", html)
 for forbidden in ("<table", "<style", "<!--", "<head", "<div", "style=", "github.com/", "FAQ.md", "free and open"):
     assert forbidden not in html, forbidden
 for path in re.findall(rf'{re.escape(RAW)}/([^"]+)"', html):
-    assert (HERE / path).exists(), f"missing {path}"
+    assert (MEDIA / path).exists(), f"missing {path}"
 
 (HERE / "docs.html").write_text(html.strip() + "\n", encoding="utf-8")
 print("wrote", HERE / "docs.html")
