@@ -7,15 +7,25 @@ from ..pg.pg_wheel_storage import WheelStorage, WheelTartaSetStorage
 from ..utils import button_scripts
 
 
-class OpPollActive:
+class OpPollStorage:
     @classmethod
     def poll_operator(cls, context) -> bool | str:
+        if WheelStorage.get_by_mode(context) is None:
+            return "Only in a sculpt / paint mode with a wheel"
+        return True
+
+
+class OpPollActive(OpPollStorage):
+    @classmethod
+    def poll_operator(cls, context) -> bool | str:
+        if (valid := super().poll_operator(context)) is not True:
+            return valid
         if WheelStorage.get_by_mode(context).active_tarta_set is None:
             return "No active Custom Buttons set"
         return True
 
 
-class OpTartaSetListAdd(OperatorAction):
+class OpTartaSetListAdd(OperatorAction, OpPollStorage):
     """ Add a new Brush Set to the Brush Set List."""
     bl_label = "Add Custom Buttons Set"
     

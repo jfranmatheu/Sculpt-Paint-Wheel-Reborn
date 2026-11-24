@@ -10,7 +10,8 @@ from ..utils.ups import get_active_brush_mode, get_tool_settings
 class OpPollActiveBrushSet:
     @classmethod
     def poll_operator(cls, context) -> bool | str:
-        if WheelStorage.get_by_mode(context).active_brush_set is None:
+        storage = WheelStorage.get_by_mode(context)
+        if storage is None or getattr(storage, "active_brush_set", None) is None:
             return "No active brush set"
         return True
 
