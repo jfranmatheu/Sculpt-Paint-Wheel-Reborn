@@ -20,4 +20,6 @@ def startup_timer() -> None:
     return None
 
 def register() -> None:
-    bpy.app.timers.register(startup_timer, first_interval=1.0)
+    # Persistent: a .blend opened at launch (double-click) loads before the timer fires, and a file load removes
+    # non-persistent timers.
+    bpy.app.timers.register(startup_timer, first_interval=1.0, persistent=True)
