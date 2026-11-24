@@ -131,7 +131,7 @@ FAQ_STORE_ANSWERS = {
         "Not this version. It's built as a Blender 5.x extension and relies on the brush assets and Grease Pencil "
         "system that Blender 5 uses.",
     "How do I install it?":
-        "1. Download `spwheel-<version>.zip` from your Superhive library. Don't unzip it.\n"
+        "1. Download the add-on zip from your Superhive library. Don't unzip it.\n"  # (No <...>: Superhive strips it.)
         "2. In Blender, go to **Edit › Preferences › Get Extensions**, open the **v** menu at the top right and choose "
         "**Install from Disk...**. You can also drag and drop the zip into Blender.\n"
         "3. Make sure **Sculpt-Paint Wheel** is enabled under **Edit › Preferences › Add-ons**.",

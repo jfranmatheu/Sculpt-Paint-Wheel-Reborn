@@ -17,7 +17,7 @@
  },
  {
   "question": "How do I install it?",
-  "answer": "<ol><li>Download <code>spwheel-&lt;version&gt;.zip</code> from your Superhive library. Don't unzip it.</li><li>In Blender, go to <strong>Edit › Preferences › Get Extensions</strong>, open the <strong>v</strong> menu at the top right and choose <strong>Install from Disk...</strong>. You can also drag and drop the zip into Blender.</li><li>Make sure <strong>Sculpt-Paint Wheel</strong> is enabled under <strong>Edit › Preferences › Add-ons</strong>.</li></ol>"
+  "answer": "<ol><li>Download the add-on zip from your Superhive library. Don't unzip it.</li><li>In Blender, go to <strong>Edit › Preferences › Get Extensions</strong>, open the <strong>v</strong> menu at the top right and choose <strong>Install from Disk...</strong>. You can also drag and drop the zip into Blender.</li><li>Make sure <strong>Sculpt-Paint Wheel</strong> is enabled under <strong>Edit › Preferences › Add-ons</strong>.</li></ol>"
  },
  {
   "question": "How do I update?",
