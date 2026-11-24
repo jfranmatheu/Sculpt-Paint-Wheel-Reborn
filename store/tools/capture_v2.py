@@ -104,6 +104,15 @@ def setup(kind, mode):
             ob = bpy.context.object
             ob.data.materials.append(bpy.data.materials.new("Paint"))
             bpy.ops.paint.add_texture_paint_slot(type='BASE_COLOR', color=(0.55, 0.62, 0.8, 1.0), width=1024, height=1024)
+            # A warm brush color, so the wheel's color picker shows a color (the default is black).
+            ts = bpy.context.tool_settings
+            warm = (0.96, 0.46, 0.16)
+            ups = getattr(ts, "unified_paint_settings", None)
+            if ups is not None and hasattr(ups, "color"):
+                ups.color = warm
+            brush = getattr(ts.image_paint, "brush", None)
+            if brush is not None and hasattr(brush, "color"):
+                brush.color = warm
     if PART not in ("themes_live", "tints_live"):
         # Cut-out shots: the object far away behind the wheel and no floor grid, so the translucent page pill
         # only shows the plain viewport background.
