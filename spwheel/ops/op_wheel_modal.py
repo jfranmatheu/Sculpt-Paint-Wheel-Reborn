@@ -43,6 +43,7 @@ class WheelModal(bl_types.OperatorModal):
         self.wheel_is_hovered = True
         self.trigger_key = event.type
         self.trigger_key_released = False
+        self._close_after_drag = False
 
     def modal_end(self, context: Context, cancel: bool, mouse: ModalMouse) -> None:
         if ts := get_tool_settings(context):
@@ -51,7 +52,17 @@ class WheelModal(bl_types.OperatorModal):
 
     def modal(self, context: Context, event: Event) -> Set[str]:
         try:
-            return super().modal(context, event)
+            # While a widget drags (pickers...), every event goes to it, so the trigger key's release was never
+            # seen and the wheel stayed open after the drag: note it here, and close once the drag ends.
+            if (self._submodal is not None and event.type == self.trigger_key and event.value == 'RELEASE'
+                    and not self.trigger_key_released):
+                self.trigger_key_released = True
+                self._close_after_drag = not self.prefs.keep_open
+            res = super().modal(context, event)
+            if getattr(self, "_close_after_drag", False) and self._submodal is None and self.running:
+                self._close_after_drag = False
+                return self._modal_end(context, cancel=False)
+            return res
         except Exception as ex:
             # Without this, the error escapes the modal and the wheel is never closed: its drawing stays and the
             # brush cursor stays hidden.
