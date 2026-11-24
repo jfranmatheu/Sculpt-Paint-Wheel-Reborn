@@ -4,6 +4,7 @@ from typing import Any
 
 from ..core.bl_types import PropertyGroup
 from .pg_tarta_button import WheelTartaButton
+from ..utils.tint_palette import default_tint
 
 
 # Most buttons a set can hold (the pie menu has one segment per button).
@@ -35,10 +36,11 @@ class WheelTartaSet(PropertyGroup):
             return op_id.strip(), ""
         return op_id.strip(), payload.strip()
 
-    def add_tarta_button_from_metadata(self, metadata: dict[str, Any]) -> WheelTartaButton:
+    def add_tarta_button_from_metadata(self, metadata: dict[str, Any], mode: str = "") -> WheelTartaButton:
         button = self.buttons.add()
         button.name = metadata.get("name", "Button")
         button.image_path = metadata.get("image_path", "")
+        button.tint = metadata.get("tint") or default_tint(button.image_path, mode)
 
         button_type = metadata.get("type", "OPERATOR")
         button.type = button_type if button_type in {"OPERATOR", "POPUP", "SCRIPT", "PROPERTY"} else "OPERATOR"

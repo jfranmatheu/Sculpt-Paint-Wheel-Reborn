@@ -5,6 +5,14 @@ from ...core.bl_types import UIList
 from ...core.utils.image_previews import get_image_icon_id
 
 
+def _tint_mode(context) -> str:
+    from ...prefs import BlendWheelPrefs
+    try:
+        return BlendWheelPrefs.get_prefs(context).wheel.theme.tarta_tint_mode
+    except Exception:
+        return "DISABLED"
+
+
 class TartaButtonList(UIList):
     # Custom properties, saved with .blend file.
     use_filter_empty: BoolProperty(
@@ -58,6 +66,8 @@ class TartaButtonList(UIList):
         # else:
         #     sub = layout.row(align=True)
         row = layout.row(align=True)
+        if _tint_mode(context) == "CUSTOM":
+            row.prop(item, "tint", text="", icon_only=True, emboss=False)
         icon_id = get_image_icon_id(item.image_path)
         if icon_id:
             row.prop(item, "name", text="", icon_value=icon_id, emboss=False)

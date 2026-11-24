@@ -7,6 +7,7 @@ from ..core.bl_types import PropertyGroup
 from .pg_tarta_set import WheelTartaSet
 from .pg_brush_set import BrushSet
 from .default_sets import MASKING_SET_NAME, get_tarta_set, get_masking_set, get_brush_set
+from ..utils.tint_palette import default_tint
 
 TARTA_SET_ENUM_ITEMS: list[tuple[str, str, str]] = [("__none__", "No sets", "No custom button sets available")]
 BRUSH_SET_ENUM_ITEMS: list[tuple[str, str, str]] = [("__none__", "No sets", "No brush sets available")]
@@ -114,6 +115,8 @@ class WheelTartaSetStorage(PropertyGroup):
     tarta_sets: CollectionProperty(type=WheelTartaSet)
     # The "Masking" default set is added once (also to existing data); deleting it doesn't bring it back.
     masking_set_seeded: BoolProperty(default=False)
+    # Bundled buttons created before custom tints get their default color once.
+    tints_seeded: BoolProperty(default=False)
     active_tarta_set_index: IntProperty(
         name="Active Custom Buttons Set Index",
         description="Index of the active custom buttons set",
@@ -330,7 +333,7 @@ class WheelStorage(PropertyGroup):
                     def_tarta_set.name = "Default Set"
                     for button_meta in default_tarta_buttons:
                         if isinstance(button_meta, dict):
-                            def_tarta_set.add_tarta_button_from_metadata(button_meta)
+                            def_tarta_set.add_tarta_button_from_metadata(button_meta, mode)
 
             if (masking_buttons := get_masking_set(mode)) and not storage.masking_set_seeded:
                 tarta_storage: WheelTartaSetStorage = storage
@@ -338,12 +341,19 @@ class WheelStorage(PropertyGroup):
                 masking_set: WheelTartaSet = tarta_storage.add_tarta_set()
                 masking_set.name = MASKING_SET_NAME
                 for button_meta in masking_buttons:
-                    masking_set.add_tarta_button_from_metadata(button_meta)
+                    masking_set.add_tarta_button_from_metadata(button_meta, mode)
                 # Keep the set the user had active.
                 if active_idx >= 0:
                     tarta_storage.active_tarta_set_index = active_idx
                     _sync_tarta_sets_enum(tarta_storage)
                 storage.masking_set_seeded = True
+
+            if hasattr(storage, "tarta_sets") and not storage.tints_seeded:
+                for tarta_set in storage.tarta_sets:
+                    for button in tarta_set.buttons:
+                        if button.tint == "NONE":
+                            button.tint = default_tint(button.image_path, mode)
+                storage.tints_seeded = True
 
             if default_brush_names := get_brush_set(mode):
                 brush_storage: WheelBrushSetStorage = storage

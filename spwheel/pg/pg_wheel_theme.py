@@ -1,8 +1,9 @@
 from typing import Tuple
-from bpy.props import BoolProperty, FloatProperty, FloatVectorProperty, PointerProperty
+from bpy.props import BoolProperty, EnumProperty, FloatProperty, FloatVectorProperty, PointerProperty
 from bpy.types import Context, UILayout
 
 from ..core.bl_types import PropertyGroup
+from ..utils.tint_palette import PALETTE_RGB
 
 
 
@@ -48,10 +49,19 @@ class WheelTheme(PropertyGroup):
     tarta_accent_color: FloatVectorProperty(
         subtype='COLOR', name="Pie Accent Color", min=0, max=1, size=4, default=(.17, .36, .72, 1.0),
         description="Outline of the hovered button and fill of pressed (toggled on) buttons")
-    use_tarta_type_tint: BoolProperty(
-        name="Tint by Button Type",
-        description="Tint the pie segments by the type of their custom button (operator / script, popup, toggle)",
-        default=True)
+    tarta_tint_mode: EnumProperty(
+        name="Tint Mode",
+        description="How the pie segments of the custom buttons are tinted",
+        items=(
+            ("DISABLED", "Disabled", "No tint: every segment uses the pie color"),
+            ("PER_TYPE", "Per Type", "Tint by button type (operator / script, popup, toggle)"),
+            ("CUSTOM", "Custom", "Each button's own color, picked from the swatch in the button list"),
+        ),
+        default="CUSTOM")
+    tarta_custom_tint_strength: FloatProperty(
+        name="Custom Tint Strength",
+        description="How strongly a button's custom color tints its segment (0: none, 1: the full color)",
+        min=0.0, max=1.0, default=0.3, subtype='FACTOR')
     tarta_operator_tint: FloatVectorProperty(
         subtype='COLOR', name="Operator / Script Tint", min=0, max=1, size=4, default=(.2, .35, .7, .25),
         description="Tint of operator and script buttons, mixed over the pie color (alpha: tint strength)")
@@ -66,9 +76,15 @@ class WheelTheme(PropertyGroup):
     def get_tarta_fill(self, button) -> Tuple[float, float, float, float]:
         """Segment fill for a custom button: the pie color, tinted by the button type when enabled."""
         base = self.tarta_color
-        if not self.use_tarta_type_tint or button is None:
+        mode = self.tarta_tint_mode
+        if mode == "DISABLED" or button is None:
             return tuple(base)
-        if button.is_operator or button.is_script:
+        if mode == "CUSTOM":
+            rgb = PALETTE_RGB.get(button.tint)
+            if rgb is None:
+                return tuple(base)
+            tint = (*rgb, self.tarta_custom_tint_strength)
+        elif button.is_operator or button.is_script:
             tint = self.tarta_operator_tint
         elif button.is_popup:
             tint = self.tarta_popup_tint
@@ -97,12 +113,13 @@ class WheelTheme(PropertyGroup):
         layout.prop(self, 'tarta_color')
         layout.prop(self, 'tarta_outline_color')
         layout.prop(self, 'tarta_accent_color')
-        layout.prop(self, 'use_tarta_type_tint')
-        tint_col = layout.column()
-        tint_col.active = self.use_tarta_type_tint
-        tint_col.prop(self, 'tarta_operator_tint')
-        tint_col.prop(self, 'tarta_popup_tint')
-        tint_col.prop(self, 'tarta_toggle_tint')
+        layout.prop(self, 'tarta_tint_mode')
+        if self.tarta_tint_mode == "PER_TYPE":
+            layout.prop(self, 'tarta_operator_tint')
+            layout.prop(self, 'tarta_popup_tint')
+            layout.prop(self, 'tarta_toggle_tint')
+        elif self.tarta_tint_mode == "CUSTOM":
+            layout.prop(self, 'tarta_custom_tint_strength')
 
         h, content = self.draw_section(layout, "Brush Slot Colors", icon='BRUSH_DATA', align_content=True, content_layout_type='COLUMN')
 

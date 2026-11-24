@@ -5,6 +5,7 @@ from bpy.types import Context
 
 from ..core.bl_types import PropertyGroup
 from ..utils import button_scripts
+from ..utils.tint_palette import tint_enum_items
 
 
 # Blender 5.3 moved brush falloff into the "Shape" panel for mesh paint modes, and the old
@@ -49,6 +50,11 @@ class WheelTartaButton(PropertyGroup):
     operator_id: StringProperty(name="Operator ID", default="")
     attr: StringProperty(name="Payload", default="", maxlen=4096)
     image_path: StringProperty(name="Icon Path", default="", subtype="FILE_PATH")
+    tint: EnumProperty(
+        name="Tint",
+        description="Color of the button's pie segment (when the theme's Tint Mode is Custom)",
+        items=tint_enum_items,
+    )
     # Toggle buttons: boolean property to flip, as a data path from the context.
     data_path: StringProperty(
         name="Property",
