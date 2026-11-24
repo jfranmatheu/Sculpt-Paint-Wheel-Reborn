@@ -37,8 +37,8 @@ class WheelTartaSet(PropertyGroup):
         return op_id.strip(), payload.strip()
 
     @classmethod
-    def metadata_key(cls, metadata: dict[str, Any]) -> tuple[str, str]:
-        """(type, target) a default button's metadata creates: what ``button_key`` gives for that button."""
+    def metadata_key(cls, metadata: dict[str, Any]) -> tuple[str, ...]:
+        """What a default button's metadata creates, as ``button_key`` gives it for that button."""
         button_type = metadata.get("type", "OPERATOR")
         if button_type == "PROPERTY":
             return button_type, metadata.get("data_path", "")
@@ -49,18 +49,30 @@ class WheelTartaSet(PropertyGroup):
                 target = ""
             return button_type, target or metadata.get("custom_identifier", "")
         if button_type == "OPERATOR":
-            op_id, _payload = cls._split_operator_expr(metadata.get("custom_identifier", ""))
-            return button_type, op_id or metadata.get("preset_operator", "")
+            op_id, payload = cls._split_operator_expr(metadata.get("custom_identifier", ""))
+            return button_type, op_id or metadata.get("preset_operator", ""), cls._payload_key(payload)
         return button_type, metadata.get("name", "")
 
     @staticmethod
-    def button_key(button: WheelTartaButton) -> tuple[str, str]:
-        """(type, target) of a button: its operator / popup id, or its property path."""
+    def _payload_key(payload: str) -> str:
+        """Operator arguments in a canonical form (``mode='VALUE', value=0`` == ``value=0,mode="VALUE"``)."""
+        return repr(sorted(WheelTartaButton._parse_operator_kwargs(payload).items()))
+
+    @classmethod
+    def button_key(cls, button: WheelTartaButton) -> tuple[str, ...]:
+        """What a button runs: its operator and arguments (two buttons of the same operator with other arguments,
+        e.g. Clear / Invert Mask, are different), its popup id, or its property path."""
         if button.is_toggle:
             return button.type, button.data_path
         if button.is_script:
             return button.type, button.name
+        if button.is_operator:
+            return button.type, button.operator_id, cls._payload_key(button.attr)
         return button.type, button.operator_id
+
+    @classmethod
+    def key_string(cls, key: tuple[str, ...]) -> str:
+        return "|".join(key)
 
     def add_tarta_button_from_metadata(self, metadata: dict[str, Any], mode: str = "") -> WheelTartaButton:
         button = self.buttons.add()
