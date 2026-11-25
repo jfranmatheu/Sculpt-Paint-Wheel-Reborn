@@ -2,6 +2,12 @@
 
 All notable changes to Sculpt-Paint Wheel. Downloads are on the [releases page](https://github.com/jfran3d/Sculpt-Paint-Wheel-Reborn/releases).
 
+## [2.0.1] - 2026-11-25
+
+### Fixes
+- The add-on failed to enable when installed in an extensions repository other than the default one (`ModuleNotFoundError: No module named 'bl_ext.user_default.spwheel'`, [#3](https://github.com/jfranmatheu/Sculpt-Paint-Wheel-Reborn/issues/3)).
+- Blender 5.3: the wheel's color picker, the centre drag (size / strength) and the weight dial now change the values Blender really uses. Blender 5.3 moved the "unified" toggles to the brush, so picks and drags could change a value Blender ignores (a picked color didn't paint, a bigger brush stayed the same size).
+
 ## [2.0.0] - 2026-11-25
 
 ### New
@@ -50,8 +56,6 @@ All notable changes to Sculpt-Paint Wheel. Downloads are on the [releases page](
 - Custom button ring: one segment per button (no empty slots), up to 10 buttons per set.
 
 ### Fixes
-- The add-on failed to enable when installed in an extensions repository other than the default one (`ModuleNotFoundError: No module named 'bl_ext.user_default.spwheel'`, [#3](https://github.com/jfranmatheu/Sculpt-Paint-Wheel-Reborn/issues/3)).
-- Blender 5.3: the wheel's color picker, the centre drag (size / strength) and the weight dial now change the values Blender really uses. Blender 5.3 moved the "unified" toggles to the brush, so picks and drags could change a value Blender ignores (a picked color didn't paint, a bigger brush stayed the same size).
 - Brush sets and custom buttons edited from the wheel or the sidebar are now kept after restarting Blender.
 - The backup of your sets is saved when you quit Blender again, even after opening a file during the session.
 - Opening Blender by double-clicking a `.blend` file no longer skips restoring your saved data and creating the default sets.
@@ -83,6 +87,7 @@ All notable changes to Sculpt-Paint Wheel. Downloads are on the [releases page](
 - Fixed sidebar panels that failed to register on Blender 5.2+.
 - Fixed a draw callback leak when the wheel failed to open.
 
+[2.0.1]: https://github.com/jfran3d/Sculpt-Paint-Wheel-Reborn/releases/tag/v2.0.1
 [2.0.0]: https://github.com/jfran3d/Sculpt-Paint-Wheel-Reborn/releases/tag/v2.0.0
 [1.2.0]: https://github.com/jfran3d/Sculpt-Paint-Wheel-Reborn/releases/tag/v1.2.0
 [1.1.1]: https://github.com/jfran3d/Sculpt-Paint-Wheel-Reborn/releases/tag/v1.1.1
