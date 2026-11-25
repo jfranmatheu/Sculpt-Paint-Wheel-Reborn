@@ -271,17 +271,21 @@ def generate_icons_py():
     icons_data_file = icons_path / 'icons_data'
     modified_icons: list[IconData] = []
 
-    icons_data_cache_files = (
-        icons_data_file.with_suffix(suffix) for suffix in {'.dir', '.bak', '.dat'}
-    )
-    for path in icons_data_cache_files:
-        if path.exists():
+    # Start from an empty cache: whatever dbm backend made it (a single SQLite file "icons_data" with Python 3.13,
+    # or .dir / .bak / .dat files with dbm.dumb). Its pickles name this module's full path (bl_ext.<repo>.spwheel...),
+    # so a cache made by another install can't be read back.
+    for path in icons_path.glob(icons_data_file.name + '*'):
+        if path.is_file():
             path.unlink()
 
     with shelve.open(str(icons_data_file)) as icons_db:
         # Check icons that changed since last generation.
         for icon in icons:
-            if saved_icon := icons_db.get(icon.idname, None):
+            try:
+                saved_icon = icons_db.get(icon.idname, None)
+            except Exception:  # (An unreadable entry: treat the icon as new.)
+                saved_icon = None
+            if saved_icon:
                 if icon.date != saved_icon.date:
                     # Modified icon.
                     icons_db[icon.idname] = icon

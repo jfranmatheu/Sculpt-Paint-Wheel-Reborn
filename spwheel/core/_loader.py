@@ -26,8 +26,13 @@ class AddonLoader:
         if GLOBALS.IN_BACKGROUND and not GLOBALS.ADDON.WORKS_IN_BACKGROUND:
             return lambda: print(f"[{GLOBALS.ADDON.NAME}] extension does not work in background."), lambda: None
 
-        if 'ICONS' in GLOBALS.ADDON.AUTO_CODE_OPTIONS:
-            AutoCode.ICONS()
+        # Code generation is a development tool: the generated files (icons.py) ship with the add-on. Never run it
+        # for users (it writes into the install folder, which can be read-only), and never let it stop the add-on.
+        if GLOBALS.IN_DEVELOPMENT and 'ICONS' in GLOBALS.ADDON.AUTO_CODE_OPTIONS:
+            try:
+                AutoCode.ICONS()
+            except Exception as ex:
+                print(f"[{GLOBALS.ADDON.NAME}] icons code generation skipped:", ex)
 
         cls.modules = get_all_submodules(PATHS.ROOT)
         cls.registered = False
