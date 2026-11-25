@@ -55,20 +55,34 @@ def get_ups(context: Optional[Context] = None) -> UnifiedPaintSettings | None:
     ups = _paint_settings(context or bpy.context)
     return ups.unified_paint_settings if ups else None
 
+# Blender 5.3 moved the "use unified ..." toggles (size, strength, weight, color...) from the unified paint settings to
+# the brush: both still have them, but Blender only reads the brush's (bl_ui properties_paint_common prop_unified*).
+_UNIFIED_TOGGLES_ON_BRUSH = bpy.app.version >= (5, 3, 0)
+
+
+def uses_unified(ups: UnifiedPaintSettings | None, brush: Brush | None, name: str) -> bool:
+    """Whether Blender uses the unified value of ``name`` (e.g. "color", "size") rather than the brush's."""
+    toggle = f"use_unified_{name}"
+    owner = brush if _UNIFIED_TOGGLES_ON_BRUSH and brush is not None and hasattr(brush, toggle) else ups
+    return bool(getattr(owner, toggle, False)) if owner is not None else False
+
+
 def _get_ups_attr(context: Context, attr: str, unif_attr: Optional[str] = None) -> float | None:
     ups = get_ups(context)
     if not ups:
         return None
-    return getattr(ups, attr) if getattr(ups, f"use_unified_{unif_attr or attr}") else getattr(get_active_brush(context), attr)
+    brush = get_active_brush(context)
+    return getattr(ups, attr) if uses_unified(ups, brush, unif_attr or attr) or brush is None else getattr(brush, attr)
 
 def _set_ups_attr(context: Context, attr: str, value: float):
     ups = get_ups(context)
     if not ups:
         return
-    if hasattr(ups, f"use_unified_{attr}") and getattr(ups, f"use_unified_{attr}"):
+    brush = get_active_brush(context)
+    if uses_unified(ups, brush, attr) or brush is None:
         setattr(ups, attr, value)
     else:
-        setattr(get_active_brush(context), attr, value)
+        setattr(brush, attr, value)
 
 def get_ups_size(context: Optional[Context] = None) -> float | None: return _get_ups_attr(context, "size")
 def set_ups_size(context: Context, size: float = 10.0): _set_ups_attr(context, "size", size)

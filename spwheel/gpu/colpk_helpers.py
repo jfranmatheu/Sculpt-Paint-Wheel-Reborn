@@ -36,7 +36,8 @@ def get_sculpt_brush_rgb(context: Context) -> tuple[float, float, float]:
     if brush is None:
         return (1.0, 1.0, 1.0)
     ups = get_sculpt_unified_paint_settings(context)
-    if ups is not None and getattr(ups, "use_unified_color", False):
+    from ..utils.ups import uses_unified
+    if ups is not None and uses_unified(ups, brush, "color"):
         return (float(ups.color[0]), float(ups.color[1]), float(ups.color[2]))
     return (float(brush.color[0]), float(brush.color[1]), float(brush.color[2]))
 
