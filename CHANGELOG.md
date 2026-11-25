@@ -9,6 +9,7 @@ All notable changes to Sculpt-Paint Wheel. Downloads are on the [releases page](
 - Custom button ring: one segment per button (no empty slots), up to 10 buttons per set.
 
 ### Fixes
+- Blender 5.3: the wheel's color picker, the centre drag (size / strength) and the weight dial now change the values Blender really uses. Blender 5.3 moved the "unified" toggles to the brush, so picks and drags could change a value Blender ignores (a picked color didn't paint, a bigger brush stayed the same size).
 - Brush sets and custom buttons edited from the wheel or the sidebar are now kept after restarting Blender.
 - The backup of your sets is saved when you quit Blender again, even after opening a file during the session.
 - Opening Blender by double-clicking a `.blend` file no longer skips restoring your saved data and creating the default sets.
